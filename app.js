@@ -1024,6 +1024,7 @@ app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/
 app.use('/admin/tickets', require('./middleware/auth').isAdmin, require('./routes/adminTickets'));
 app.use('/admin/telegram', require('./middleware/auth').isAdmin, require('./routes/adminTelegram'));
 app.use('/admin/leaderboard', require('./middleware/auth').isAdmin, require('./routes/adminLeaderboard'));
+app.use('/admin/merchants', require('./middleware/auth').isAdmin, require('./routes/adminMerchants'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/api/ticker', require('./routes/ticker'));
 app.use('/help-center', require('./routes/help-center'));

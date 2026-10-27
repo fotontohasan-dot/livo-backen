@@ -1,0 +1,138 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+// ফিল্টার ধরে রেখে পেজ-লিংক বানানো
+function qs(extra) {
+  const p = new URLSearchParams();
+  if (filters.q) p.set('q', filters.q);
+  if (filters.status) p.set('status', filters.status);
+  if (filters.parent) p.set('parent', filters.parent);
+  Object.keys(extra || {}).forEach(function (k) { p.set(k, extra[k]); });
+  const s = p.toString();
+  return '/admin/merchants' + (s ? '?' + s : '');
+}
+const ed = editing || null;
+const formAction = ed ? '/admin/merchants/' + ed.id : '/admin/merchants';
+%>
+<%- include('partials/admin-layout', {
+    title: t('merchant_title'),
+    active: 'merchants',
+    body: `
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-xl font-bold text-slate-800"><i class="fas fa-store"></i> ${t('merchant_title')}</h1>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><div class="text-xs text-slate-400">${t('merchant_stat_total')}</div><div class="text-2xl font-bold text-slate-800">${stats.total}</div></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><div class="text-xs text-slate-400">${t('merchant_stat_active')}</div><div class="text-2xl font-bold text-emerald-600">${stats.active}</div></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><div class="text-xs text-slate-400">${t('merchant_stat_suspended')}</div><div class="text-2xl font-bold text-amber-600">${stats.suspended}</div></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><div class="text-xs text-slate-400">${t('merchant_stat_sub')}</div><div class="text-2xl font-bold text-blue-600">${stats.sub}</div></div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 mb-5">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold text-slate-800">${ed ? t('merchant_form_edit') + ': ' + escapeHtml(ed.code) : t('merchant_form_new')}</h2>
+      ${ed ? `<a href="/admin/merchants" class="text-sm text-slate-500"><i class="fas fa-xmark"></i> ${t('merchant_cancel_edit')}</a>` : ''}
+    </div>
+    <form method="POST" action="${formAction}" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <label class="text-xs text-slate-500">${t('merchant_f_code')}
+        <input type="text" name="code" required maxlength="30" pattern="[A-Za-z0-9_-]{2,30}" value="${ed ? escapeHtml(ed.code) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full uppercase">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_name')}
+        <input type="text" name="name" required maxlength="100" value="${ed ? escapeHtml(ed.name) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_parent')}
+        <select name="parent_id" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+          <option value="">${t('merchant_parent_none')}</option>
+          ${parents.filter(p => !ed || p.id !== ed.id).map(p => `<option value="${p.id}" ${ed && ed.parent_id === p.id ? 'selected' : ''}>${escapeHtml(p.code)} — ${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_contact')}
+        <input type="text" name="contact_name" maxlength="100" value="${ed ? escapeHtml(ed.contact_name) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_phone')}
+        <input type="text" name="phone" maxlength="30" value="${ed ? escapeHtml(ed.phone) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_email')}
+        <input type="email" name="email" maxlength="150" value="${ed ? escapeHtml(ed.email) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_commission')}
+        <input type="number" name="commission_rate" min="0" max="100" step="0.01" value="${ed ? escapeHtml(ed.commission_rate) : '0'}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_status')}
+        <select name="status" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+          <option value="active" ${!ed || ed.status === 'active' ? 'selected' : ''}>${t('merchant_status_active')}</option>
+          <option value="suspended" ${ed && ed.status === 'suspended' ? 'selected' : ''}>${t('merchant_status_suspended')}</option>
+        </select>
+      </label>
+      <label class="text-xs text-slate-500">${t('merchant_f_user_id')}
+        <input type="number" name="user_id" min="1" value="${ed && ed.user_id ? escapeHtml(ed.user_id) : ''}" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">
+      </label>
+      <label class="text-xs text-slate-500 md:col-span-3">${t('merchant_f_notes')}
+        <textarea name="notes" rows="2" maxlength="1000" class="mt-1 border px-3 py-2.5 rounded-xl text-sm w-full">${ed ? escapeHtml(ed.notes) : ''}</textarea>
+      </label>
+      <div class="md:col-span-3 flex items-center justify-between">
+        <span class="text-xs text-slate-400">${t('merchant_depth_hint').replace('{max}', maxDepth)}</span>
+        <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-semibold">${ed ? t('merchant_save') : t('merchant_create')}</button>
+      </div>
+    </form>
+  </div>
+
+  <form method="GET" action="/admin/merchants" class="mb-4 flex flex-wrap gap-2">
+    <input type="text" name="q" value="${escapeHtml(filters.q)}" placeholder="${t('merchant_search')}" class="border px-3 py-2.5 rounded-xl text-sm w-full md:w-72">
+    <select name="status" class="border px-3 py-2.5 rounded-xl text-sm">
+      <option value="">${t('merchant_filter_all_status')}</option>
+      <option value="active" ${filters.status === 'active' ? 'selected' : ''}>${t('merchant_status_active')}</option>
+      <option value="suspended" ${filters.status === 'suspended' ? 'selected' : ''}>${t('merchant_status_suspended')}</option>
+    </select>
+    <select name="parent" class="border px-3 py-2.5 rounded-xl text-sm">
+      <option value="">${t('merchant_filter_all_levels')}</option>
+      <option value="root" ${filters.parent === 'root' ? 'selected' : ''}>${t('merchant_filter_top_only')}</option>
+      ${parents.map(p => `<option value="${p.id}" ${String(filters.parent) === String(p.id) ? 'selected' : ''}>${t('merchant_filter_subs_of')} ${escapeHtml(p.code)}</option>`).join('')}
+    </select>
+    <button type="submit" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold">${t('merchant_filter_apply')}</button>
+  </form>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-400 text-xs uppercase">
+        <th class="p-3">${t('merchant_f_code')}</th><th class="p-3">${t('merchant_f_name')}</th><th class="p-3">${t('merchant_col_parent')}</th>
+        <th class="p-3">${t('merchant_col_subs')}</th><th class="p-3">${t('merchant_f_commission')}</th><th class="p-3">${t('merchant_f_status')}</th><th class="p-3">${t('merchant_col_actions')}</th>
+      </tr></thead>
+      <tbody>
+        ${merchants.map(m => `
+          <tr class="border-t border-slate-50">
+            <td class="p-3 font-mono text-xs font-bold">${escapeHtml(m.code)}</td>
+            <td class="p-3"><div class="font-medium">${escapeHtml(m.name)}</div><div class="text-xs text-slate-400">${escapeHtml([m.contact_name, m.phone, m.email].filter(Boolean).join(' • '))}${m.user_username ? ' • @' + escapeHtml(m.user_username) : ''}</div></td>
+            <td class="p-3">${m.parent_id ? `<a class="text-blue-600" href="${escapeHtml(qs({ edit: m.parent_id }))}">${escapeHtml(m.parent_code)}</a>` : '<span class="text-slate-400">' + t('merchant_top_level') + '</span>'}</td>
+            <td class="p-3">${m.child_count > 0 ? `<a class="text-blue-600 font-semibold" href="/admin/merchants?parent=${m.id}">${m.child_count}</a>` : '<span class="text-slate-300">0</span>'}</td>
+            <td class="p-3">${escapeHtml(m.commission_rate)}%</td>
+            <td class="p-3">${m.status === 'active' ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">' + t('merchant_status_active') + '</span>' : '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">' + t('merchant_status_suspended') + '</span>'}</td>
+            <td class="p-3">
+              <div class="flex flex-wrap gap-1.5">
+                <a href="${escapeHtml(qs({ edit: m.id }))}" class="px-2.5 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">${t('merchant_edit')}</a>
+                <form method="POST" action="/admin/merchants/${m.id}/status"><button type="submit" class="px-2.5 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-semibold">${m.status === 'active' ? t('merchant_suspend') : t('merchant_activate')}</button></form>
+                ${m.child_count > 0 ? '' : `<form method="POST" action="/admin/merchants/${m.id}/delete" data-confirm="${escapeHtml(t('merchant_confirm_delete'))}"><button type="submit" class="px-2.5 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold">${t('merchant_delete')}</button></form>`}
+              </div>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="7" class="p-6 text-center text-slate-400">' + t('merchant_empty') + '</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  ${totalPages > 1 ? `
+  <div class="flex items-center justify-between mt-4 text-sm">
+    <span class="text-slate-400">${t('merchant_page_of').replace('{page}', page).replace('{pages}', totalPages).replace('{total}', total)}</span>
+    <div class="flex gap-2">
+      ${page > 1 ? `<a href="${escapeHtml(qs({ page: page - 1 }))}" class="px-3 py-1.5 bg-white border rounded-lg">${t('merchant_prev')}</a>` : ''}
+      ${page < totalPages ? `<a href="${escapeHtml(qs({ page: page + 1 }))}" class="px-3 py-1.5 bg-white border rounded-lg">${t('merchant_next')}</a>` : ''}
+    </div>
+  </div>` : ''}
+</div>
+`
+}) %>
