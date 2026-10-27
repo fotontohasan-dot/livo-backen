@@ -2386,6 +2386,84 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS channel_id INTEGER REFERENCES payment_channels(id);`);
     console.log('✅ payment_channels টেবিল ও payment_requests.channel_id কলাম ready');
 
+    // ==================== মার্চেন্ট ম্যানেজমেন্ট (মার্চেন্ট → সাব-মার্চেন্ট হায়ারার্কি) ====================
+    // parent_id নিজের টেবিলকেই রেফার করে: NULL = টপ-লেভেল মার্চেন্ট, মান থাকলে সেটা ওই মার্চেন্টের সাব-মার্চেন্ট।
+    // ON DELETE RESTRICT ইচ্ছাকৃত — প্যারেন্ট মুছলে সাব-মার্চেন্টরা চুপচাপ টপ-লেভেল হয়ে যাওয়া (বা হারিয়ে
+    // যাওয়া) ঠেকাতে; আগে সাব-মার্চেন্টদের সরাতে/সরিয়ে নিতে হবে।
+    // user_id ঐচ্ছিক — মার্চেন্ট চাইলে একটা বিদ্যমান প্ল্যাটফর্ম ইউজারের সাথে যুক্ত থাকতে পারে (একজন ইউজার
+    // সর্বোচ্চ একটা মার্চেন্ট)। চক্র (A→B→A) ও গভীরতার সীমা routes/adminMerchants.js-এ ট্রানজেকশনের ভেতরে
+    // যাচাই হয়; এখানে শুধু "নিজেই নিজের প্যারেন্ট" ঠেকানো হয়েছে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS merchants (
+        id SERIAL PRIMARY KEY,
+        parent_id INTEGER REFERENCES merchants(id) ON DELETE RESTRICT,
+        user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE SET NULL,
+        code VARCHAR(30) NOT NULL UNIQUE,
+        name VARCHAR(100) NOT NULL,
+        contact_name VARCHAR(100),
+        phone VARCHAR(30),
+        email VARCHAR(150),
+        commission_rate NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (commission_rate >= 0 AND commission_rate <= 100),
+        status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended')),
+        notes TEXT,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        CONSTRAINT merchants_not_own_parent CHECK (parent_id IS NULL OR parent_id <> id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_parent ON merchants(parent_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_merchants_status ON merchants(status);`);
+    console.log('✅ merchants টেবিল ready');
+
+    // ---- মার্চেন্ট ক্রেডেনশিয়াল: Merchant ID + API Key ----
+    // merchant_uid  — অটো-জেনারেট করা ইউনিক আইডি (MID-XXXXXXXXXX)
+    // api_key_hash  — SHA-256 (API যাচাইয়ের জন্য); api_key_enc — AES-GCM (পোর্টালে দেখানোর জন্য)
+    // api_key_prefix — তালিকায় চেনার জন্য সামনের কয়েক অক্ষর (গোপন নয়)
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS merchant_uid VARCHAR(20);`);
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_hash TEXT;`);
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_enc TEXT;`);
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_prefix VARCHAR(12);`);
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_created_at TIMESTAMP;`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_merchant_uid ON merchants(merchant_uid);`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_api_key_hash ON merchants(api_key_hash);`);
+
+    // বিদ্যমান মার্চেন্টদের জন্য ব্যাকফিল (শুধু যাদের এখনো নেই; পুনরায় চালালে কিছু বদলায় না)
+    {
+      const merchantCreds = require('./services/merchantCredentials');
+      const missing = await pool.query(
+        `SELECT id FROM merchants WHERE merchant_uid IS NULL OR api_key_hash IS NULL ORDER BY id`
+      );
+      for (const row of missing.rows) {
+        const c = await pool.connect();
+        try {
+          await c.query('BEGIN');
+          const cur = await c.query('SELECT merchant_uid, api_key_hash FROM merchants WHERE id = $1 FOR UPDATE', [row.id]);
+          const m = cur.rows[0];
+          if (m) {
+            const uid = m.merchant_uid || await merchantCreds.allocateMerchantUid(c);
+            if (m.api_key_hash) {
+              await c.query('UPDATE merchants SET merchant_uid = $1 WHERE id = $2', [uid, row.id]);
+            } else {
+              const k = merchantCreds.newKeyFields();
+              await c.query(
+                `UPDATE merchants SET merchant_uid = $1, api_key_hash = $2, api_key_enc = $3,
+                        api_key_prefix = $4, api_key_created_at = NOW() WHERE id = $5`,
+                [uid, k.api_key_hash, k.api_key_enc, k.api_key_prefix, row.id]
+              );
+            }
+          }
+          await c.query('COMMIT');
+        } catch (e) {
+          try { await c.query('ROLLBACK'); } catch (_) { /* ignore */ }
+          throw e;
+        } finally {
+          c.release();
+        }
+      }
+    }
+    console.log('✅ merchants ক্রেডেনশিয়াল কলাম ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

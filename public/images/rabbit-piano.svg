@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Rabbit playing the piano">
+  <!-- music notes -->
+  <g fill="#6366f1">
+    <path d="M50 8v10.2a3.2 2.6 0 1 1-1.6-2.2V9.6l7-1.6v8.4a3.2 2.6 0 1 1-1.6-2.2V6.6z"/>
+  </g>
+  <!-- ears -->
+  <g transform="rotate(-8 24 14)"><ellipse cx="24" cy="13" rx="4.6" ry="11.5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/><ellipse cx="24" cy="14" rx="2.2" ry="8" fill="#fbcfe8"/></g>
+  <g transform="rotate(10 38 14)"><ellipse cx="38" cy="13" rx="4.6" ry="11.5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/><ellipse cx="38" cy="14" rx="2.2" ry="8" fill="#fbcfe8"/></g>
+  <!-- body (behind piano) -->
+  <ellipse cx="31" cy="44" rx="15" ry="11" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <!-- head -->
+  <circle cx="31" cy="29" r="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+  <ellipse cx="22.5" cy="33" rx="2.6" ry="1.8" fill="#fecdd3" opacity=".8"/>
+  <ellipse cx="39.5" cy="33" rx="2.6" ry="1.8" fill="#fecdd3" opacity=".8"/>
+  <!-- happy closed eyes -->
+  <path d="M24.5 28.5q2.2-2.6 4.4 0M33.1 28.5q2.2-2.6 4.4 0" fill="none" stroke="#1e293b" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- nose + mouth -->
+  <ellipse cx="31" cy="32" rx="1.7" ry="1.2" fill="#f472b6"/>
+  <path d="M31 33.2v1.4m0 0q-1.8 1.8-3.4.6m3.4-.6q1.8 1.8 3.4.6" fill="none" stroke="#1e293b" stroke-width="1" stroke-linecap="round"/>
+  <!-- piano body -->
+  <rect x="5" y="46" width="54" height="15" rx="2.5" fill="#1e293b"/>
+  <!-- white keys -->
+  <g fill="#fff" stroke="#cbd5e1" stroke-width=".6">
+    <rect x="7"    y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="13.2" y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="19.4" y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="25.6" y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="31.8" y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="38"   y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="44.2" y="48" width="6.2" height="11.5" rx=".8"/>
+    <rect x="50.4" y="48" width="6.2" height="11.5" rx=".8"/>
+  </g>
+  <!-- black keys -->
+  <g fill="#0f172a">
+    <rect x="11.2" y="48" width="3.8" height="7" rx=".7"/>
+    <rect x="17.4" y="48" width="3.8" height="7" rx=".7"/>
+    <rect x="29.8" y="48" width="3.8" height="7" rx=".7"/>
+    <rect x="36"   y="48" width="3.8" height="7" rx=".7"/>
+    <rect x="42.2" y="48" width="3.8" height="7" rx=".7"/>
+  </g>
+  <!-- paws on keys (one lifted, mid-play) -->
+  <ellipse cx="22.5" cy="47.2" rx="4.2" ry="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.1"/>
+  <ellipse cx="39.5" cy="45.4" rx="4.2" ry="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.1"/>
+</svg>

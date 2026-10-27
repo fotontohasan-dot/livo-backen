@@ -1,0 +1,113 @@
+<%#
+  মার্চেন্ট/সাব-মার্চেন্ট ব্যাকএন্ডের লেআউট (routes/merchantPortal.js)।
+  অ্যাডমিন লেআউট থেকে আলাদা: সাইডবার/অ্যাডমিন নেভ নেই, শুধু হেডার + কনটেন্ট।
+  হেডারের উপরের ডানে খরগোশ-পিয়ানো আইকন — ক্লিকে Merchant ID ও API Key মডাল (public/js/merchant-portal.js)।
+  সব স্ট্রিং t() দিয়ে; স্ক্রিপ্ট বাইরের ফাইলে (CSP — ইনলাইন স্ক্রিপ্ট নেই)।
+-%>
+<!DOCTYPE html>
+<html lang="<%= locals.lang || 'en' %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Bet420 - <%= title || t('merchant_portal_title') %></title>
+    <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style nonce="<%= cspNonce %>">
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .mp-rabbit { width: 48px; height: 48px; border-radius: 9999px; background: #eef2ff; border: 2px solid #c7d2fe;
+                     display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+                     transition: transform .15s, background-color .15s; padding: 0; }
+        .mp-rabbit:hover { background: #e0e7ff; transform: scale(1.06) rotate(-4deg); }
+        .mp-rabbit:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .mp-rabbit img { width: 40px; height: 40px; display: block; }
+        .mp-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    </style>
+    <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+    <script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white flex-shrink-0"><i class="fas fa-store"></i></div>
+                <div class="min-w-0">
+                    <div class="font-bold text-slate-800 truncate"><%= merchant.name %></div>
+                    <div class="text-xs text-slate-400 mp-mono truncate"><%= merchant.merchant_uid || merchant.code %></div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <form method="POST" action="/merchant/exit" class="hidden sm:block">
+                    <button type="submit" class="ui-btn bg-slate-100 text-slate-700"><i class="fas fa-arrow-left"></i> <%= t('merchant_portal_exit') %></button>
+                </form>
+                <%# উপরের ডানের আইকন: খরগোশ পিয়ানো বাজাচ্ছে — ক্লিক করলে Merchant ID ও API Key %>
+                <button type="button" id="mpRabbitBtn" class="mp-rabbit" data-merchant-creds-open
+                        aria-haspopup="dialog" aria-controls="mpCredsModal"
+                        title="<%= t('merchant_portal_rabbit_title') %>" aria-label="<%= t('merchant_portal_rabbit_title') %>">
+                    <img src="/images/rabbit-piano.svg" alt="" width="40" height="40">
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
+        <div class="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+            <span><i class="fas fa-user-shield"></i> <%= t('merchant_portal_admin_banner') %></span>
+            <form method="POST" action="/merchant/exit" class="sm:hidden">
+                <button type="submit" class="font-semibold underline"><%= t('merchant_portal_exit') %></button>
+            </form>
+        </div>
+    </div>
+
+    <main class="max-w-5xl mx-auto px-4 py-6">
+        <% (Array.isArray(locals.success) ? success : []).forEach(function (m) { %>
+            <div class="mb-4 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="status"><%= m %></div>
+        <% }) %>
+        <% (Array.isArray(locals.error) ? error : []).forEach(function (m) { %>
+            <div class="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm" role="alert"><%= m %></div>
+        <% }) %>
+        <%- body %>
+    </main>
+
+    <%# Merchant ID ও API Key মডাল। মান পেজের HTML-এ নেই — খোলার সময় POST /merchant/credentials থেকে আসে। %>
+    <div id="mpCredsModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="mpCredsTitle"
+         data-copied="<%= t('merchant_portal_copied') %>" data-copy="<%= t('merchant_portal_copy') %>"
+         data-show="<%= t('merchant_portal_show') %>" data-hide="<%= t('merchant_portal_hide') %>"
+         data-loading="<%= t('merchant_portal_creds_loading') %>" data-error="<%= t('merchant_err_load') %>">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <h3 id="mpCredsTitle" class="font-semibold text-slate-800 flex items-center gap-2">
+                    <img src="/images/rabbit-piano.svg" alt="" width="28" height="28"> <%= t('merchant_portal_creds_heading') %>
+                </h3>
+                <button type="button" data-merchant-creds-close aria-label="<%= t('merchant_portal_close') %>" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p id="mpCredsStatus" class="text-sm text-slate-500 hidden" role="status"></p>
+                <div id="mpCredsError" class="hidden px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm" role="alert"></div>
+
+                <div id="mpCredsFields" class="space-y-4">
+                    <div>
+                        <label for="mpMerchantId" class="block text-xs font-semibold text-slate-500 mb-1"><%= t('merchant_f_uid') %></label>
+                        <div class="flex gap-2">
+                            <input id="mpMerchantId" type="text" readonly class="flex-1 min-w-0 border border-slate-200 bg-slate-50 px-3 py-2.5 rounded-xl text-sm mp-mono">
+                            <button type="button" data-copy-target="mpMerchantId" class="ui-btn bg-slate-100 text-slate-700"><i class="fas fa-copy"></i> <span><%= t('merchant_portal_copy') %></span></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="mpApiKey" class="block text-xs font-semibold text-slate-500 mb-1"><%= t('merchant_f_api_key') %></label>
+                        <div class="flex gap-2">
+                            <input id="mpApiKey" type="password" readonly autocomplete="off" class="flex-1 min-w-0 border border-slate-200 bg-slate-50 px-3 py-2.5 rounded-xl text-sm mp-mono">
+                            <button type="button" id="mpToggleKey" class="ui-btn bg-slate-100 text-slate-700"><i class="fas fa-eye"></i> <span><%= t('merchant_portal_show') %></span></button>
+                            <button type="button" data-copy-target="mpApiKey" class="ui-btn bg-slate-100 text-slate-700"><i class="fas fa-copy"></i> <span><%= t('merchant_portal_copy') %></span></button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400"><i class="fas fa-triangle-exclamation"></i> <%= t('merchant_portal_creds_note') %></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/merchant-portal.js?v=<%= locals.assetVersion || 'dev' %>"></script>
+</body>
+</html>
