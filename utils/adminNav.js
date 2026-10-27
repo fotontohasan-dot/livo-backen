@@ -41,15 +41,6 @@ const NAV = [
     ]
   },
   {
-    id: 'merchants',
-    label: 'Merchants',
-    labelKey: 'admin_nav_merchants',
-    icon: 'fa-store',
-    items: [
-      { href: '/admin/merchants', label: 'Merchant Management', labelKey: 'admin_nav_item_merchants', icon: 'fa-store', active: 'merchants', permission: 'merchants_manage' }
-    ]
-  },
-  {
     id: 'finance',
     label: 'Finance',
     labelKey: 'admin_nav_finance',
