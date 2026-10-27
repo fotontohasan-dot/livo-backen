@@ -1,0 +1,57 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toISOString().slice(0, 10); } catch (e) { return '—'; }
+}
+function statusBadge(st) {
+  return st === 'active'
+    ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">' + t('merchant_status_active') + '</span>'
+    : '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">' + t('merchant_status_suspended') + '</span>';
+}
+%>
+<%- include('partials/merchant-layout', {
+    title: t('merchant_portal_title'),
+    merchant: merchant,
+    body: `
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-5">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-lg font-bold text-slate-800">${t('merchant_portal_profile')}</h1>
+    ${statusBadge(merchant.status)}
+  </div>
+  <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_name')}</dt><dd class="font-medium text-slate-800">${escapeHtml(merchant.name)}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_uid')}</dt><dd class="font-medium text-slate-800 mp-mono">${escapeHtml(merchant.merchant_uid || merchant.code)}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_parent')}</dt><dd class="font-medium text-slate-800">${merchant.parent_id ? escapeHtml(merchant.parent_name) + ' <span class="text-slate-400 mp-mono">(' + escapeHtml(merchant.parent_uid || '') + ')</span>' : t('merchant_top_level')}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_commission')}</dt><dd class="font-medium text-slate-800">${escapeHtml(merchant.commission_rate)}%</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_contact')}</dt><dd class="font-medium text-slate-800">${escapeHtml(merchant.contact_name) || '—'}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_phone')}</dt><dd class="font-medium text-slate-800">${escapeHtml(merchant.phone) || '—'}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_f_email')}</dt><dd class="font-medium text-slate-800">${escapeHtml(merchant.email) || '—'}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_portal_created_at')}</dt><dd class="font-medium text-slate-800">${fmtDate(merchant.created_at)}</dd></div>
+    <div><dt class="text-xs text-slate-400">${t('merchant_portal_key_created')}</dt><dd class="font-medium text-slate-800">${fmtDate(merchant.api_key_created_at)}</dd></div>
+  </dl>
+</div>
+
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+  <div class="px-5 pt-4 pb-2 font-bold text-slate-800">${t('merchant_portal_subs_heading')}</div>
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-slate-400 text-xs uppercase">
+      <th class="p-3">${t('merchant_f_uid')}</th><th class="p-3">${t('merchant_f_name')}</th><th class="p-3">${t('merchant_f_commission')}</th><th class="p-3">${t('merchant_f_status')}</th>
+    </tr></thead>
+    <tbody>
+      ${subMerchants.map(s => `
+        <tr class="border-t border-slate-50">
+          <td class="p-3 mp-mono text-xs font-bold">${escapeHtml(s.merchant_uid)}</td>
+          <td class="p-3 font-medium">${escapeHtml(s.name)}</td>
+          <td class="p-3">${escapeHtml(s.commission_rate)}%</td>
+          <td class="p-3">${statusBadge(s.status)}</td>
+        </tr>`).join('') || '<tr><td colspan="4" class="p-6 text-center text-slate-400">' + t('merchant_portal_no_subs') + '</td></tr>'}
+    </tbody>
+  </table>
+</div>
+`
+}) %>
