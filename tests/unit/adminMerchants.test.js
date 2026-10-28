@@ -82,9 +82,9 @@ describe('escapeLike', () => {
 describe('রুট-গার্ড', () => {
   const routeLines = routeSrc.split('\n').filter((l) => /^router\.(get|post|put|delete|patch)\(/.test(l));
 
-  test('রুট আছে: লিস্ট, তৈরি, সাব-তৈরি (Add), আপডেট, লগইন-অ্যাজ, কী-রিজেনারেট, স্ট্যাটাস, ডিলিট', () => {
-    expect(routeLines.length).toBe(8);
-    for (const frag of ["'/sub'", "'/:id/login-as'", "'/:id/regenerate-key'"]) {
+  test('রুট আছে: লিস্ট, তৈরি, সাব-তৈরি (Add), সাধারণ-তৈরি (Ordinary), আপডেট, লগইন-অ্যাজ, কী-রিজেনারেট, স্ট্যাটাস, ডিলিট', () => {
+    expect(routeLines.length).toBe(9);
+    for (const frag of ["'/sub'", "'/ordinary'", "'/:id/login-as'", "'/:id/regenerate-key'"]) {
       expect(routeLines.some((l) => l.includes(frag))).toBe(true);
     }
   });

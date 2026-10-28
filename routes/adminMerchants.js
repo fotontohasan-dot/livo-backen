@@ -359,6 +359,31 @@ router.post('/sub', requireManage, async (req, res) => {
   }
 });
 
+// ==================== POST /ordinary — সাধারণ (Ordinary) মার্চেন্ট তৈরি ====================
+// Ordinary = টপ-লেভেল মার্চেন্ট (প্যারেন্ট নেই)। প্যারেন্ট ইনপুট নেওয়া হয় না — ফর্মে পাঠানো থাকলেও উপেক্ষা।
+// অটো-জেনারেট ইউনিক Merchant ID ও API Key (API ইন্টিগ্রেশনের জন্য); code = Merchant ID।
+
+router.post('/ordinary', requireManage, async (req, res) => {
+  const b = req.body || {};
+  const parsed = parseMerchantForm({ ...b, code: 'TMP-CODE', parent_id: '', user_id: '', status: 'active' });
+  if (parsed.errorKey) return flashAndRedirect(req, res, 'error', parsed.errorKey);
+  const v = { ...parsed.values, code: null, parent_id: null };
+  const actor = actorOf(req);
+
+  try {
+    const created = await withTreeLock(async (client) => insertMerchant(client, v, actor.id));
+    audit(req, 'ORDINARY_MERCHANT_CREATED',
+      `সাধারণ মার্চেন্ট তৈরি: ${created.merchant_uid} — ${v.name} (#${created.id})`,
+      { merchantId: created.id, merchantUid: created.merchant_uid, commission: v.commission_rate });
+    req.flash('success', req.t('merchant_ordinary_created').replace('{id}', created.merchant_uid));
+    return res.redirect(BASE);
+  } catch (err) {
+    const key = constraintErrorKey(err);
+    if (!key) console.error('admin/merchants ordinary-create error:', err && err.stack ? err.stack : err);
+    return flashAndRedirect(req, res, 'error', key || 'merchant_err_save');
+  }
+});
+
 // ==================== POST /:id — আপডেট (প্যারেন্ট বদলসহ) ====================
 
 router.post('/:id', requireManage, requireIntParam('id', BASE), async (req, res) => {
