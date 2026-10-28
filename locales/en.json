@@ -3291,5 +3291,9 @@
   "merchant_portal_subs_heading": "Sub-merchants",
   "merchant_portal_no_subs": "This merchant has no sub-merchants yet.",
   "merchant_portal_created_at": "Created",
-  "merchant_portal_key_created": "API key created"
+  "merchant_portal_key_created": "API key created",
+  "merchant_f_currency": "Currency",
+  "merchant_f_whitelist_ips": "Whitelisted API IPs (comma-separated)",
+  "merchant_err_currency": "Currency must be BDT, CNY or LGC.",
+  "merchant_err_ips": "Invalid IP list (max 20 valid IPv4/IPv6 addresses)."
 }

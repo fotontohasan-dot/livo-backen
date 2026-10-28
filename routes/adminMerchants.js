@@ -41,6 +41,7 @@ const creds = require('../services/merchantCredentials');
 const PAGE_SIZE = 25;
 const MAX_DEPTH = 5;                 // টপ-লেভেল = ১; সর্বোচ্চ ৫ স্তর
 const STATUSES = ['active', 'suspended'];
+const CURRENCIES = ['BDT', 'CNY', 'LGC'];   // LGC = CNY-এর সমমূল্য
 const TREE_LOCK_KEY = 74210001;      // pg_advisory_xact_lock-এর ধ্রুব কী (merchants ট্রি)
 const BASE = '/admin/merchants';
 
@@ -101,6 +102,12 @@ function parseMerchantForm(body) {
 
   const status = STATUSES.includes(b.status) ? b.status : 'active';
 
+  const currency = String(b.currency || 'BDT').trim().toUpperCase();
+  if (!CURRENCIES.includes(currency)) return { errorKey: 'merchant_err_currency' };
+
+  const ips = parseWhitelistIps(b.whitelist_ips);
+  if (ips === null) return { errorKey: 'merchant_err_ips' };
+
   const parent = parseOptionalId(b.parent_id);
   if (!parent.ok) return { errorKey: 'merchant_err_parent_missing' };
   const user = parseOptionalId(b.user_id);
@@ -113,12 +120,27 @@ function parseMerchantForm(body) {
       phone: phone || null,
       email: email || null,
       commission_rate: commission,
+      currency,
+      whitelist_ips: ips.length ? ips.join(',') : null,
       status,
       notes: cleanStr(b.notes, 1000) || null,
       parent_id: parent.value,
       user_id: user.value
     }
   };
+}
+
+
+/** IPv4/IPv6 সাধারণ যাচাই (কমা/নতুন লাইন/স্পেস দিয়ে আলাদা)। ব্যর্থ হলে null। সর্বোচ্চ ২০টা। */
+function parseWhitelistIps(raw) {
+  const list = String(raw == null ? '' : raw).split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+  if (list.length > 20) return null;
+  const v4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  const v6 = /^[0-9a-fA-F:]{2,39}$/;
+  for (const ip of list) {
+    if (!(v4.test(ip) || (ip.includes(':') && v6.test(ip)))) return null;
+  }
+  return Array.from(new Set(list));
 }
 
 /** একটা ট্রানজেকশনে tree-lock নিয়ে fn(client) চালায়। */
@@ -218,10 +240,10 @@ async function insertMerchant(client, v, createdBy) {
   const code = v.code || uid;
   const r = await client.query(
     `INSERT INTO merchants (parent_id, user_id, code, name, contact_name, phone, email, commission_rate, status, notes, created_by,
-                            merchant_uid, api_key_hash, api_key_enc, api_key_prefix, api_key_created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW()) RETURNING id, merchant_uid`,
+                            currency, whitelist_ips, merchant_uid, api_key_hash, api_key_enc, api_key_prefix, api_key_created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NOW()) RETURNING id, merchant_uid`,
     [v.parent_id, v.user_id, code, v.name, v.contact_name, v.phone, v.email, v.commission_rate, v.status, v.notes, createdBy,
-     uid, k.api_key_hash, k.api_key_enc, k.api_key_prefix]
+     v.currency, v.whitelist_ips, uid, k.api_key_hash, k.api_key_enc, k.api_key_prefix]
   );
   return r.rows[0];
 }
@@ -401,15 +423,17 @@ router.post('/:id', requireManage, requireIntParam('id', BASE), async (req, res)
       if (v.user_id !== before.user_id) await assertUserExists(client, v.user_id);
       await client.query(
         `UPDATE merchants SET parent_id=$1, user_id=$2, code=$3, name=$4, contact_name=$5, phone=$6, email=$7,
-                commission_rate=$8, status=$9, notes=$10, updated_at=NOW()
-          WHERE id=$11`,
-        [v.parent_id, v.user_id, v.code, v.name, v.contact_name, v.phone, v.email, v.commission_rate, v.status, v.notes, id]
+                commission_rate=$8, status=$9, notes=$10, currency=$11, whitelist_ips=$12, updated_at=NOW()
+          WHERE id=$13`,
+        [v.parent_id, v.user_id, v.code, v.name, v.contact_name, v.phone, v.email, v.commission_rate, v.status, v.notes, v.currency, v.whitelist_ips, id]
       );
       return before;
     });
     const changed = [];
     if (result.parent_id !== v.parent_id) changed.push(`parent ${result.parent_id || '-'}→${v.parent_id || '-'}`);
     if (parseFloat(result.commission_rate) !== v.commission_rate) changed.push(`commission ${result.commission_rate}→${v.commission_rate}`);
+    if ((result.currency || 'BDT') !== v.currency) changed.push(`currency ${result.currency || 'BDT'}→${v.currency}`);
+    if ((result.whitelist_ips || null) !== v.whitelist_ips) changed.push('whitelist_ips changed');
     if (result.status !== v.status) changed.push(`status ${result.status}→${v.status}`);
     audit(req, 'MERCHANT_UPDATED',
       `মার্চেন্ট আপডেট: ${v.code} (#${id})${changed.length ? ' [' + changed.join(', ') + ']' : ''}`,

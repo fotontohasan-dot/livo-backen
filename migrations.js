@@ -2425,6 +2425,9 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_enc TEXT;`);
     await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_prefix VARCHAR(12);`);
     await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS api_key_created_at TIMESTAMP;`);
+    // ---- কারেন্সি ও API whitelist IP (DB গেমস ইন্টিগ্রেশনের জন্য) ----
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS currency VARCHAR(5) NOT NULL DEFAULT 'BDT';`);
+    await pool.query(`ALTER TABLE merchants ADD COLUMN IF NOT EXISTS whitelist_ips TEXT;`);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_merchant_uid ON merchants(merchant_uid);`);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_api_key_hash ON merchants(api_key_hash);`);
 
