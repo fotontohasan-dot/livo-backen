@@ -20,9 +20,10 @@
 // ---------------------------------------------------------------------------
 
 const mockCasino = require('./mockCasino');
+const dbGames = require('./dbGames');
 
 // _template.js ইচ্ছাকৃতভাবে এখানে নেই — ওটা কপি করার নমুনা, চালানোর জন্য নয়।
-const ADAPTERS = [mockCasino];
+const ADAPTERS = [mockCasino, dbGames];
 
 function allowList() {
   return (process.env.CASINO_PROVIDERS || '')
