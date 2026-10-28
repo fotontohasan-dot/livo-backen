@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -402,7 +403,7 @@ const claimLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
+  keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : ipKeyGenerator(req.ip)),
   message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' }
 });
 

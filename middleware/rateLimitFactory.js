@@ -11,6 +11,7 @@
 // শুধু নিচের দুটো ক্রস-কাটিং কনসার্ন এক জায়গা থেকে যোগ হয়।
 
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;   // express-rate-limit v8: IPv6-safe IP key (একই /56 সাবনেটকে এক ধরা হয়)
 const { createRedisStore } = require('./redisRateLimitStore');
 const { tr } = require('../utils/i18n');
 
@@ -59,4 +60,4 @@ function createLimiter(name, options = {}) {
   });
 }
 
-module.exports = { createLimiter };
+module.exports = { createLimiter, ipKeyGenerator };

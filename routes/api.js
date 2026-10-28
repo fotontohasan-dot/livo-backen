@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 const { pool } = require('../db');
 const cache = require('../services/cache');
 const { apiUsageLogger } = require('../middleware/apiLogger');
@@ -28,7 +29,7 @@ const perKeyLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.apiKey ? `key:${req.apiKey.id}` : req.ip),
+  keyGenerator: (req) => (req.apiKey ? `key:${req.apiKey.id}` : ipKeyGenerator(req.ip)),
   message: (req) => ({ error: 'rate_limited', message: req.t('api_key_rate_limit_exceeded') }),
   store: new RedisRateLimitStore('rl:api:key:')
 });
