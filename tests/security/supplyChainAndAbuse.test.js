@@ -135,7 +135,13 @@ describe('Secrets, CI/CD, dependencies and resource abuse (PHASE 10-13)', () => 
         // ম্যাচ না করায় কখনো install/run হয় না — lockfile regenerate হলে
         // মাঝেমধ্যে entry হিসেবে দেখা যায়, কিন্তু কোনো প্রকৃত সাপ্লাই-চেইন
         // ঝুঁকি নেই।
-        expect(['@scarf/scarf', '@sentry/cli', 'msgpackr-extract', 'fsevents']).toContain(pkg);
+        // @parcel/watcher: Parcel প্রজেক্টের নেটিভ ফাইল-ওয়াচার (prebuilt binary লোড করার
+        // install স্ক্রিপ্ট)। Jest 30-এর jest-haste-map-এর ট্রানজিটিভ ডিপেন্ডেন্সি — শুধু
+        // dev (lockfile-এ dev:true), প্রোডাকশনে যায় না। Jest 30-এ আপগ্রেডের সময় যোগ করা।
+        // unrs-resolver: Rust/napi-rs ভিত্তিক মডিউল-রেজলভার (prebuilt binary সেটআপের
+        // install স্ক্রিপ্ট)। Jest 30-এর jest-resolve-এর ট্রানজিটিভ ডিপেন্ডেন্সি — একইভাবে
+        // শুধু dev (dev:true), registry.npmjs.org থেকে। Jest 30-এ আপগ্রেডের সময় যোগ করা।
+        expect(['@scarf/scarf', '@sentry/cli', 'msgpackr-extract', 'fsevents', '@parcel/watcher', 'unrs-resolver']).toContain(pkg);
       }
     });
   });

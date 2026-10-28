@@ -3,7 +3,7 @@ const router = express.Router();
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
 const { pool } = require('../db');
-const { createLimiter } = require('../middleware/rateLimitFactory');
+const { createLimiter, ipKeyGenerator } = require('../middleware/rateLimitFactory');
 const { buildUrl } = require('../utils/publicUrl');
 
 // KYC জমাদানে সীমা — পরিচয়পত্র/ডকুমেন্ট বারবার জমা দেওয়া স্প্যাম/রিসোর্স অপব্যবহার
@@ -12,7 +12,7 @@ const kycLimiter = createLimiter('kyc_submit', {
   windowMs: 60 * 60 * 1000,
   max: 5,
   message: (req) => req.t('kyc_rate_limited'),
-  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : ipKeyGenerator(req.ip)
 });
 
 // ==== KYC ইনপুট ভ্যালিডেশন ====

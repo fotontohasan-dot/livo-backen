@@ -2,14 +2,14 @@
 // কেন্দ্রীয় API Gateway — সব /api/* রিকোয়েস্টের জন্য একটাই জায়গায়
 // rate-limit, logging, standardized response এবং error handling
 
-const { createLimiter } = require('./rateLimitFactory');
+const { createLimiter, ipKeyGenerator } = require('./rateLimitFactory');
 const { tr } = require('../utils/i18n');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = createLimiter('public_api', {
   windowMs: 60 * 1000,
   max: 60, // প্রতি মিনিটে সর্বোচ্চ ৬০ টা API কল প্রতি IP/user থেকে
-  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip,
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : ipKeyGenerator(req.ip),
   handler: (req, res) => {
     res.status(429).json({ success: false, error: tr(req, 'api_rate_limited_soft') });
   }

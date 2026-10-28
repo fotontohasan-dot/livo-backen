@@ -24,6 +24,7 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 const router = express.Router();
 
 const { pool } = require('../db');
@@ -40,7 +41,7 @@ const walletLimiter = rateLimit({
   standardHeaders: false,
   legacyHeaders: false,
   store: createRedisStore('provider-wallet'),
-  keyGenerator: (req) => `${req.params.provider || 'unknown'}:${req.ip}`,
+  keyGenerator: (req) => `${req.params.provider || 'unknown'}:${ipKeyGenerator(req.ip)}`,
   handler: (req, res) => res.status(429).json({ success: false, error: 'RATE_LIMITED' })
 });
 

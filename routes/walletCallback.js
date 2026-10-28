@@ -21,13 +21,13 @@ const express = require('express');
 const router = express.Router();
 
 const walletCallback = require('../services/walletCallback');
-const { createLimiter } = require('../middleware/rateLimitFactory');
+const { createLimiter, ipKeyGenerator } = require('../middleware/rateLimitFactory');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
 
 const limiter = createLimiter('wallet-callback', {
   windowMs: 60 * 1000,
   max: 120,
-  keyGenerator: (req) => `${req.params.provider || 'unknown'}:${req.ip}`,
+  keyGenerator: (req) => `${req.params.provider || 'unknown'}:${ipKeyGenerator(req.ip)}`,
   handler: (req, res) => res.status(429).json({ success: false, error: 'RATE_LIMITED' })
 });
 
