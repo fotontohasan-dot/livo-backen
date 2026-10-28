@@ -97,6 +97,75 @@ describe('ক্রেডেনশিয়াল হেল্পার', () => 
 });
 
 // ---------------------------------------------------------------------------
+describe('Ordinary merchant → POST /admin/merchants/ordinary', () => {
+  beforeAll(() => { currentUserId = adminId; flashes = []; });
+
+  test('টপ-লেভেল মার্চেন্ট তৈরি; অটো Merchant ID + API Key; code = Merchant ID', async () => {
+    const res = await post('/admin/merchants/ordinary', {
+      name: nm('ord1'), contact_name: 'Karim', phone: '01800000000', email: 'ord1@example.com', commission_rate: '3'
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/admin/merchants');
+    expect(lastFlash()).toEqual({ kind: 'success', msg: 'merchant_ordinary_created' });
+    const m = await byName(nm('ord1'));
+    expect(m.parent_id).toBeNull();
+    expect(m.merchant_uid).toMatch(creds.UID_RE);
+    expect(m.code).toBe(m.merchant_uid);
+    expect(m.api_key_prefix).toMatch(/^mk_/);
+    expect(m.api_key_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(creds.hashApiKey(creds.revealApiKey(m.api_key_enc))).toBe(m.api_key_hash);
+    expect(Number(m.commission_rate)).toBe(3);
+    expect(m.created_by).toBe(adminId);
+  });
+
+  test('দুটোর ID ও API Key আলাদা', async () => {
+    await post('/admin/merchants/ordinary', { name: nm('ord2') });
+    await post('/admin/merchants/ordinary', { name: nm('ord3') });
+    const a = await byName(nm('ord2')); const b = await byName(nm('ord3'));
+    expect(a.merchant_uid).not.toBe(b.merchant_uid);
+    expect(a.api_key_hash).not.toBe(b.api_key_hash);
+  });
+
+  test('ফর্মে parent_id/user_id/status পাঠালেও উপেক্ষা — টপ-লেভেল ও active', async () => {
+    const parent = (await byName(nm('ord1'))).id;
+    await post('/admin/merchants/ordinary', { name: nm('ord4'), parent_id: String(parent), user_id: '1', status: 'suspended' });
+    const m = await byName(nm('ord4'));
+    expect(m.parent_id).toBeNull();
+    expect(m.user_id).toBeNull();
+    expect(m.status).toBe('active');
+  });
+
+  test('ভুল ইনপুট: ফাঁকা নাম / কমিশন সীমার বাইরে → তৈরি হয় না', async () => {
+    await post('/admin/merchants/ordinary', { name: '   ' });
+    expect(lastFlash().kind).toBe('error');
+    await post('/admin/merchants/ordinary', { name: nm('ord-bad'), commission_rate: '101' });
+    expect(lastFlash().kind).toBe('error');
+    expect(await byName(nm('ord-bad'))).toBeUndefined();
+  });
+
+  test('অডিট লগ লেখা হয় — কিন্তু raw API Key নয়', async () => {
+    const m = await byName(nm('ord1'));
+    const raw = creds.revealApiKey(m.api_key_enc);
+    const r = await pool.query(`SELECT details FROM audit_events WHERE action = 'ORDINARY_MERCHANT_CREATED' ORDER BY id DESC LIMIT 5`).catch(() => ({ rows: [] }));
+    expect(JSON.stringify(r.rows)).not.toContain(raw);
+  });
+
+  test('পারমিশনহীন অ্যাডমিন পারে না', async () => {
+    currentUserId = limitedId;
+    const res = await post('/admin/merchants/ordinary', { name: nm('ord-denied') });
+    expect(res.headers.location).toBe('/admin');
+    expect(await byName(nm('ord-denied'))).toBeUndefined();
+    currentUserId = adminId;
+  });
+
+  test('নতুন মার্চেন্টের Merchant ID + API Key দিয়ে লগইন-এজ রাউট কাজ করে (ক্রেডেনশিয়াল বৈধ)', async () => {
+    const m = await byName(nm('ord1'));
+    const found = await pool.query('SELECT id FROM merchants WHERE merchant_uid = $1 AND api_key_hash = $2',
+      [m.merchant_uid, creds.hashApiKey(creds.revealApiKey(m.api_key_enc))]);
+    expect(found.rows[0].id).toBe(m.id);
+  });
+});
+
 describe('"Add" বাটন → POST /admin/merchants/sub', () => {
   let parentId;
   beforeAll(async () => {
