@@ -3291,5 +3291,9 @@
   "merchant_portal_subs_heading": "সাব-মার্চেন্ট",
   "merchant_portal_no_subs": "এই মার্চেন্টের এখনো কোনো সাব-মার্চেন্ট নেই।",
   "merchant_portal_created_at": "তৈরি",
-  "merchant_portal_key_created": "API কী তৈরি"
+  "merchant_portal_key_created": "API কী তৈরি",
+  "merchant_f_currency": "কারেন্সি",
+  "merchant_f_whitelist_ips": "API হোয়াইটলিস্ট IP (কমা দিয়ে আলাদা)",
+  "merchant_err_currency": "কারেন্সি BDT, CNY বা LGC হতে হবে।",
+  "merchant_err_ips": "IP তালিকা সঠিক নয় (সর্বোচ্চ ২০টা বৈধ IPv4/IPv6)।"
 }
