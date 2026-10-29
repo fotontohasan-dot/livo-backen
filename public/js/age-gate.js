@@ -38,40 +38,68 @@
     document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
   }
 
+  // CSP style-src-attr সতর্কতা এড়াতে: inline style="" অ্যাট্রিবিউট/cssText নেই,
+  // শুধু CSSOM (el.style.prop = ...) ব্যবহার হয়েছে।
+  function el(tag, styles, text, id) {
+    var node = document.createElement(tag);
+    if (id) node.id = id;
+    if (text) node.textContent = text;
+    var keys = Object.keys(styles || {});
+    for (var i = 0; i < keys.length; i++) {
+      node.style.setProperty(keys[i], styles[keys[i]]);
+    }
+    return node;
+  }
+
   function showGate() {
-    var overlay = document.createElement('div');
-    overlay.id = 'age-gate-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;z-index:999999;background:rgba(5,8,14,0.96);' +
-      'display:flex;align-items:center;justify-content:center;padding:20px;' +
-      'font-family:"Hind Siliguri",sans-serif;';
+    var overlay = el('div', {
+      position: 'fixed', top: '0', right: '0', bottom: '0', left: '0',
+      'z-index': '999999', background: 'rgba(5,8,14,0.96)',
+      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+      padding: '20px', 'font-family': '"Hind Siliguri",sans-serif'
+    }, '', 'age-gate-overlay');
 
-    overlay.innerHTML =
-      '<div style="max-width:380px;width:100%;background:#121212;border:1px solid rgba(234,179,8,0.35);' +
-      'border-radius:18px;padding:28px 22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.5);">' +
-        '<div style="font-size:40px;margin-bottom:10px;">🔞</div>' +
-        '<div style="color:#EAB308;font-size:19px;font-weight:800;margin-bottom:10px;">বয়স নিশ্চিতকরণ</div>' +
-        '<div style="color:#cbd5e1;font-size:13.5px;line-height:1.6;margin-bottom:20px;">' +
-          'এই ওয়েবসাইটে রিয়েল-মানি গেমিং কনটেন্ট রয়েছে। প্রবেশ করতে হলে আপনার বয়স অবশ্যই ' +
-          '<b style="color:#fff;">১৮ বছর বা তার বেশি</b> হতে হবে।' +
-        '</div>' +
-        '<div style="display:flex;gap:10px;">' +
-          '<button id="age-gate-no" style="flex:1;padding:12px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.15);' +
-          'background:transparent;color:#94a3b8;font-weight:700;font-size:14px;cursor:pointer;">না, বের হচ্ছি</button>' +
-          '<button id="age-gate-yes" style="flex:1;padding:12px 0;border-radius:10px;border:none;' +
-          'background:linear-gradient(135deg,#EAB308,#FCD34D);color:#000;font-weight:800;font-size:14px;cursor:pointer;">' +
-          'হ্যাঁ, আমি ১৮+</button>' +
-        '</div>' +
-      '</div>';
+    var card = el('div', {
+      'max-width': '380px', width: '100%', background: '#121212',
+      border: '1px solid rgba(234,179,8,0.35)', 'border-radius': '18px',
+      padding: '28px 22px', 'text-align': 'center',
+      'box-shadow': '0 20px 50px rgba(0,0,0,0.5)'
+    });
 
+    card.appendChild(el('div', { 'font-size': '40px', 'margin-bottom': '10px' }, '🔞'));
+    card.appendChild(el('div', {
+      color: '#EAB308', 'font-size': '19px', 'font-weight': '800', 'margin-bottom': '10px'
+    }, 'বয়স নিশ্চিতকরণ'));
+
+    var msg = el('div', {
+      color: '#cbd5e1', 'font-size': '13.5px', 'line-height': '1.6', 'margin-bottom': '20px'
+    }, 'এই ওয়েবসাইটে রিয়েল-মানি গেমিং কনটেন্ট রয়েছে। প্রবেশ করতে হলে আপনার বয়স অবশ্যই ');
+    msg.appendChild(el('b', { color: '#fff' }, '১৮ বছর বা তার বেশি'));
+    msg.appendChild(document.createTextNode(' হতে হবে।'));
+    card.appendChild(msg);
+
+    var row = el('div', { display: 'flex', gap: '10px' });
+    var no = el('button', {
+      flex: '1', padding: '12px 0', 'border-radius': '10px',
+      border: '1px solid rgba(255,255,255,0.15)', background: 'transparent',
+      color: '#94a3b8', 'font-weight': '700', 'font-size': '14px', cursor: 'pointer'
+    }, 'না, বের হচ্ছি', 'age-gate-no');
+    var yes = el('button', {
+      flex: '1', padding: '12px 0', 'border-radius': '10px', border: 'none',
+      background: 'linear-gradient(135deg,#EAB308,#FCD34D)', color: '#000',
+      'font-weight': '800', 'font-size': '14px', cursor: 'pointer'
+    }, 'হ্যাঁ, আমি ১৮+', 'age-gate-yes');
+    row.appendChild(no);
+    row.appendChild(yes);
+    card.appendChild(row);
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    document.getElementById('age-gate-yes').addEventListener('click', function () {
+    yes.addEventListener('click', function () {
       setCookie(COOKIE_NAME, '1', COOKIE_DAYS);
       overlay.remove();
     });
-
-    document.getElementById('age-gate-no').addEventListener('click', function () {
+    no.addEventListener('click', function () {
       window.location.href = 'https://www.google.com';
     });
   }
