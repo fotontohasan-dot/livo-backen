@@ -44,7 +44,8 @@ describe('বাইরে আনা স্ক্রিপ্ট — যা ল�
     for (const file of templates) {
       const src = fs.readFileSync(file, 'utf8');
       for (const m of src.matchAll(/<script src="(\/js\/[^"]+)"/g)) {
-        const target = path.join(ROOT, 'public', m[1].replace(/^\//, ''));
+        // ক্যাশ-বাস্টিং সাফিক্স (?v=<%= ... %>) ডিস্কের ফাইলনামের অংশ নয় — বাদ দিয়ে ফাইল খোঁজা হয়।
+        const target = path.join(ROOT, 'public', m[1].replace(/^\//, '').split('?')[0]);
         if (!fs.existsSync(target)) missing.push(path.relative(ROOT, file) + ' -> ' + m[1]);
       }
     }
