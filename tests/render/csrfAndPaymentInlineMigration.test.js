@@ -30,9 +30,11 @@ describe('CSRF ইনজেক্টর — একটাই কপি', () => {
     expect(offenders).toEqual([]);
   });
 
-  test('১০টা টেমপ্লেটই শেয়ার করা ফাইলটা লোড করে', () => {
+  test('১১টা টেমপ্লেটই শেয়ার করা ফাইলটা লোড করে', () => {
+    // ১০টা আগের + views/merchant/partials/merchant-layout.ejs (মার্চেন্ট পোর্টাল — নিজের ইনলাইন কপি নেই)।
     const users = VIEWS.filter((f) => /\/js\/csrf-inject\.js/.test(fs.readFileSync(f, 'utf8')));
-    expect(users.length).toBe(10);
+    expect(users.length).toBe(11);
+    expect(users.map((f) => path.relative(ROOT, f))).toContain(path.join('views', 'merchant', 'partials', 'merchant-layout.ejs'));
   });
 
   test('দুর্বল সংস্করণটা নয় — শক্তিশালীটাই রাখা হয়েছে', () => {
