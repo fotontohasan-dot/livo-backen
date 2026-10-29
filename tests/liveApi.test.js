@@ -20,4 +20,14 @@ describe('services/liveApi', () => {
   test('ভুল দৈর্ঘ্যের AES key বাতিল', () => {
     expect(() => live.encryptParams('{}', 'short')).toThrow();
   });
+
+  test('URL ডিফল্টে obothapi + v2', () => {
+    delete process.env.LIVE_API_ROOT; delete process.env.LIVE_API_VERSION;
+    expect(live.endpointUrl('create', { apiRoot: 'https://api.obothapi.com/api/merchant/', version: 'v2' }))
+      .toBe('https://api.obothapi.com/api/merchant/create/v2');
+  });
+
+  test('loginName-এ merchantCode ছোট হাতের', () => {
+    expect(live.buildLoginName('user1', { merchantCode: '272AVA' })).toBe('272avauser1');
+  });
 });
