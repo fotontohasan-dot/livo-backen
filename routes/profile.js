@@ -3,6 +3,11 @@ const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
 const router = express.Router();
 const { pool } = require('../db');
+const { getBaseUrl } = require('../utils/publicUrl');
+const { listActiveSessions, revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
+const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { logAdminAction } = require('../services/fraudDetection');
+const { createLimiter } = require('../middleware/rateLimitFactory');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
@@ -10,7 +15,7 @@ const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
-const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
+const { getSegments, canSpin, spin, getHistory: getWheelHistory, getTodayResult } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
@@ -20,6 +25,14 @@ const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
+
+// PIN তৈরি/পরিবর্তন/রিসেট — প্রতি ইউজারে ১৫ মিনিটে সর্বোচ্চ ৬ বার (ব্রুট-ফোর্স ঠেকাতে)।
+const accountSecurityLimiter = createLimiter('account_security', {
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  message: (req) => req.t('common_rate_limited_15m'),
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+});
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -109,13 +122,25 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security/login-password');
     }
 
+    if (!np || np.length < 8) {
+      req.flash('error', req.t('profile_password_min_length'));
+      return res.redirect('/profile/security/login-password');
+    }
+
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    if (!(await bcrypt.compare(cp, user.rows[0].password))) {
+    if (!cp || !(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
       return res.redirect('/profile/security/login-password');
     }
-    const hashed = await bcrypt.hash(np, 10);
-    await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    const hashed = await bcrypt.hash(np, 12);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+    // পাসওয়ার্ড বদলের পর অন্য সব ডিভাইসের পুরনো সেশন বাতিল (সেশন হাইজ্যাক ঝুঁকি কমায়);
+    // বর্তমান সেশন চালু থাকে। routes/auth.js-এর password-reset-এও একই আচরণ।
+    try {
+      await revokeAllOtherSessions(req.session.user.id, req.sessionID, 'PASSWORD_CHANGE');
+    } catch (e) {
+      console.error('revokeAllOtherSessions error:', e.message);
+    }
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security/login-password');
   } catch (err) {
@@ -560,7 +585,7 @@ router.get('/api/vip-progress', isAuth, async (req, res) => {
 router.get('/referral', isAuth, async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: stats.totalReferrals,
@@ -569,7 +594,7 @@ router.get('/referral', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('referral page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
@@ -788,11 +813,11 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
 router.get('/share', isAuth, async (req, res) => {
   try {
     const share = await getShareStatus(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share, baseUrl });
   } catch (err) {
     console.error('share page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share: null, baseUrl });
   }
 });
@@ -817,6 +842,206 @@ router.get('/contest', isAuth, async (req, res) => {
   } catch (err) {
     console.error('contest page error:', err.message);
     res.render('profile/contest', { user: req.session.user, contest: null, pastContests: [] });
+  }
+});
+
+// ==================== পুনরুদ্ধার: ফ্রন্টএন্ড যে রুটগুলো এখনো কল করে (আগে 404 দিত) ====================
+
+const ALLOWED_AVATARS = [
+  'https://i.pravatar.cc/300?img=12',
+  'https://i.pravatar.cc/300?img=33',
+  'https://i.pravatar.cc/300?img=5',
+  'https://i.pravatar.cc/300?img=47',
+  'https://i.pravatar.cc/300?img=8',
+  'https://i.pravatar.cc/300?img=25',
+  'https://i.pravatar.cc/300?img=15',
+  'https://i.pravatar.cc/300?img=44',
+  'https://i.pravatar.cc/300?img=68',
+  'https://i.pravatar.cc/300?img=32',
+  'https://i.pravatar.cc/300?img=60',
+  'https://i.pravatar.cc/300?img=51',
+  'https://i.pravatar.cc/300?img=20',
+  'https://i.pravatar.cc/300?img=49',
+  'https://i.pravatar.cc/300?img=65',
+  'https://i.pravatar.cc/300?img=57'
+];
+
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body || {};
+    // শুধুমাত্র পূর্বনির্ধারিত তালিকার URL গ্রহণযোগ্য — নইলে ইউজার
+    // যেকোনো external/malicious URL সেট করতে পারত।
+    if (!avatar || !ALLOWED_AVATARS.includes(avatar)) {
+      return res.status(400).json({ success: false, error: req.t('profile_avatar_invalid') });
+    }
+    await pool.query('UPDATE users SET avatar=$1 WHERE id=$2', [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('profile/update-avatar error:', err.message);
+    res.status(500).json({ success: false, error: req.t('profile_avatar_update_failed') });
+  }
+});
+
+router.post('/devices/:id/logout', isAuth, async (req, res) => {
+  try {
+    await revokeDeviceSession(req.session.user.id, parseInt(req.params.id, 10), req.session.user.username);
+    req.flash('success', req.t('profile_device_logged_out'));
+  } catch (err) {
+    console.error('device logout error:', err.message);
+    req.flash('error', req.t('profile_device_logout_failed'));
+  }
+  res.redirect('/profile/security');
+});
+
+router.post('/devices/logout-all-others', isAuth, async (req, res) => {
+  try {
+    const count = await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username);
+    req.flash('success', count > 0 ? req.t('profile_devices_logged_out_count').replace('{value}', count) : req.t('profile_no_other_devices'));
+  } catch (err) {
+    console.error('logout-all-others error:', err.message);
+    req.flash('error', req.t('common_retry_error'));
+  }
+  res.redirect('/profile/security');
+});
+
+router.get('/login-history', isAuth, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = 20;
+  try {
+    const logins = await listLoginHistory(req.session.user.id, limit + 1, (page - 1) * limit);
+    const hasMore = logins.length > limit;
+    res.render('profile/login-history', {
+      user: req.session.user,
+      logins: logins.slice(0, limit),
+      page,
+      hasMore
+    });
+  } catch (err) {
+    console.error('login-history load error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page, hasMore: false, loadError: true });
+  }
+});
+
+router.get('/wheel/result', isAuth, async (req, res) => {
+  try {
+    const result = await getTodayResult(req.session.user.id, req.lang || 'bn');
+    if (!result) return res.json({ success: false, message: req.t('profile_no_spin_today') });
+    res.json({ success: true, prize: result.prize, message: result.message });
+  } catch (err) {
+    console.error('wheel result error:', err.message);
+    res.json({ success: false, message: req.t('common_server_error') });
+  }
+});
+
+router.get('/support', isAuth, (req, res) => {
+  res.render('profile/support', { user: req.session.user });
+});
+
+router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const status = await getPinStatus(userId);
+    if (status.configured) {
+      req.flash('error', req.t('pin_already_set'));
+      return res.redirect('/profile/security');
+    }
+
+    const { pin, confirmPin } = req.body;
+    if (!pin || !confirmPin || pin !== confirmPin) {
+      req.flash('error', req.t('pin_mismatch'));
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(pin)) {
+      req.flash('error', req.t('pin_too_weak_detail'));
+      return res.redirect('/profile/security');
+    }
+
+    await createPin(userId, pin, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
+    req.flash('success', req.t('pin_created'));
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin create error:', err.message);
+    req.flash('error', req.t('pin_create_failed'));
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN পরিবর্তন (বর্তমান PIN জানা থাকলে) ====================
+router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { currentPin, newPin, confirmNewPin } = req.body;
+
+    const status = await getPinStatus(userId);
+    if (!status.configured) {
+      req.flash('error', req.t('pin_not_created_yet'));
+      return res.redirect('/profile/security');
+    }
+    if (status.locked) {
+      req.flash('error', req.t('pin_locked_minutes').replace('{value}', Math.ceil(status.remainingMs / 60000)));
+      return res.redirect('/profile/security');
+    }
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', req.t('pin_new_mismatch'));
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', req.t('pin_too_weak'));
+      return res.redirect('/profile/security');
+    }
+
+    const check = await verifyPin(userId, currentPin, req.ip);
+    if (!check.success) {
+      if (check.locked) {
+        req.flash('error', req.t('pin_locked_15m'));
+      } else {
+        req.flash('error', req.t('pin_current_wrong'));
+      }
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'changed');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
+    req.flash('success', req.t('pin_changed'));
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin change error:', err.message);
+    req.flash('error', req.t('pin_change_failed'));
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN রিসেট (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) ====================
+router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { accountPassword, newPin, confirmNewPin } = req.body;
+
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', req.t('pin_new_mismatch'));
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', req.t('pin_too_weak'));
+      return res.redirect('/profile/security');
+    }
+
+    const u = await pool.query('SELECT password FROM users WHERE id=$1', [userId]);
+    if (!u.rows[0] || !(await bcrypt.compare(accountPassword || '', u.rows[0].password))) {
+      req.flash('error', req.t('profile_account_password_wrong'));
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'reset');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
+    req.flash('success', req.t('pin_reset_done'));
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin reset error:', err.message);
+    req.flash('error', req.t('pin_reset_failed'));
+    res.redirect('/profile/security');
   }
 });
 

@@ -1274,61 +1274,8 @@ router.post('/sslcommerz/ipn', async (req, res) => {
 //   ৪. amount ভেরিফিকেশন যোগ করুন — request.amount-এর সাথে প্রোভাইডারের
 //      পাঠানো amount না মিললে credit করবেন না (দেখুন উপরে amountMatches)।
 // ---------------------------------------------------------------------------
-router.post('/single-wallet/callback', async (req, res) => {
-  // TODO: এখানে req.body / req.headers থেকে signature verify করুন।
-  // ভেরিফিকেশন ছাড়া এই endpoint কখনো লাইভ রাখবেন না।
-
-  const { trackingId, userId, status } = req.body || {};
-
-  if (!trackingId || !userId || !status) {
-    return res.status(400).json({ success: false, error: 'MISSING_FIELDS' });
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const result = await client.query(
-      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 AND user_id=$2 FOR UPDATE`,
-      [trackingId, userId]
-    );
-    const request = result.rows[0];
-
-    if (!request || request.status !== 'pending') {
-      await client.query('ROLLBACK');
-      // ইতিমধ্যে প্রসেসড বা অস্তিত্বহীন — গেটওয়েকে বলা হচ্ছে "গ্রহণ করা হয়েছে"
-      // যাতে অহেতুক রিট্রাই লুপ না হয় (sslcommerz/ipn-এর একই যুক্তি দেখুন)।
-      return res.sendStatus(200);
-    }
-
-    // TODO: এখানে প্রোভাইডারের সার্ভারে গিয়ে independently verify করুন
-    // (callback body কখনো একা যথেষ্ট নয়) এবং amount/currency মিলান।
-    const isSuccess = status === 'SUCCESS';
-
-    if (isSuccess) {
-      await client.query(
-        `UPDATE payment_requests SET gateway_response=$1 WHERE id=$2`,
-        [JSON.stringify(req.body), request.id]
-      );
-      await creditApprovedDeposit(client, request);
-    } else {
-      await client.query(
-        `UPDATE payment_requests SET status='rejected', gateway_response=$1, updated_at=NOW() WHERE id=$2`,
-        [JSON.stringify(req.body), request.id]
-      );
-    }
-
-    await client.query('COMMIT');
-    return res.sendStatus(200);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('single-wallet callback error:', err.message);
-    // ব্যর্থতায় 500 — গেটওয়ে যেন নিজের রিট্রাই নীতি অনুযায়ী আবার পাঠায়।
-    return res.sendStatus(500);
-  } finally {
-    client.release();
-  }
-});
+// (নিরাপত্তা) POST /single-wallet/callback সরানো হয়েছে — signature যাচাই ছাড়া যে কেউ ডিপোজিট ক্রেডিট করাতে পারত।
+// স্বাক্ষর-যাচাইসহ বৈধ রুট: POST /wallet-callback/:provider (routes/walletCallback.js)।
 
 router.creditApprovedDeposit = creditApprovedDeposit;
 module.exports = router;

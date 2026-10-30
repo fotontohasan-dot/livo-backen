@@ -27,6 +27,8 @@ const KYC_DOCTYPE_RE = /^[A-Za-z_\-\s]{2,40}$/;
 // এখন cloud_name আমাদের নিজের (CLOUDINARY_CLOUD_NAME) কিনা এবং পাথ আমাদের নিজস্ব
 // আপলোড ফোল্ডারের (routes/chat.js-এর 'livo/chat', যেটা KYC আপলোডও ব্যবহার করে) ভেতরে
 // কিনা — দুটোই যাচাই করা হয়।
+const KYC_ALLOWED_UPLOAD_FOLDERS = ['/bet420/chat/', '/livo/chat/'];
+
 function isSafeCloudinaryUrl(url) {
   if (typeof url !== 'string' || !url) return false;
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -36,7 +38,9 @@ function isSafeCloudinaryUrl(url) {
     if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return false;
     const expectedPrefix = `/${cloudName}/`;
     if (!parsed.pathname.startsWith(expectedPrefix)) return false;
-    return parsed.pathname.includes('/livo/chat/');
+    // আসল আপলোড ফোল্ডার routes/chat.js-এ 'bet420/chat' — আগে এখানে শুধু 'livo/chat' চেক হতো,
+    // ফলে প্রতিটা বৈধ KYC ডকুমেন্ট URL বাতিল হতো। ব্র্যান্ড রিনেমের সময়কার জন্য দুটোই গ্রহণযোগ্য।
+    return KYC_ALLOWED_UPLOAD_FOLDERS.some((folder) => parsed.pathname.includes(folder));
   } catch (e) {
     return false;
   }
