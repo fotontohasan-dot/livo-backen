@@ -295,7 +295,8 @@ describe('#55 SMS সিমুলেশন সফলতা বলে চাল�
 
 describe('#14 transaction ID পুনঃব্যবহার', () => {
   test('অন্য ইউজারের TrxID status নির্বিশেষে ব্লক', () => {
-    const payment = read('routes', 'payment.js');
-    expect(payment).toMatch(/user_id <> \$3 OR status <> 'rejected'/);
+    // লজিক এখন services/transactionId.js-এ (payment.js শুধু findDuplicate ডাকে)
+    const svc = read('services', 'transactionId.js');
+    expect(svc).toMatch(/user_id <> \$2 OR status <> 'rejected'/);
   });
 });
