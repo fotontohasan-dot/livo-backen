@@ -13,6 +13,7 @@ const _t = (typeof t !== 'undefined' && t) ? t : {
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title><%= _t.error_title %> - <%= siteName %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+ <link rel="stylesheet" href="/css/brand.css?v=<%= locals.assetVersion || 'dev' %>">
  <style nonce="<%= cspNonce %>">
    * { margin:0; padding:0; box-sizing:border-box; }
    body {
@@ -55,6 +56,7 @@ const _t = (typeof t !== 'undefined' && t) ? t : {
 </head>
 <body>
  <div class="error-box">
+   <picture><source srcset="/images/brand/bet420-wordmark.webp" type="image/webp"><img class="brand-logo brand-logo--page" src="/images/brand/bet420-wordmark.png" width="720" height="195" alt="<%= siteName %>" decoding="async"></picture>
    <div class="error-icon">⚠️</div>
    <h1><%= _t.error_title %></h1>
    <p><%= message || _t.server_error %></p>

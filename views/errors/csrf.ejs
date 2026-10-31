@@ -5,6 +5,7 @@
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>Invalid or Expired CSRF Token - <%= typeof siteName !== 'undefined' ? siteName : 'Bet420' %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+ <link rel="stylesheet" href="/css/brand.css?v=<%= locals.assetVersion || 'dev' %>">
  <style nonce="<%= cspNonce %>">
    * { margin:0; padding:0; box-sizing:border-box; }
    body {
@@ -47,6 +48,7 @@
 </head>
 <body>
  <div class="error-box">
+   <picture><source srcset="/images/brand/bet420-wordmark.webp" type="image/webp"><img class="brand-logo brand-logo--page" src="/images/brand/bet420-wordmark.png" width="720" height="195" alt="<%= typeof siteName !== 'undefined' ? siteName : 'Bet420' %>" decoding="async"></picture>
    <div class="error-icon">🚫</div>
    <h1>Invalid or Expired CSRF Token</h1>
    <p><%= t('csrf_expired') %></p>
