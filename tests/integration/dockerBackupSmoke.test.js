@@ -127,7 +127,7 @@ describe('Docker ডিপ্লয়মেন্ট কনফিগ স্ম�
 // ---------------------------------------------------------------------------
 describe('compose কনফিগ পার্সার-স্তরের যাচাই (Docker ডিমন ছাড়াই)', () => {
   const yaml = require('js-yaml');
-  const baseDoc = yaml.load(compose);
+  const baseDoc = yaml.load(compose, { schema: yaml.YAML11_SCHEMA });
   const overrideDoc = yaml.load(fs.readFileSync(path.join(ROOT, 'docker-compose.override.yml'), 'utf8'));
 
   test('তিনটে compose ফাইলই সিনট্যাক্টিক্যালি বৈধ YAML', () => {
