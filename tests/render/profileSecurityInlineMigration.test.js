@@ -62,7 +62,8 @@ describe('profile/security.ejs — ট্যাব এখন আসল পেজ
 
 describe('routes/profile.js — /security/:tab রাউট ও রিডাইরেক্ট টার্গেট', () => {
   test('GET /security/:tab? রাউট আছে, বৈধ ট্যাব লিস্ট আছে', () => {
-    expect(routes).toMatch(/router\.get\('\/security\/:tab\?'/);
+    // Express 5 (path-to-regexp v8)-এ ঐচ্ছিক সেগমেন্ট `{/:tab}`; পুরনো `/:tab?` আর চলে না।
+    expect(routes).toMatch(/router\.get\('\/security\{\/:tab\}'/);
     expect(routes).toContain("SECURITY_TABS");
   });
 

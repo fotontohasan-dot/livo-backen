@@ -202,9 +202,9 @@ describe('অ্যাকাউন্ট সেন্টার — ডেটা 
   test('মোবাইলে অনুভূমিক ওভারফ্লো ঠেকাতে গ্রিড রেসপনসিভ', async () => {
     const { agent } = await makeUserAgent();
     const res = await agent.get('/profile');
-    expect(res.text).toMatch(/\.mc-flat-grid\{[^}]*grid-template-columns:repeat\(4,1fr\)/);
-    expect(res.text).toMatch(/@media \(max-width:339px\)\{\.mc-flat-grid\{grid-template-columns:repeat\(3,1fr\)\}/);
-    expect(res.text).toMatch(/@media \(min-width:768px\)\{\.mc-flat-grid\{grid-template-columns:repeat\(6,1fr\)\}/);
+    expect(res.text).toMatch(/\.mc-flat-grid\{[^}]*grid-template-columns:repeat\(4,(?:minmax\(0,)?1fr\)?\)/);
+    expect(res.text).toMatch(/@media \(max-width:339px\)\{\.mc-flat-grid\{grid-template-columns:repeat\(3,(?:minmax\(0,)?1fr\)?\)\}/);
+    expect(res.text).toMatch(/@media \(min-width:768px\)\{\.mc-flat-grid\{grid-template-columns:repeat\(6,(?:minmax\(0,)?1fr\)?\)\}/);
   });
 
   test('টাচ টার্গেট যথেষ্ট বড় (min-height ৬৪px)', async () => {

@@ -370,7 +370,7 @@ body.light-mode .promo-banner {
 <!-- ===== 3D Hero Particles Background ===== -->
 <div id="hero-3d" style="position:absolute; top:0; left:0; right:0; height:400px; z-index:-1;"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
+<script nonce="<%= cspNonce %>">
 (function() {
   const container = document.getElementById('hero-3d');
   if (!container) return;
@@ -616,7 +616,7 @@ body.light-mode .promo-banner {
 </div>
 
 <!-- ===== 3D Card Tilt Effect ===== -->
-<script>
+<script nonce="<%= cspNonce %>">
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.game-card-premium').forEach(card => {
     card.addEventListener('mousemove', e => {

@@ -5,6 +5,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const { getBaseUrl } = require('../utils/publicUrl');
+const cache = require('../services/cache');
 const { listActiveSessions, revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { logAdminAction } = require('../services/fraudDetection');
@@ -276,87 +277,85 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-// ট্যাব সিলেকশন সার্ভার-সাইডে URL প্যারাম দিয়ে ঠিক হয় (/profile/security/bank
-// ইত্যাদি) — প্রতিটা ক্যাটাগরি এখন নিজের আলাদা, একক পেজ (কোনো পাশাপাশি
-// ট্যাব-বার/অন্য ফিচারের অপশন দেখায় না, একটাতে ক্লিক করলে একটাই ফিচার খোলে)।
-const SECURITY_TABS = ['personal', 'bank', 'login-password', 'transaction-password'];
-
-// Safety Score / Checklist — স্ক্রিনশটের ডিজাইন অনুযায়ী। ক্রিপ্টো ওয়ালেট/
-// ই-ওয়ালেটের জন্য বাস্তব ডেটা bank_cards টেবিল থেকে; ট্রানজেকশন পাসওয়ার্ড
-// সেট হয়েছে কিনা সেটা users.transaction_password কলাম থেকে।
-function buildSecurityChecklist(user, bankCards) {
-  const personalInfoComplete = !!(user.full_name && user.phone);
-  const hasWallet = bankCards.length > 0;
-  const hasTxnPassword = !!user.transaction_password;
-
-  const checklist = [
-    {
-      icon: 'fa-user', ok: personalInfoComplete,
-      label: 'Personal Info',
-      sub: personalInfoComplete ? req.t('profile_msg_23') : 'Complete your personal info.',
-      kind: 'tab', target: 'personal'
-    },
-    {
-      icon: 'fa-coins', ok: hasWallet,
-      label: 'Add Crypto Wallet',
-      sub: hasWallet ? req.t('profile_msg_24') : 'Please use a trusted crypto wallet.',
-      kind: 'tab', target: 'bank'
-    },
-    {
-      icon: 'fa-wallet', ok: hasWallet,
-      label: 'Bind E-Wallet',
-      sub: hasWallet ? req.t('profile_msg_25') : 'Bind an e-wallet for withdrawals.',
-      kind: 'tab', target: 'bank'
-    },
-    {
-      icon: 'fa-lock', ok: false,
-      label: 'Change Login Password',
-      sub: 'Suggested: mix of letters and numbers',
-      kind: 'tab', target: 'login-password'
-    },
-    {
-      icon: 'fa-shield-halved', ok: hasTxnPassword,
-      label: 'Transaction Password',
-      sub: hasTxnPassword ? req.t('profile_msg_26') : 'Set a funds password to improve transaction security',
-      kind: 'tab', target: 'transaction-password'
-    }
-  ];
-
-  const okCount = checklist.filter(it => it.ok).length;
-  const safetyScore = Math.round((okCount / checklist.length) * 100);
-  const safetyLevel = safetyScore >= 80 ? 'high' : (safetyScore >= 40 ? 'medium' : 'low');
-
-  return { checklist, safetyScore, safetyLevel };
-}
-
+// 'login-password' ও 'transaction-password' আলাদা পেজ; 'login-password' পাসওয়ার্ড-পরিবর্তন ফর্মসহ 'security' ট্যাবে দেখায়।
+const SECURITY_TABS = ['personal', 'bank', 'security', 'devices', 'transaction-password'];
+// Express 5 (path-to-regexp v8): ঐচ্ছিক সেগমেন্ট `{/:tab}` সিনট্যাক্সে লিখতে হয়।
 router.get('/security{/:tab}', isAuth, async (req, res) => {
-  // '/profile/security' (no :tab) → hub page: শুধু Safety Score + checklist,
-  // কোনো ফর্ম/ট্যাব কন্টেন্ট থাকে না।
-  // '/profile/security/personal|bank|security' → dedicated page: শুধু সেই
-  // একটা সেকশনের ফর্ম, হাবের Safety Score/checklist আর দেখানো হয় না।
-  // ফলে checklist আইটেমে ক্লিক করলে আসলেই আলাদা একটা পেজে যায়, নিচে
-  // স্ক্রল করে আগের কন্টেন্টের সাথে জোড়া লাগা কিছু দেখায় না।
-  const isDetailView = !!req.params.tab;
-  const activeTab = SECURITY_TABS.includes(req.params.tab) ? req.params.tab : 'personal';
+  const rawTab = req.params.tab === 'login-password' ? 'security' : req.params.tab;
+  const activeTab = SECURITY_TABS.includes(rawTab) ? rawTab : 'personal';
   try {
-    const [userRes, cards] = await Promise.all([
-      pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]),
-      pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id])
-    ]);
-    const user = userRes.rows[0] || req.session.user;
-    const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(user, cards.rows);
+    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, wallet_kind, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const hasCryptoWallet = cards.rows.some(c => c.wallet_kind === 'crypto');
+    const hasEwallet = cards.rows.some(c => c.wallet_kind !== 'crypto');
+    let pinStatus = { configured: false, locked: false };
+    try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
+
+    let activeSessions = [];
+    let recentLogins = [];
+    try {
+      activeSessions = await listActiveSessions(req.session.user.id, req.sessionID);
+      recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
+    } catch (e) { console.error('security devices load error:', e.message); }
+
+    // ==================== Security Center — ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
+    let emailStatus = { verified: true, hasEmail: false, lastSentAt: null };
+    let passwordChangedAt = null;
+    try {
+      const u = await pool.query(
+        'SELECT email, email_verified, last_verification_sent_at, password_changed_at FROM users WHERE id = $1',
+        [req.session.user.id]
+      );
+      if (u.rows[0]) {
+        emailStatus = {
+          verified: !!u.rows[0].email_verified,
+          hasEmail: !!u.rows[0].email,
+          lastSentAt: u.rows[0].last_verification_sent_at
+        };
+        passwordChangedAt = u.rows[0].password_changed_at;
+      }
+    } catch (e) { console.error('security email/password status load error:', e.message); }
+
+    // সাম্প্রতিক অ্যাক্টিভিটি — লগইন + ডিপোজিট/উইথড্র + রিওয়ার্ড/VIP, একই cache key পুনঃব্যবহার করা হয়েছে যাতে ডুপ্লিকেট কোয়েরি না হয়
+    let recentActivity = [];
+    try {
+      recentActivity = await cache.getOrSet(`profile:recent:${req.session.user.id}`, 20, async () => {
+        const r = await pool.query(
+          `(SELECT 'login' AS kind, created_at, NULL::numeric AS amount FROM login_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5)
+           UNION ALL
+           (SELECT type AS kind, created_at, amount FROM payment_requests WHERE user_id=$1 AND status='approved' ORDER BY created_at DESC LIMIT 5)
+           UNION ALL
+           (SELECT CASE WHEN type='vip_upgrade' THEN 'vip_upgrade' ELSE 'reward_claim' END AS kind, created_at, amount
+              FROM coin_transactions WHERE user_id=$1 AND amount > 0
+                AND type IN ('badge','mission','loyalty_redeem','weekly_cashback','monthly_reward','social_share','daily_bonus','cashback','free_bet','lucky_wheel','vip_upgrade','win_streak')
+              ORDER BY created_at DESC LIMIT 5)
+           ORDER BY created_at DESC LIMIT 10`,
+          [req.session.user.id]
+        );
+        return r.rows;
+      });
+    } catch (e) { console.error('security recent activity error:', e.message); }
+
+    const personalInfoComplete = !!(req.session.user.full_name && req.session.user.phone);
+    const lastLogin = recentLogins[0] || null;
+
+    // ==================== নিরাপত্তা শতাংশ — ৫টি আইটেম, প্রতিটি ২০% ====================
+    const safetyChecks = [personalInfoComplete, hasCryptoWallet, hasEwallet, !!passwordChangedAt, !!(pinStatus && pinStatus.configured)];
+    const safetyScore = safetyChecks.filter(Boolean).length * 20;
+    const safetyLevel = safetyScore >= 80 ? 'high' : (safetyScore >= 40 ? 'medium' : 'low');
+
     res.render('profile/security', {
-      user, bankCards: cards.rows, activeTab, isDetailView,
-      checklist, safetyScore, safetyLevel,
-      lastLogin: { ip: user.last_ip, created_at: user.last_login }
+      user: req.session.user, bankCards: cards.rows, hasCryptoWallet, hasEwallet, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt, recentActivity, loadError: false,
+      personalInfoComplete, lastLogin, safetyScore, safetyLevel, activeTab
     });
   } catch (err) {
+    // খালি bankCards দেখলে ইউজার ভাবতে পারে তার সংরক্ষিত ওয়ালেট মুছে
+    // গেছে — এটাই withdraw-এর গন্তব্য, তাই "খালি" আর "জানা যায়নি" আলাদা।
     console.error('security page error:', err.message);
-    const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(req.session.user, []);
     res.render('profile/security', {
-      user: req.session.user, bankCards: [], activeTab, isDetailView,
-      checklist, safetyScore, safetyLevel,
-      lastLogin: { ip: null, created_at: null }
+      user: req.session.user, bankCards: [], hasCryptoWallet: false, hasEwallet: false, pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: [], loadError: true,
+      personalInfoComplete: false, lastLogin: null, safetyScore: 0, safetyLevel: 'low', activeTab
     });
   }
 });
@@ -436,6 +435,12 @@ const claimLimiter = rateLimit({
 router.post('/wheel/spin', isAuth, requireFeature('lucky_wheel'), claimLimiter, async (req, res) => {
   try {
     const result = await spin(req.session.user.id, req.lang);
+    // সফল স্পিনে পুরস্কার/জয়ের বার্তা ক্লায়েন্টে পাঠানো হয় না — অ্যানিমেশন শেষ হওয়ার
+    // আগে ফলাফল দেখা (বা নেটওয়ার্ক ট্যাবে ফাঁস) ঠেকাতে। ক্লায়েন্ট শুধু `index` দিয়ে
+    // চাকা ঘোরায়, তারপর GET /wheel/result থেকে নিজের ফলাফল আনে।
+    if (result && result.success) {
+      return res.json({ success: true, index: result.index });
+    }
     res.json(result);
   } catch (err) {
     console.error('wheel spin error:', err.message);
@@ -469,7 +474,14 @@ router.post('/missions/claim/:id', isAuth, requireFeature('missions'), async (re
 router.get('/rewards', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
-    res.render('profile/rewards', { user: req.session.user, reward });
+    // ব্যাজ প্রিভিউ ঐচ্ছিক — ব্যর্থ হলেও রিওয়ার্ড পেজ যেন ভেঙে না যায়
+    let badgesPreview;
+    try {
+      const all = await getBadges(req.session.user.id);
+      const earned = all.filter(b => b.earned);
+      badgesPreview = { totalCount: all.length, earnedCount: earned.length, earned: earned.slice(0, 6) };
+    } catch (e) { console.error('rewards badges preview error:', e.message); }
+    res.render('profile/rewards', { user: req.session.user, reward, badgesPreview });
   } catch (err) {
     console.error('rewards page error:', err.message);
     res.render('profile/rewards', { user: req.session.user, reward: null });
@@ -613,7 +625,8 @@ router.get('/transactions', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    console.error('profile transactions load error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -625,7 +638,8 @@ router.get('/account-record', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    console.error('profile transactions load error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -892,7 +906,7 @@ router.post('/devices/:id/logout', isAuth, async (req, res) => {
     console.error('device logout error:', err.message);
     req.flash('error', req.t('profile_device_logout_failed'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/devices');
 });
 
 router.post('/devices/logout-all-others', isAuth, async (req, res) => {
@@ -903,7 +917,7 @@ router.post('/devices/logout-all-others', isAuth, async (req, res) => {
     console.error('logout-all-others error:', err.message);
     req.flash('error', req.t('common_retry_error'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/devices');
 });
 
 router.get('/login-history', isAuth, async (req, res) => {
@@ -945,27 +959,27 @@ router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, 
     const status = await getPinStatus(userId);
     if (status.configured) {
       req.flash('error', req.t('pin_already_set'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const { pin, confirmPin } = req.body;
     if (!pin || !confirmPin || pin !== confirmPin) {
       req.flash('error', req.t('pin_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(pin)) {
       req.flash('error', req.t('pin_too_weak_detail'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await createPin(userId, pin, req.ip);
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `User #${userId} created their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_created'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin create error:', err.message);
     req.flash('error', req.t('pin_create_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
@@ -978,19 +992,19 @@ router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, 
     const status = await getPinStatus(userId);
     if (!status.configured) {
       req.flash('error', req.t('pin_not_created_yet'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (status.locked) {
       req.flash('error', req.t('pin_locked_minutes').replace('{value}', Math.ceil(status.remainingMs / 60000)));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
       req.flash('error', req.t('pin_new_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(newPin)) {
       req.flash('error', req.t('pin_too_weak'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const check = await verifyPin(userId, currentPin, req.ip);
@@ -1000,17 +1014,17 @@ router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, 
       } else {
         req.flash('error', req.t('pin_current_wrong'));
       }
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await updatePin(userId, newPin, req.ip, 'changed');
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `User #${userId} changed their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_changed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin change error:', err.message);
     req.flash('error', req.t('pin_change_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
@@ -1022,27 +1036,27 @@ router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, r
 
     if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
       req.flash('error', req.t('pin_new_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(newPin)) {
       req.flash('error', req.t('pin_too_weak'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const u = await pool.query('SELECT password FROM users WHERE id=$1', [userId]);
     if (!u.rows[0] || !(await bcrypt.compare(accountPassword || '', u.rows[0].password))) {
       req.flash('error', req.t('profile_account_password_wrong'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await updatePin(userId, newPin, req.ip, 'reset');
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `User #${userId} reset their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_reset_done'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin reset error:', err.message);
     req.flash('error', req.t('pin_reset_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 

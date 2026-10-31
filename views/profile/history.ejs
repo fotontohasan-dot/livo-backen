@@ -1,5 +1,20 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* filter chips — inline style → class (CSP style-src-attr) */
+  .hf-1{white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass);}
+  .hf-2{flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass);}
+  .hf-quick-today{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-today.is-on{background:var(--grad-gold);color:#000}
+  .hf-quick-yesterday{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-yesterday.is-on{background:var(--grad-gold);color:#000}
+  .hf-quick-7days{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-7days.is-on{background:var(--grad-gold);color:#000}
+  .hf-status-won{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-won.is-on{background:#10b981;color:var(--text-main)}
+  .hf-status-lost{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-lost.is-on{background:#ef4444;color:var(--text-main)}
+  .hf-status-pending{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-pending.is-on{background:#f59e0b;color:#000}
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
@@ -44,9 +59,9 @@
 
   <form class="im73-2" method="GET" action="/profile/history">
     <div class="dz72-4">
-      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
-      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
-      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <button type="submit" name="quick" value="today" class="hf-1 hf-quick-today <%= filter.quick === 'today' ? 'is-on' : '' %>">আজ</button>
+      <button type="submit" name="quick" value="yesterday" class="hf-1 hf-quick-yesterday <%= filter.quick === 'yesterday' ? 'is-on' : '' %>">গতকাল</button>
+      <button type="submit" name="quick" value="7days" class="hf-1 hf-quick-7days <%= filter.quick === '7days' ? 'is-on' : '' %>">গত ৭ দিন</button>
       <a class="dz72-5" href="/profile/history"><%= t('hist_all') %></a>
     </div>
     <div class="im73-3">
@@ -56,9 +71,9 @@
       <button class="dz72-8" type="submit"><%= t('hist_filter') %></button>
     </div>
     <div class="im73-4">
-      <button type="submit" name="status" value="won" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'won' ? '#10b981' : 'var(--bg-card)' %>; color: <%= filter.status === 'won' ? 'var(--text-main)' : 'var(--text-main)' %>;">জয়</button>
-      <button type="submit" name="status" value="lost" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'lost' ? '#ef4444' : 'var(--bg-card)' %>; color: <%= filter.status === 'lost' ? 'var(--text-main)' : 'var(--text-main)' %>;">হার</button>
-      <button type="submit" name="status" value="pending" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'pending' ? '#f59e0b' : 'var(--bg-card)' %>; color: <%= filter.status === 'pending' ? '#000' : 'var(--text-main)' %>;">পেন্ডিং</button>
+      <button type="submit" name="status" value="won" class="hf-2 hf-status-won <%= filter.status === 'won' ? 'is-on' : '' %>">জয়</button>
+      <button type="submit" name="status" value="lost" class="hf-2 hf-status-lost <%= filter.status === 'lost' ? 'is-on' : '' %>">হার</button>
+      <button type="submit" name="status" value="pending" class="hf-2 hf-status-pending <%= filter.status === 'pending' ? 'is-on' : '' %>">পেন্ডিং</button>
     </div>
   </form>
 

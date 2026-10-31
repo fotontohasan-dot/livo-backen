@@ -4,84 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>আমন্ত্রণ শেয়ার করুন</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Noto Sans Bengali', Arial, sans-serif;
-    background: #f2f4f7;
-    margin: 0;
-    padding: 24px 16px;
-    display: flex;
-    justify-content: center;
-  }
-  .card {
-    background: #fff;
-    border-radius: 16px;
-    max-width: 420px;
-    width: 100%;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  }
-  h1 {
-    font-size: 20px;
-    text-align: center;
-    margin: 0 0 8px;
-  }
-  p.sub {
-    text-align: center;
-    color: #667085;
-    font-size: 14px;
-    margin: 0 0 20px;
-  }
-  label {
-    font-size: 13px;
-    color: #344054;
-    display: block;
-    margin: 12px 0 4px;
-  }
-  input, textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-  .btn-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 20px;
-  }
-  .share-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 4px;
-    border-radius: 12px;
-    text-decoration: none;
-    font-size: 12px;
-    color: #fff;
-    cursor: pointer;
-    border: none;
-  }
-  .share-btn svg { width: 24px; height: 24px; fill: #fff; }
-  .whatsapp { background: #25D366; }
-  .messenger { background: #0084FF; }
-  .facebook  { background: #1877F2; }
-  .instagram { background: linear-gradient(45deg,#f58529,#dd2a7b,#8134af,#515bd4); }
-  .viber     { background: #7360F2; }
-  .imo       { background: #23A2E1; }
-  #status {
-    text-align: center;
-    font-size: 12px;
-    color: #667085;
-    margin-top: 12px;
-    min-height: 16px;
-  }
-</style>
+<link rel="stylesheet" href="/css/invite.css">
 </head>
 <body>
 <div class="card">
@@ -124,45 +47,6 @@
   <div id="status"></div>
 </div>
 
-<script>
-  const msgEl = document.getElementById('msg');
-  const linkEl = document.getElementById('link');
-
-  const btnWhatsapp  = document.getElementById('btnWhatsapp');
-  const btnMessenger = document.getElementById('btnMessenger');
-  const btnFacebook  = document.getElementById('btnFacebook');
-  const btnInstagram = document.getElementById('btnInstagram');
-  const btnViber     = document.getElementById('btnViber');
-  const btnImo       = document.getElementById('btnImo');
-  const status       = document.getElementById('status');
-
-  function updateLinks() {
-    const text = msgEl.value.trim();
-    const link = linkEl.value.trim();
-    const combined = encodeURIComponent(text + ' ' + link);
-    const encLink = encodeURIComponent(link);
-
-    btnWhatsapp.href  = `https://wa.me/?text=${combined}`;
-    btnFacebook.href  = `https://www.facebook.com/sharer/sharer.php?u=${encLink}`;
-    btnMessenger.href = `fb-messenger://share/?link=${encLink}`;
-    btnViber.href     = `viber://forward?text=${combined}`;
-    btnImo.href       = `imo://send?text=${combined}`;
-
-    btnInstagram.onclick = async (e) => {
-      e.preventDefault();
-      try {
-        await navigator.clipboard.writeText(text + ' ' + link);
-        status.textContent = 'টেক্সট কপি হয়েছে — এখন Instagram-এ পেস্ট করুন';
-      } catch {
-        status.textContent = 'কপি করা যায়নি, ম্যানুয়ালি কপি করুন';
-      }
-      window.location.href = 'instagram://app';
-    };
-  }
-
-  msgEl.addEventListener('input', updateLinks);
-  linkEl.addEventListener('input', updateLinks);
-  updateLinks();
-</script>
+<script src="/js/invite.js" defer></script>
 </body>
 </html>

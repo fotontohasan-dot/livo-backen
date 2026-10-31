@@ -3332,5 +3332,13 @@
   "profile_msg_34": "❌ Could not send your feedback.",
   "profile_msg_daily_limit_set": "Daily deposit limit set to {value}.",
   "profile_msg_self_exclude_set": "Your account has been locked for {value} days.",
-  "profile_msg_daily_limit_removed": "Deposit limit removed."
+  "profile_msg_daily_limit_removed": "Deposit limit removed.",
+  "txn_pwd_title_change": "Change transaction password",
+  "txn_pwd_title_set": "Set transaction password",
+  "txn_pwd_btn_change": "Change password",
+  "txn_pwd_btn_set": "Set password",
+  "txn_pwd_current": "Current transaction password",
+  "txn_pwd_new": "New transaction password",
+  "txn_pwd_confirm": "Confirm new transaction password",
+  "viph_total_count": "(total {value})"
 }

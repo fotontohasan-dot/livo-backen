@@ -1,0 +1,97 @@
+/* ==========================================================================
+   Design tokens (--ds-*) + global accessibility baseline.
+   Additive: নতুন ভেরিয়েবল যোগ করে, বিদ্যমান --gold/--bg-card ইত্যাদি বদলায় না।
+   থিম: ডিফল্ট ডার্ক; OS লাইট হলে লাইট; <html data-theme="dark|light"> দিয়ে ওভাররাইড।
+   ========================================================================== */
+:root {
+  /* Brand */
+  --ds-gold-500: #C9A227;
+  --ds-gold-400: #E0BC4A;
+  --ds-green-900: #0A1C14;
+  --ds-green-600: #10b981;
+  --ds-red-500: #C83B3B;
+
+  /* Surfaces & text (dark) */
+  --ds-bg: #0A1C14;
+  --ds-surface: #131a17;
+  --ds-surface-2: #1b2622;
+  --ds-border: rgba(255, 255, 255, 0.10);
+  --ds-text: #f4f6f5;
+  --ds-text-muted: #aab6b0;   /* ≥ 4.5:1 on --ds-bg */
+  --ds-focus: #E0BC4A;
+  --ds-on-gold: #1a1400;
+
+  /* Typography */
+  --ds-font-body: 'Hind Siliguri', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ds-font-display: 'Teko', 'Hind Siliguri', sans-serif;
+  --ds-text-xs: 0.75rem;
+  --ds-text-sm: 0.875rem;
+  --ds-text-md: 1rem;
+  --ds-text-lg: 1.25rem;
+  --ds-text-xl: 1.75rem;
+  --ds-leading: 1.55;
+
+  /* Spacing / radius / elevation / motion */
+  --ds-space-1: 4px;  --ds-space-2: 8px;  --ds-space-3: 12px;
+  --ds-space-4: 16px; --ds-space-5: 24px; --ds-space-6: 32px;
+  --ds-radius-sm: 8px; --ds-radius-md: 12px; --ds-radius-lg: 20px; --ds-radius-pill: 999px;
+  --ds-shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --ds-shadow-2: 0 8px 24px rgba(0, 0, 0, .35);
+  --ds-ease: cubic-bezier(.2, .8, .2, 1);
+  --ds-dur: 180ms;
+  --ds-tap: 44px;             /* ন্যূনতম টাচ টার্গেট */
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ds-bg: #f6f7f4;
+    --ds-surface: #ffffff;
+    --ds-surface-2: #eef1ec;
+    --ds-border: rgba(10, 28, 20, 0.14);
+    --ds-text: #0f1a15;
+    --ds-text-muted: #4b5a52;
+    --ds-focus: #8a6d00;
+    --ds-shadow-1: 0 1px 2px rgba(10, 28, 20, .12);
+    --ds-shadow-2: 0 8px 24px rgba(10, 28, 20, .14);
+  }
+}
+:root[data-theme="light"] {
+  --ds-bg: #f6f7f4; --ds-surface: #ffffff; --ds-surface-2: #eef1ec;
+  --ds-border: rgba(10, 28, 20, 0.14); --ds-text: #0f1a15; --ds-text-muted: #4b5a52;
+  --ds-focus: #8a6d00;
+  --ds-shadow-1: 0 1px 2px rgba(10, 28, 20, .12);
+  --ds-shadow-2: 0 8px 24px rgba(10, 28, 20, .14);
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
+/* ---------- Accessibility baseline ---------- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+:where(button, [role="button"], a.btn, .btn) { min-height: 40px; }
+@media (pointer: coarse) {
+  :where(button, [role="button"], a.btn, .btn) { min-height: var(--ds-tap); }
+}
+.ds-sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Reusable states (loading / empty / error) ---------- */
+.ds-state { text-align: center; padding: var(--ds-space-6) var(--ds-space-4); color: var(--ds-text-muted); }
+.ds-state--error { color: #f87171; }
+.ds-skeleton {
+  background: linear-gradient(90deg, var(--ds-surface) 25%, var(--ds-surface-2) 50%, var(--ds-surface) 75%);
+  background-size: 200% 100%; animation: ds-shimmer 1.4s linear infinite; border-radius: var(--ds-radius-sm);
+}
+@keyframes ds-shimmer { to { background-position: -200% 0; } }
