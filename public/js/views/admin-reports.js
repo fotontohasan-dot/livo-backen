@@ -7,6 +7,8 @@
   var el = document.getElementById('admin-reportsConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
 
+  // Chart.js CDN থেকে আসে — লোড না হলে চার্ট বাদ, বাকি পেজ চলবে (uncaught ReferenceError নয়)।
+  if (typeof Chart === 'undefined') return;
   const ctx1 = document.getElementById('ggrChart');
   new Chart(ctx1, {
       type: 'line',
