@@ -3332,5 +3332,6 @@
   "profile_msg_34": "❌ মতামত পাঠাতে সমস্যা হয়েছে।",
   "profile_msg_daily_limit_set": "দৈনিক ডিপোজট সীমা {value} টাকা সেট হয়েছে।",
   "profile_msg_self_exclude_set": "আপনার অ্যাকাউন্ট {value} দিনের জন্য বন্ধ করা হয়েছে।",
-  "profile_msg_daily_limit_removed": "ডিপোজিট সীমা সরানো হয়েছে।"
+  "profile_msg_daily_limit_removed": "ডিপোজিট সীমা সরানো হয়েছে।",
+  "viph_total_label": "মোট"
 }

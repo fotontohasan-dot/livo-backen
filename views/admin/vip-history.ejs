@@ -33,7 +33,7 @@
       <a class="dz7-1" href="/admin/vip"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_vip') %></a>
 
       <div class="admin-card dz7-2">
-        <div class="admin-card-header"><%= t('viph_reward_history') %> (মোট <%= rewardHistory.total %>)</div>
+        <div class="admin-card-header"><%= t('viph_reward_history') %> (<%= t('viph_total_label') %> <%= rewardHistory.total %>)</div>
         <div class="dz7-3">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_vip_level') %></th><th><%= t('admin_col_type') %></th><th><%= t('admin_col_amount') %></th><th><%= t('admin_col_description') %></th><th><%= t('admin_col_date') %></th></tr></thead>
@@ -65,7 +65,7 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header"><%= t('viph_upgrade_history') %> (মোট <%= upgradeHistory.total %>)</div>
+        <div class="admin-card-header"><%= t('viph_upgrade_history') %> (<%= t('viph_total_label') %> <%= upgradeHistory.total %>)</div>
         <div class="dz7-3">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_old_level') %></th><th><%= t('admin_col_new_level') %></th><th><%= t('admin_col_bonus') %></th><th><%= t('admin_col_turnover_at_upgrade') %></th><th><%= t('admin_col_date') %></th></tr></thead>
