@@ -3333,5 +3333,12 @@
   "profile_msg_daily_limit_set": "দৈনিক ডিপোজট সীমা {value} টাকা সেট হয়েছে।",
   "profile_msg_self_exclude_set": "আপনার অ্যাকাউন্ট {value} দিনের জন্য বন্ধ করা হয়েছে।",
   "profile_msg_daily_limit_removed": "ডিপোজিট সীমা সরানো হয়েছে।",
-  "viph_total_label": "মোট"
+  "txn_pwd_title_change": "ট্রানজেকশন পাসওয়ার্ড পরিবর্তন করুন",
+  "txn_pwd_title_set": "ট্রানজেকশন পাসওয়ার্ড সেট করুন",
+  "txn_pwd_btn_change": "পাসওয়ার্ড পরিবর্তন করুন",
+  "txn_pwd_btn_set": "পাসওয়ার্ড সেট করুন",
+  "txn_pwd_current": "বর্তমান ট্রানজেকশন পাসওয়ার্ড",
+  "txn_pwd_new": "নতুন ট্রানজেকশন পাসওয়ার্ড",
+  "txn_pwd_confirm": "নতুন ট্রানজেকশন পাসওয়ার্ড নিশ্চিত করুন",
+  "viph_total_count": "(মোট {value})"
 }

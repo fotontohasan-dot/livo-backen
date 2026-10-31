@@ -1,5 +1,13 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* filter chips — inline style → class (CSP style-src-attr) */
+  .sf-1{white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1);}
+  .sf-quick-today{background:rgba(255,255,255,0.05);color:var(--text-main)}
+  .sf-quick-today.is-on{background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000}
+  .sf-quick-yesterday{background:rgba(255,255,255,0.05);color:var(--text-main)}
+  .sf-quick-yesterday.is-on{background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000}
+  .sf-quick-7days{background:rgba(255,255,255,0.05);color:var(--text-main)}
+  .sf-quick-7days.is-on{background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000}
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */

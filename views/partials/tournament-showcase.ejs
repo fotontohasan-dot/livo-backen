@@ -22,19 +22,20 @@
    ⚠️ সংখ্যা ও নামগুলো নমুনা। উপরের প্রিভিউ চিহ্নটি সরাবেন না যতক্ষণ না এখানে
    আসল ডেটা যুক্ত হয় — নাহলে ব্যবহারকারী নমুনা বিজয়ীদের আসল বিজয়ী ভেবে বসবেন।
    ========================================================================== */
+const tshowFmt = function (n) { return Number(n).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD'); };
 const tshowLeaders = [
-  { initial: 'র', nick: 'rakib_h',    bets: 48, points: '৩,৮২০', prize: '২৫,০০০' },
-  { initial: 'স', nick: 'sumaiya_a',  bets: 39, points: '৩,১৫০', prize: '১৫,০০০' },
-  { initial: 'ত', nick: 'tanvir_i',   bets: 52, points: '২,৯৪০', prize: '১০,০০০' },
-  { initial: 'ন', nick: 'nadia_r',    bets: 31, points: '২,১১০', prize: null },
-  { initial: 'ফ', nick: 'fahim_c',    bets: 27, points: '১,৮৭০', prize: null }
+  { initial: 'R', nick: 'rakib_h',    bets: 48, points: 3820, prize: 25000 },
+  { initial: 'S', nick: 'sumaiya_a',  bets: 39, points: 3150, prize: 15000 },
+  { initial: 'T', nick: 'tanvir_i',   bets: 52, points: 2940, prize: 10000 },
+  { initial: 'N', nick: 'nadia_r',    bets: 31, points: 2110, prize: null },
+  { initial: 'F', nick: 'fahim_c',    bets: 27, points: 1870, prize: null }
 ];
-const tshowMe = { initial: 'আ', bets: 22, points: '১,২৪০', rank: '৭' };
+const tshowMe = { initial: (typeof user !== 'undefined' && user && user.username) ? String(user.username)[0].toUpperCase() : '?', bets: 22, points: 1240, rank: 7 };
 const tshowWinners = [
-  { initial: 'শ', nick: 'shakil_a', tour: t.tshow_sample_tour_football, prize: '১৮,০০০' },
-  { initial: 'ম', nick: 'mitu_b',   tour: t.tshow_sample_tour_t20,      prize: '১২,৫০০' },
-  { initial: 'আ', nick: 'ariful_h', tour: t.tshow_sample_tour_cricket,  prize: '৯,০০০' },
-  { initial: 'স', nick: 'sadia_n',  tour: t.tshow_sample_tour_football, prize: '৭,২০০' }
+  { initial: 'S', nick: 'shakil_a', tour: t.tshow_sample_tour_football, prize: 18000 },
+  { initial: 'M', nick: 'mitu_b',   tour: t.tshow_sample_tour_t20,      prize: 12500 },
+  { initial: 'A', nick: 'ariful_h', tour: t.tshow_sample_tour_cricket,  prize: 9000 },
+  { initial: 'S', nick: 'sadia_n',  tour: t.tshow_sample_tour_football, prize: 7200 }
 ];
 %>
 
@@ -57,11 +58,11 @@ const tshowWinners = [
 
         <div class="tshow-standing">
           <div class="tshow-pos">
-            <span class="big"><%= tshowMe.rank %></span><span class="of">/১৪২</span>
+            <span class="big"><%= tshowFmt(tshowMe.rank) %></span><span class="of">/<%= tshowFmt(142) %></span>
           </div>
           <div class="tshow-standing-meta">
             <span class="tshow-delta"><i class="fas fa-arrow-up"></i> <%= t.tshow_moved_up %></span>
-            <div class="tshow-mypoints"><%= t.tshow_your_points %> <b><%= tshowMe.points %></b></div>
+            <div class="tshow-mypoints"><%= t.tshow_your_points %> <b><%= tshowFmt(tshowMe.points) %></b></div>
           </div>
         </div>
       </div>
@@ -70,8 +71,8 @@ const tshowWinners = [
       <div class="tshow-pool">
         <div class="tshow-pool-top">
           <span class="tshow-pool-cur">৳</span>
-          <span class="tshow-pool-amount">৫০,০০০</span>
-          <span class="tshow-pool-side">১৪২ <%= t.tshow_participants %></span>
+          <span class="tshow-pool-amount"><%= tshowFmt(50000) %></span>
+          <span class="tshow-pool-side"><%= tshowFmt(142) %> <%= t.tshow_participants %></span>
         </div>
 
         <div class="tshow-split">
@@ -79,9 +80,9 @@ const tshowWinners = [
         </div>
 
         <div class="tshow-key">
-          <div><span class="amt">৳২৫,০০০</span><span class="sw qq2-5"></span><%= t.tshow_first %></div>
-          <div><span class="amt">৳১৫,০০০</span><span class="sw qq2-6"></span><%= t.tshow_second %></div>
-          <div><span class="amt">৳১০,০০০</span><span class="sw qq2-7"></span><%= t.tshow_third %></div>
+          <div><span class="amt">৳<%= tshowFmt(25000) %></span><span class="sw qq2-5"></span><%= t.tshow_first %></div>
+          <div><span class="amt">৳<%= tshowFmt(15000) %></span><span class="sw qq2-6"></span><%= t.tshow_second %></div>
+          <div><span class="amt">৳<%= tshowFmt(10000) %></span><span class="sw qq2-7"></span><%= t.tshow_third %></div>
         </div>
       </div>
     </div>
@@ -93,7 +94,7 @@ const tshowWinners = [
           <div class="tshow-cut"><span><%= t.tshow_payout_line %></span><i></i></div>
         <% } %>
         <div class="tshow-row <%= row.prize ? 'is-paid' : '' %>">
-          <div class="tshow-rank"><%= i + 1 %></div>
+          <div class="tshow-rank"><%= tshowFmt(i + 1) %></div>
           <div class="tshow-who">
             <div class="tshow-av"><%= row.initial %></div>
             <div>
@@ -102,9 +103,9 @@ const tshowWinners = [
             </div>
           </div>
           <div class="tshow-score">
-            <div class="pts"><%= row.points %></div>
+            <div class="pts"><%= tshowFmt(row.points) %></div>
             <% if (row.prize) { %>
-              <div class="prize">৳<%= row.prize %></div>
+              <div class="prize">৳<%= tshowFmt(row.prize) %></div>
             <% } else { %>
               <div class="prize blank">—</div>
             <% } %>
@@ -113,7 +114,7 @@ const tshowWinners = [
       <% }); %>
 
       <div class="tshow-row is-me">
-        <div class="tshow-rank"><%= tshowMe.rank %></div>
+        <div class="tshow-rank"><%= tshowFmt(tshowMe.rank) %></div>
         <div class="tshow-who">
           <div class="tshow-av"><%= tshowMe.initial %></div>
           <div>
@@ -122,7 +123,7 @@ const tshowWinners = [
           </div>
         </div>
         <div class="tshow-score">
-          <div class="pts"><%= tshowMe.points %></div>
+          <div class="pts"><%= tshowFmt(tshowMe.points) %></div>
           <div class="prize blank">—</div>
         </div>
       </div>
@@ -137,7 +138,7 @@ const tshowWinners = [
         <div class="tshow-av"><%= w.initial %></div>
         <div class="tshow-winner-name"><%= w.nick %></div>
         <div class="tshow-winner-tour"><%= w.tour %></div>
-        <div class="tshow-winner-prize"><span class="cur">৳</span><%= w.prize %></div>
+        <div class="tshow-winner-prize"><span class="cur">৳</span><%= tshowFmt(w.prize) %></div>
       </div>
     <% }); %>
   </div>

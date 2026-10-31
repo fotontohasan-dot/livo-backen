@@ -5,6 +5,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const { getBaseUrl } = require('../utils/publicUrl');
+const cache = require('../services/cache');
 const { listActiveSessions, revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { logAdminAction } = require('../services/fraudDetection');
@@ -474,7 +475,14 @@ router.post('/missions/claim/:id', isAuth, requireFeature('missions'), async (re
 router.get('/rewards', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
-    res.render('profile/rewards', { user: req.session.user, reward });
+    // ব্যাজ প্রিভিউ ঐচ্ছিক — ব্যর্থ হলেও রিওয়ার্ড পেজ যেন ভেঙে না যায়
+    let badgesPreview;
+    try {
+      const all = await getBadges(req.session.user.id);
+      const earned = all.filter(b => b.earned);
+      badgesPreview = { totalCount: all.length, earnedCount: earned.length, earned: earned.slice(0, 6) };
+    } catch (e) { console.error('rewards badges preview error:', e.message); }
+    res.render('profile/rewards', { user: req.session.user, reward, badgesPreview });
   } catch (err) {
     console.error('rewards page error:', err.message);
     res.render('profile/rewards', { user: req.session.user, reward: null });
@@ -631,7 +639,7 @@ router.get('/account-record', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    console.error('transactions load error:', err.message);
+    console.error('profile transactions load error:', err.message);
     res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
@@ -966,7 +974,7 @@ router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, 
     }
 
     await createPin(userId, pin, req.ip);
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `User #${userId} created their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_created'));
     res.redirect('/profile/security/security');
   } catch (err) {
@@ -1011,7 +1019,7 @@ router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, 
     }
 
     await updatePin(userId, newPin, req.ip, 'changed');
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `User #${userId} changed their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_changed'));
     res.redirect('/profile/security/security');
   } catch (err) {
@@ -1043,7 +1051,7 @@ router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, r
     }
 
     await updatePin(userId, newPin, req.ip, 'reset');
-    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `User #${userId} reset their Withdraw PIN`, req.ip);
     req.flash('success', req.t('pin_reset_done'));
     res.redirect('/profile/security/security');
   } catch (err) {

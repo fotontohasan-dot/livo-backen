@@ -1,5 +1,20 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* filter chips — inline style → class (CSP style-src-attr) */
+  .hf-1{white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass);}
+  .hf-2{flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass);}
+  .hf-quick-today{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-today.is-on{background:var(--grad-gold);color:#000}
+  .hf-quick-yesterday{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-yesterday.is-on{background:var(--grad-gold);color:#000}
+  .hf-quick-7days{background:var(--bg-card);color:var(--text-main)}
+  .hf-quick-7days.is-on{background:var(--grad-gold);color:#000}
+  .hf-status-won{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-won.is-on{background:#10b981;color:var(--text-main)}
+  .hf-status-lost{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-lost.is-on{background:#ef4444;color:var(--text-main)}
+  .hf-status-pending{background:var(--bg-card);color:var(--text-main)}
+  .hf-status-pending.is-on{background:#f59e0b;color:#000}
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
