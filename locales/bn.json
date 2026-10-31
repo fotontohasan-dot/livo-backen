@@ -3340,5 +3340,5 @@
   "txn_pwd_current": "বর্তমান ট্রানজেকশন পাসওয়ার্ড",
   "txn_pwd_new": "নতুন ট্রানজেকশন পাসওয়ার্ড",
   "txn_pwd_confirm": "নতুন ট্রানজেকশন পাসওয়ার্ড নিশ্চিত করুন",
-  "viph_total_count": "(মোট {value})"
+  "viph_total_label": "মোট"
 }

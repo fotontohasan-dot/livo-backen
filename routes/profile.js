@@ -11,7 +11,6 @@ const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('..
 const { logAdminAction } = require('../services/fraudDetection');
 const { createLimiter } = require('../middleware/rateLimitFactory');
 const { isAuth } = require('../middleware/auth');
-const cache = require('../services/cache');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
