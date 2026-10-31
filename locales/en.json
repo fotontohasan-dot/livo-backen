@@ -3340,5 +3340,6 @@
   "txn_pwd_btn_set": "Set password",
   "txn_pwd_current": "Current transaction password",
   "txn_pwd_new": "New transaction password",
-  "txn_pwd_confirm": "Confirm new transaction password"
+  "txn_pwd_confirm": "Confirm new transaction password",
+  "viph_total_count": "(Total {value})"
 }
