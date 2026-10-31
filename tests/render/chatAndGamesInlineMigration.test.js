@@ -36,10 +36,11 @@ describe('profile/chat.ejs — ইনলাইন কোড সরানো হ�
     expect(chatJs).toContain('[data-quick-msg]');
   });
 
-  test('মোড টগল ও ফাইল-বাতিল hook আছে', () => {
-    // বট/এজেন্ট মোড টগল ৯e61e45 কমিটে ইচ্ছাকৃতভাবে সরানো হয়েছে (Chatbase iframe এখন
-    // একমাত্র AI সাপোর্ট) — তাই data-chat-mode আর থাকার কথা নয়।
-    expect(chatView).not.toMatch(/data-chat-mode=/);
+  test('বট/এজেন্ট মোড টগল নেই (9e61e45) — ফাইল-বাতিল hook আছে', () => {
+    // AI সাপোর্ট এখন Chatbase iframe দিয়ে; সকেট-চ্যাট শুধু লাইভ এজেন্টের জন্য,
+    // তাই data-chat-mode টগল ইচ্ছাকৃতভাবে সরানো হয়েছে।
+    expect(count(chatView, /data-chat-mode=/g)).toBe(0);
+    expect(chatJs).not.toContain('[data-chat-mode]');
     expect(count(chatView, /data-clear-file/g)).toBe(1);
     expect(chatJs).toContain('[data-clear-file]');
   });

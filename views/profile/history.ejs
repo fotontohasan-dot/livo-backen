@@ -44,6 +44,17 @@
   .im73-5 { display: flex; flex-direction: column; gap: 10px; }
   .im73-6 { display: flex; justify-content: space-between; }
   .im73-7 { display: flex; justify-content: space-between; margin-top: 8px; align-items: center; }
+  /* ফিল্টার চিপ / স্ট্যাটাস বাটন — আগে শর্তনির্ভর ইনলাইন style ছিল; এখন is-active ক্লাস */
+  .hist-chip { white-space: nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); }
+  .hist-chip.is-active { background: var(--grad-gold); color: #000; }
+  .hist-status { flex: 1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); }
+  .hist-status.is-won.is-active { background: #10b981; }
+  .hist-status.is-lost.is-active { background: #ef4444; }
+  .hist-status.is-pending.is-active { background: #f59e0b; color: #000; }
+  .hist-bet-status { font-size: 12px; font-weight: 800; }
+  .hist-bet-status.is-won { color: #10b981; }
+  .hist-bet-status.is-lost { color: #ef4444; }
+  .hist-bet-status.is-pending { color: #f59e0b; }
 </style>
 
 
@@ -59,9 +70,9 @@
 
   <form class="im73-2" method="GET" action="/profile/history">
     <div class="dz72-4">
-      <button type="submit" name="quick" value="today" class="hf-1 hf-quick-today <%= filter.quick === 'today' ? 'is-on' : '' %>">আজ</button>
-      <button type="submit" name="quick" value="yesterday" class="hf-1 hf-quick-yesterday <%= filter.quick === 'yesterday' ? 'is-on' : '' %>">গতকাল</button>
-      <button type="submit" name="quick" value="7days" class="hf-1 hf-quick-7days <%= filter.quick === '7days' ? 'is-on' : '' %>">গত ৭ দিন</button>
+      <button type="submit" name="quick" value="today" class="hist-chip<%= filter.quick === 'today' ? ' is-active' : '' %>"><%= t('hist_today') %></button>
+      <button type="submit" name="quick" value="yesterday" class="hist-chip<%= filter.quick === 'yesterday' ? ' is-active' : '' %>"><%= t('hist_yesterday') %></button>
+      <button type="submit" name="quick" value="7days" class="hist-chip<%= filter.quick === '7days' ? ' is-active' : '' %>"><%= t('hist_7days') %></button>
       <a class="dz72-5" href="/profile/history"><%= t('hist_all') %></a>
     </div>
     <div class="im73-3">
@@ -71,9 +82,9 @@
       <button class="dz72-8" type="submit"><%= t('hist_filter') %></button>
     </div>
     <div class="im73-4">
-      <button type="submit" name="status" value="won" class="hf-2 hf-status-won <%= filter.status === 'won' ? 'is-on' : '' %>">জয়</button>
-      <button type="submit" name="status" value="lost" class="hf-2 hf-status-lost <%= filter.status === 'lost' ? 'is-on' : '' %>">হার</button>
-      <button type="submit" name="status" value="pending" class="hf-2 hf-status-pending <%= filter.status === 'pending' ? 'is-on' : '' %>">পেন্ডিং</button>
+      <button type="submit" name="status" value="won" class="hist-status is-won<%= filter.status === 'won' ? ' is-active' : '' %>"><%= t('hist_won') %></button>
+      <button type="submit" name="status" value="lost" class="hist-status is-lost<%= filter.status === 'lost' ? ' is-active' : '' %>"><%= t('hist_lost') %></button>
+      <button type="submit" name="status" value="pending" class="hist-status is-pending<%= filter.status === 'pending' ? ' is-active' : '' %>"><%= t('hist_status_pending') %></button>
     </div>
   </form>
 
@@ -85,7 +96,7 @@
         <div class="dz72-9">
           <div class="im73-6">
             <div class="dz72-10"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || t('hist_match')) %></div>
-            <div style="color: <%= sc %>; font-size: 12px; font-weight: 800;"><%= st %></div>
+            <div class="hist-bet-status is-<%= b.status === 'won' ? 'won' : b.status === 'lost' ? 'lost' : 'pending' %>"><%= st %></div>
           </div>
           <div class="dz72-11"><%= b.runner %> · <%= t('hist_odd') %> <%= b.odd %></div>
           <div class="im73-7">

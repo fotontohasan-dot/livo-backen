@@ -303,10 +303,10 @@
 <style nonce="<%= cspNonce %>">
 .rs2-36{background:#10291D;border:1px solid #1E4633}
 .rs2-37{color:#8FA396}
-.mc-flat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 8px;align-items:start;justify-items:center}
-@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
-.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;min-height:64px;align-self:start}
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px 8px;align-items:start;justify-items:center}
+@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
+.mc-tile{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;align-self:start}
 .mc-tile-label{color:#F2F5F3;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
 .mc-tile-sublabel{display:none}
 .mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(145deg,#008F5A 0%,#006A4E 100%);border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:25px;color:#ffffff;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.45)}

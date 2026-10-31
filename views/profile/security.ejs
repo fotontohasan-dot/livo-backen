@@ -489,26 +489,6 @@
     <% } %>
   </div>
 
-  <% if (activeTab === 'transaction-password') { %>
-  <% var hasTxnPwd = !!(user && user.transaction_password); %>
-  <div id="tab-transaction-password" class="sec-content active-tab">
-    <div class="im72-4">
-      <h3 class="dz71-13"><i class="fas fa-shield-halved"></i> <%= hasTxnPwd ? t('txn_pwd_title_change') : t('txn_pwd_title_set') %></h3>
-      <form action="/profile/set-transaction-password" method="POST" class="im72-4">
-        <% if (hasTxnPwd) { %>
-        <label><%= t('txn_pwd_current') %></label>
-        <input type="password" name="currentPassword" required autocomplete="current-password">
-        <% } %>
-        <label><%= t('txn_pwd_new') %></label>
-        <input type="password" name="newPassword" required autocomplete="new-password">
-        <label><%= t('txn_pwd_confirm') %></label>
-        <input type="password" name="confirmPassword" required autocomplete="new-password">
-        <button type="submit" class="btn btn-primary"><%= hasTxnPwd ? t('txn_pwd_btn_change') : t('txn_pwd_btn_set') %></button>
-      </form>
-    </div>
-  </div>
-  <% } %>
-
 </div>
 
 

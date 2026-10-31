@@ -11,6 +11,7 @@ const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('..
 const { logAdminAction } = require('../services/fraudDetection');
 const { createLimiter } = require('../middleware/rateLimitFactory');
 const { isAuth } = require('../middleware/auth');
+const cache = require('../services/cache');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
@@ -277,12 +278,12 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-// 'login-password' ও 'transaction-password' আলাদা পেজ; 'login-password' পাসওয়ার্ড-পরিবর্তন ফর্মসহ 'security' ট্যাবে দেখায়।
-const SECURITY_TABS = ['personal', 'bank', 'security', 'devices', 'transaction-password'];
-// Express 5 (path-to-regexp v8): ঐচ্ছিক সেগমেন্ট `{/:tab}` সিনট্যাক্সে লিখতে হয়।
+const SECURITY_TABS = ['personal', 'bank', 'security', 'devices'];
+// পুরনো/ভিন্ন URL (লগইন-পাসওয়ার্ড, ট্রানজেকশন-পাসওয়ার্ড) 'security' ট্যাবেই খোলে।
+const SECURITY_TAB_ALIASES = { 'login-password': 'security', 'transaction-password': 'security' };
 router.get('/security{/:tab}', isAuth, async (req, res) => {
-  const rawTab = req.params.tab === 'login-password' ? 'security' : req.params.tab;
-  const activeTab = SECURITY_TABS.includes(rawTab) ? rawTab : 'personal';
+  const requestedTab = SECURITY_TAB_ALIASES[req.params.tab] || req.params.tab;
+  const activeTab = SECURITY_TABS.includes(requestedTab) ? requestedTab : 'personal';
   try {
     const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, wallet_kind, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     const hasCryptoWallet = cards.rows.some(c => c.wallet_kind === 'crypto');
@@ -360,6 +361,7 @@ router.get('/security{/:tab}', isAuth, async (req, res) => {
   }
 });
 
+
 // ==================== দায়িত্বশীল গেমিং ====================
 router.get('/responsible', isAuth, async (req, res) => {
   try {
@@ -435,13 +437,12 @@ const claimLimiter = rateLimit({
 router.post('/wheel/spin', isAuth, requireFeature('lucky_wheel'), claimLimiter, async (req, res) => {
   try {
     const result = await spin(req.session.user.id, req.lang);
-    // সফল স্পিনে পুরস্কার/জয়ের বার্তা ক্লায়েন্টে পাঠানো হয় না — অ্যানিমেশন শেষ হওয়ার
-    // আগে ফলাফল দেখা (বা নেটওয়ার্ক ট্যাবে ফাঁস) ঠেকাতে। ক্লায়েন্ট শুধু `index` দিয়ে
-    // চাকা ঘোরায়, তারপর GET /wheel/result থেকে নিজের ফলাফল আনে।
+    // পুরস্কার/জয়ের বার্তা এখানে পাঠানো হয় না — অ্যানিমেশন শেষের আগে ফাঁস হবে।
+    // পুরস্কার শুধু GET /wheel/result দেয়।
     if (result && result.success) {
       return res.json({ success: true, index: result.index });
     }
-    res.json(result);
+    res.json({ success: false, message: (result && result.message) || req.t('profile_msg_31') });
   } catch (err) {
     console.error('wheel spin error:', err.message);
     res.json({ success: false, message: req.t('profile_msg_31') });
@@ -625,7 +626,7 @@ router.get('/transactions', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    console.error('profile transactions load error:', err.message);
+    console.error('transactions load error:', err.message);
     res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
