@@ -79,12 +79,14 @@
   </h1>
 
   <!-- ==================== অ্যাচিভমেন্ট প্রিভিউ ==================== -->
-  <% if (typeof badgesPreview !== 'undefined' && badgesPreview.totalCount > 0) { %>
+  <%# /profile/badges লিংক শর্তহীন — প্রিভিউ ডেটা না থাকলেও Reward Center থেকে অ্যাচিভমেন্ট পেজে যাওয়া যায় %>
+  <% var hasBadgePreview = (typeof badgesPreview !== 'undefined') && badgesPreview && badgesPreview.totalCount > 0; %>
   <div class="card im76-1">
     <div class="card-header im76-2">
-      <span><%= t.achievements_label %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
+      <span><%= t.achievements_label %><% if (hasBadgePreview) { %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)<% } %></span>
       <a class="dz75-3" href="/profile/badges"><%= t.view_all_arrow %></a>
     </div>
+    <% if (hasBadgePreview) { %>
     <div class="card-body dz75-4">
       <% if (badgesPreview.earned.length > 0) { %>
       <div class="dz75-5">
@@ -99,8 +101,8 @@
       <div class="dz75-8"><%= t.no_badges_yet %></div>
       <% } %>
     </div>
+    <% } %>
   </div>
-  <% } %>
 
   <!-- ==================== রেফারেল সামারি ==================== -->
   <% if (typeof referralSummary !== 'undefined' && referralSummary) { %>

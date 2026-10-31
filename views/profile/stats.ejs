@@ -34,6 +34,8 @@
   .im68-3 { display: flex; gap: 8px; align-items: center; }
   .im68-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .im68-5 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .stat-chip { white-space: nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-main); }
+  .stat-chip.is-active { background: linear-gradient(90deg,#f59e0b,#fbbf24); color: #000; }
 </style>
 
 <div class="container dz67-1">
@@ -44,9 +46,9 @@
 
   <form class="im68-2" method="GET" action="/profile/stats">
     <div class="dz67-4">
-      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
-      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
-      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <button type="submit" name="quick" value="today" class="stat-chip<%= filter.quick === 'today' ? ' is-active' : '' %>">আজ</button>
+      <button type="submit" name="quick" value="yesterday" class="stat-chip<%= filter.quick === 'yesterday' ? ' is-active' : '' %>">গতকাল</button>
+      <button type="submit" name="quick" value="7days" class="stat-chip<%= filter.quick === '7days' ? ' is-active' : '' %>">গত ৭ দিন</button>
       <a class="dz67-5" href="/profile/stats"><%= t('st_all') %></a>
     </div>
     <div class="im68-3">
