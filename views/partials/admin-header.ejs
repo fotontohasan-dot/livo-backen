@@ -8,12 +8,10 @@
         <i class="fas fa-bars text-xl"></i>
       </button>
       <div class="flex items-center gap-2">
-        <div class="w-9 h-9 bg-[#f59e0b] rounded-xl flex items-center justify-center">
-          <span class="text-black font-black text-2xl tracking-tighter">L</span>
-        </div>
-        <div>
-          <span class="font-bold text-2xl text-white tracking-wider">BET420</span>
-          <span class="text-[#f59e0b] text-xs font-bold tracking-[3px] ml-0.5">ADMIN</span>
+        <link rel="stylesheet" href="/css/brand.css?v=<%= locals.assetVersion || 'dev' %>">
+        <div class="flex items-center gap-2">
+          <picture><source srcset="/images/brand/bet420-wordmark.webp" type="image/webp"><img class="brand-logo brand-logo--admin" src="/images/brand/bet420-wordmark.png" width="720" height="195" alt="Bet420" decoding="async"></picture>
+          <span class="text-[#f59e0b] text-xs font-bold tracking-[3px]">ADMIN</span>
         </div>
       </div>
     </div>

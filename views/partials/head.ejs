@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/css/style.css?v=<%= locals.assetVersion || 'dev' %>">
   <!-- রেফারেন্স স্ক্রিনশট-ম্যাচিং ভিজ্যুয়াল লেয়ার (style.css-এর পরে লোড হয়) -->
   <link rel="stylesheet" href="/css/reference-theme.css?v=<%= locals.assetVersion || 'dev' %>">
+  <link rel="stylesheet" href="/css/brand.css?v=<%= locals.assetVersion || 'dev' %>">
   <!-- টুর্নামেন্ট শোকেস (সাজসজ্জার সেকশন) -->
   <link rel="stylesheet" href="/css/tournament-showcase.css?v=<%= locals.assetVersion || 'dev' %>">
 
@@ -40,7 +41,9 @@
   <meta property="og:site_name" content="Bet420">
   <meta property="og:title" content="<%= locals.title || t('head_default_title') %>">
   <meta property="og:description" content="<%= locals.description || t('head_default_description') %>">
-  <meta property="og:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
+  <meta property="og:image" content="<%= locals.baseUrl || '' %>/images/brand/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:url" content="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
   <meta property="og:locale" content="<%= locals.lang === 'en' ? 'en_US' : 'bn_BD' %>">
 
@@ -48,7 +51,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="<%= locals.title || t('head_default_title') %>">
   <meta name="twitter:description" content="<%= locals.description || 'Bet420-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড।' %>">
-  <meta name="twitter:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
+  <meta name="twitter:image" content="<%= locals.baseUrl || '' %>/images/brand/og-image.jpg">
 
   <!-- ফেভিকন -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">

@@ -9,6 +9,7 @@
          জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
          CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
     <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
+    <link rel="stylesheet" href="/css/brand.css?v=<%= locals.assetVersion || 'dev' %>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style nonce="<%= cspNonce %>">
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@500;600&amp;display=swap');
@@ -201,12 +202,9 @@
                     lg:static lg:translate-x-0 lg:z-auto">
             <!-- Logo -->
             <div class="px-6 py-6 flex items-center gap-x-3 border-b border-slate-700">
-                <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
-                    <i class="fas fa-chart-line text-white text-3xl"></i>
-                </div>
                 <div>
-                    <span class="logo-font text-3xl font-semibold tracking-tighter">Bet420</span>
-                    <span class="text-blue-400 text-xl font-semibold"><%= t('admin_col_admin') %></span>
+                    <picture><source srcset="/images/brand/bet420-wordmark.webp" type="image/webp"><img class="brand-logo brand-logo--admin" src="/images/brand/bet420-wordmark.png" width="720" height="195" alt="Bet420" decoding="async"></picture>
+                    <span class="text-blue-400 text-sm font-semibold tracking-widest"><%= t('admin_col_admin') %></span>
                 </div>
                 <button data-admin-nav="close-sidebar" aria-label="<%= t('admin_ui_close_menu') %>"
                         class="lg:hidden ml-auto text-slate-400 hover:text-white p-2 -mr-2">
