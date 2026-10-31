@@ -31,6 +31,7 @@ const en = require('../../locales/en.json');
 const ALLOWED = new Set([
   'Bet420',                                    // ব্র্যান্ড নাম
   'Bet420 Admin',                              // ব্র্যান্ড নাম
+  'Admin',                                     // লগইন পেজের ব্র্যান্ড শিরোনাম — দুই ভাষাতেই এক
   'Bet420 Betting Platform • Admin Dashboard', // ব্র্যান্ড ট্যাগলাইন
   'বাংলা',                                    // ভাষা সুইচারের endonym — সবসময় নিজের ভাষাতেই দেখানো হয়
   'English',                                 // একই কারণ

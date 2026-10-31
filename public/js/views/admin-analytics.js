@@ -7,6 +7,8 @@
   var el = document.getElementById('admin-analyticsConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
 
+  // Chart.js CDN থেকে আসে — লোড না হলে চার্ট বাদ, বাকি পেজ চলবে (uncaught ReferenceError নয়)।
+  if (typeof Chart === 'undefined') return;
   const revenueLabels = cfg.revenueLabels || [];
           const revenueDeposit = cfg.revenueDeposit || [];
           const revenueWithdraw = cfg.revenueWithdraw || [];
