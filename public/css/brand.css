@@ -1,15 +1,15 @@
 /* Bet420 লোগো — সব জায়গার সাইজ এক ফাইলে (CSP-এর কারণে ইনলাইন style="" ব্যবহার নেই)।
-   ওয়ার্ডমার্ক ছবির অনুপাত ≈ 3.7 : 1, তাই শুধু height ঠিক করলেই width নিজে নিজে ঠিক হয়। */
+   ওয়ার্ডমার্ক ছবির অনুপাত ≈ 3 : 1, তাই শুধু height ঠিক করলেই width নিজে নিজে ঠিক হয়। */
 .brand-link { display: inline-flex; align-items: center; text-decoration: none; line-height: 0; }
 .brand-logo { display: block; width: auto; max-width: 100%; object-fit: contain; border-radius: 8px; }
-.brand-logo--nav    { height: 34px; }   /* হোম টপ-বার */
-.brand-logo--side   { height: 30px; }   /* সাইড মেনু */
-.brand-logo--footer { height: 30px; opacity: .95; }
-.brand-logo--auth   { height: 56px; margin: 0 auto; }   /* লগইন / রেজিস্ট্রেশন */
-.brand-logo--page   { height: 52px; margin: 0 auto 18px; } /* এরর / মেইনটেন্যান্স / অফলাইন */
-.brand-logo--admin  { height: 30px; }   /* অ্যাডমিন সাইডবার/হেডার */
-.brand-logo--admin-lg { height: 52px; margin: 0 auto 14px; } /* অ্যাডমিন লগইন */
+.brand-logo--nav    { height: 40px; }   /* হোম টপ-বার */
+.brand-logo--side   { height: 34px; }   /* সাইড মেনু */
+.brand-logo--footer { height: 34px; opacity: .95; }
+.brand-logo--auth   { height: 64px; margin: 0 auto; }   /* লগইন / রেজিস্ট্রেশন */
+.brand-logo--page   { height: 60px; margin: 0 auto 18px; } /* এরর / মেইনটেন্যান্স / অফলাইন */
+.brand-logo--admin  { height: 36px; }   /* অ্যাডমিন সাইডবার/হেডার */
+.brand-logo--admin-lg { height: 60px; margin: 0 auto 14px; } /* অ্যাডমিন লগইন */
 @media (max-width: 380px) {
-  .brand-logo--nav { height: 30px; }
-  .brand-logo--auth { height: 48px; }
+  .brand-logo--nav { height: 34px; }
+  .brand-logo--auth { height: 56px; }
 }
