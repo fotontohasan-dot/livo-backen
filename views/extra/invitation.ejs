@@ -1,10 +1,22 @@
-<%#
-  ⚠️ এটা সম্পূর্ণ ফাইল নয় — শুধু পরিবর্তিত/যোগ হওয়া অংশ (fragment)।
-  আসল views/extra/invitation.ejs-এর সঠিক জায়গায় নিচের তিনটা অংশ বসান।
-%>
-
-<%# ===== (১) <style> ব্লকের ভেতরে, .im51-* রুলগুলোর পরে যোগ করুন ===== %>
-<style>
+<%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz51-1 { text-align: center; padding: 40px 20px; border-radius: 24px; }
+  .dz51-2 { color: var(--text-main); margin-bottom: 10px; }
+  .dz51-3 { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+  .dz51-4 { padding: 20px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--gold); }
+  .dz51-5 { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .dz51-6 { font-family: 'Teko', sans-serif; font-size: 36px; color: var(--text-accent); font-weight: 700; letter-spacing: 4px; }
+  .dz51-7 { margin-top: 15px; border-radius: 20px; padding: 8px 30px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im51-1 { padding-top: 20px; }
+  .im51-2 { font-size: 60px; margin-bottom: 20px; }
+  .im51-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
   /* সোশ্যাল শেয়ার বাটন গ্রিড */
   .sh51-title { margin-top: 30px; font-size: 13px; color: var(--text-muted); text-align: center; }
   .sh51-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
@@ -18,10 +30,32 @@
   .sh51-imo       { background: #23A2E1; }
 </style>
 
+<%- include('../partials/navbar') %>
 
-<%# ===== (২) স্ট্যাটস কার্ড (bonus_earned) দেখানোর div-এর ঠিক পরে, ===== %>
-<%#     মূল কন্টেইনার </div></div> বন্ধ হওয়ার আগে যোগ করুন             %>
+<div class="container page im51-1">
+    <div class="card glass dz51-1">
+        <div class="im51-2">✉️</div>
+        <h2 class="dz51-2"><%= t.invite_friends_title %></h2>
+        <p class="dz51-3"><%= t.invite_friends_desc %></p>
 
+        <div class="glass dz51-4">
+            <p class="dz51-5"><%= t.your_referral_code %></p>
+            <div class="dz51-6">
+                <%= referralCode %>
+            </div>
+            <button data-copy-ref class="btn btn-primary dz51-7"><%= t.copy %></button>
+        </div>
+
+        <div class="im51-3">
+            <div class="stat-card">
+                <div class="stat-value"><%= referralCount %></div>
+                <div class="stat-label"><%= t.total_referrals %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">৳ ০</div>
+                <div class="stat-label"><%= t.bonus_earned %></div>
+            </div>
+        </div>
 <p class="sh51-title"><%= t.share %></p>
 <div class="sh51-grid">
     <a class="sh51-btn sh51-whatsapp" data-share="whatsapp" rel="noopener" target="_blank">
@@ -49,14 +83,11 @@
         imo
     </a>
 </div>
+    </div>
+</div>
 
-
-<%# ===== (৩) নিচের কনফিগ-স্ক্রিপ্ট লাইনটা সম্পূর্ণ প্রতিস্থাপন করুন ===== %>
-
-<%# আগে ছিল: %>
-<%#
-<script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, copied: t.referral_code_copied }) %></script>
-%>
-
-<%# এখন হবে: %>
 <script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, referralLink: referralLink, copied: t.referral_code_copied }) %></script>
+<script src="/js/views/extra-invitation.js"></script>
+
+<%- include('../partials/bottom-nav') %>
+</body></html>
