@@ -27,7 +27,7 @@ export default function HomePage() {
           <Menu className="text-icon-secondary" size={24} />
           <a href="/" aria-label="Bet420" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/brand/bet420-wordmark.png" alt="Bet420" width={720} height={195} className="h-9 w-auto rounded-lg" />
+            <img src="/images/brand/bet420-wordmark.png" alt="Bet420" width={720} height={239} className="h-11 w-auto rounded-lg" />
           </a>
         </div>
 
@@ -175,7 +175,7 @@ export default function HomePage() {
         {/* Footer info */}
         <footer className="pt-8 pb-4 text-center space-y-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/brand/bet420-wordmark.png" alt="Bet420" width={720} height={195} className="h-8 w-auto rounded-lg mx-auto opacity-90" />
+          <img src="/images/brand/bet420-wordmark.png" alt="Bet420" width={720} height={239} className="h-10 w-auto rounded-lg mx-auto opacity-90" />
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-bold text-text-muted uppercase tracking-widest">
             <Link href="#">Privacy</Link>
             <Link href="#">Terms</Link>
