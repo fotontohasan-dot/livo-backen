@@ -333,24 +333,41 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
   });
 
   test('ডিপোজিট — bKash ম্যানুয়াল ফ্লো (init → পেমেন্ট বিবরণী সাবমিট)', async ({ page }) => {
-    await restoreSession(page, sessionCookies);
-    const issues = attachErrorTracking(page);
-    await page.goto('/payment/deposit', { waitUntil: 'domcontentloaded' });
-    await page.fill('#amountInput', '500');
-    await page.click('#depNextBtn');
-    await page.waitForSelector('#step2', { state: 'visible' });
-    await page.fill('input[name="transaction_id"]', 'E2ETRX' + Date.now());
-    await page.fill('input[name="account_number"]', '01700000002');
-    await page.click('#depSubmitBtn');
-    await page.waitForLoadState('domcontentloaded');
-    assertClean(issues);
-
-    const pr = await pool.query(
-      `SELECT pr.status FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-       WHERE u.username = $1 AND pr.type = 'deposit' ORDER BY pr.created_at DESC LIMIT 1`,
-      [username]
+    // ডিপোজিট পেজের পেমেন্ট নম্বরের একমাত্র উৎস অ্যাডমিন-নিয়ন্ত্রিত payment_methods টেবিল
+    // (routes/payment.js → services/paymentMethods.listActivePublic)। CI-র ফ্রেশ DB-তে সেখানে
+    // কোনো সারি নেই, ফলে পেজের ডিফল্ট মেথডে (nagad/agent) কোনো অ্যাকাউন্ট না পেয়ে
+    // `#depNextBtn` disabled থাকে এবং click() ৬০ সেকেন্ড ঝুলে টাইমআউট হয় — অ্যাপ বাগ নয়,
+    // টেস্ট ডেটা অনুপস্থিত। তাই এখানে একটা সক্রিয় অ্যাকাউন্ট সিড করা হয়, শেষে মুছে ফেলা হয়।
+    const seededNumber = '01712' + String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+    const seeded = await pool.query(
+      `INSERT INTO payment_methods (method, account_number, account_name, account_type, status)
+       VALUES ('nagad', $1, 'E2E Test Account', 'agent', 'active') RETURNING id`,
+      [seededNumber]
     );
-    expect(pr.rows[0]?.status).toBe('pending'); // ম্যানুয়াল — অ্যাডমিন অনুমোদন সাপেক্ষ, তাই এখনো pending
+    const seededId = seeded.rows[0].id;
+    try {
+      await restoreSession(page, sessionCookies);
+      const issues = attachErrorTracking(page);
+      await page.goto('/payment/deposit', { waitUntil: 'domcontentloaded' });
+      await page.fill('#amountInput', '500');
+      await expect(page.locator('#depNextBtn')).toBeEnabled();
+      await page.click('#depNextBtn');
+      await page.waitForSelector('#step2', { state: 'visible' });
+      await page.fill('input[name="transaction_id"]', 'E2ETRX' + Date.now());
+      await page.fill('input[name="account_number"]', '01700000002');
+      await page.click('#depSubmitBtn');
+      await page.waitForLoadState('domcontentloaded');
+      assertClean(issues);
+
+      const pr = await pool.query(
+        `SELECT pr.status FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+         WHERE u.username = $1 AND pr.type = 'deposit' ORDER BY pr.created_at DESC LIMIT 1`,
+        [username]
+      );
+      expect(pr.rows[0]?.status).toBe('pending'); // ম্যানুয়াল — অ্যাডমিন অনুমোদন সাপেক্ষ, তাই এখনো pending
+    } finally {
+      await pool.query('DELETE FROM payment_methods WHERE id = $1', [seededId]);
+    }
   });
 
   test('উইথড্র পেজ — লোড হয়, কার্ড না থাকলে/থাকলে ফর্ম প্রত্যাশিতভাবে আচরণ করে', async ({ page }) => {
