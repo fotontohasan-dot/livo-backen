@@ -31,3 +31,9 @@ jest-output.log
 *.sql.gz
 backup-*.json
 backup-*.bin
+
+# অডিট টুলিং (scripts/audit) — লোকাল আউটপুট, কমিট হবে না
+.audit-tools/
+reports/
+# Playwright রান আউটপুট
+test-results/
