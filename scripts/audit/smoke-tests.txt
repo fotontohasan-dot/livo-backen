@@ -1,0 +1,13 @@
+# স্মোক টেস্ট তালিকা — safe-delete.sh প্রতিটা মোছার আগে ও পরে এগুলো চালায়।
+# লক্ষ্য: অ্যাপ বুট হয়, সব ভিউ রেন্ডার হয়, স্ক্রিপ্ট/CSP ঠিক থাকে, অথ/RBAC ও পেমেন্ট/উইথড্র ঠিক থাকে।
+# একটা ফাইল/ফোল্ডার প্রতি লাইনে। # দিয়ে শুরু হলে কমেন্ট।
+tests/appLifecycle.test.js
+tests/testHarnessIntegrity.test.js
+tests/health.test.js
+tests/regression
+tests/render
+tests/security/cspInlineRatchet.test.js
+tests/security/adminRoutePermissionSweep.test.js
+tests/security/rbac.test.js
+tests/payment.test.js
+tests/withdrawalWindow.test.js
