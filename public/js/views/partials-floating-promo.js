@@ -152,18 +152,6 @@
     var e = _g('lpPopup'); if (!e || !PP_SLIDES.length) return;
     lpStop(); lpCur = 0; lpApplyFrame(); lpRender(); e.style.display = 'flex'; lpSchedule();
   }
-  function lpStop(){ if(lpSlide){clearInterval(lpSlide);lpSlide=null;} }
-  function lpNextFn(){ lpStop(); if(lpCur<LP_IMG.length-1){lpCur++;lpRender();}else{lpClosePopupFn();} }
-  function lpPrevFn(){ lpStop(); if(lpCur>0){lpCur--;lpRender();} }
-  function lpClosePopupFn(){ lpStop(); var e=_g('lpPopup'); if(e) e.style.display='none'; }
-  // আগে: প্রতি ১০০০ms-এ স্লাইড বদলাত এবং শেষ স্লাইডের পর পপআপ নিজে থেকে বন্ধ হয়ে যেত — তাই ৪টা
-  // ছবি মিলিয়ে ~৪ সেকেন্ডে সব উধাও, ইউজার কিছুই দেখতে/পড়তে পারত না।
-  // এখন: পপআপ আগের মতোই সামনে আসে ও স্লাইডশো চলে, কিন্তু প্রতিটা স্লাইড ৬ সেকেন্ড থাকে,
-  // শেষ স্লাইডে থেমে যায় (নিজে বন্ধ হয় না)। ইউজার "পরবর্তী/পূর্ববর্তী" চাপলে অটো-স্লাইড থামে;
-  // বন্ধ হয় শুধু ✕ / বাইরে ক্লিক / শেষ স্লাইডের "পরবর্তী" চাপলে।
-  var LP_SLIDE_MS = 6000;
-  function lpShowPopup(){ var e=_g('lpPopup'); if(!e) return; lpStop(); lpCur=0; lpRender(); e.style.display='flex'; lpSlide=setInterval(function(){ if(lpCur<LP_IMG.length-1){ lpCur++; lpRender(); } else { lpStop(); } }, LP_SLIDE_MS); }
-
   function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.setHours(24,0,0,0); var df=Math.max(0,Math.floor((e-n)/1000)); function p(x){return x<10?'0'+x:''+x;} var a=_g(h),b=_g(m),c=_g(s); if(a)a.textContent=p(Math.floor(df/3600)); if(b)b.textContent=p(Math.floor((df%3600)/60)); if(c)c.textContent=p(df%60); } tk(); setInterval(tk,1000); }
 
   (function(){
