@@ -10,6 +10,7 @@ const path = require('path');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, extractCsrfToken } = require('../helpers/app');
 const { cleanupUsers } = require('../helpers/cleanup');
 const { pool } = require('../../db');
+const withdrawalWindow = require('../../services/withdrawalWindow');
 
 const root = path.join(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -44,6 +45,18 @@ afterAll(async () => {
 });
 
 describe('উইথড্র KYC গার্ড', () => {
+  // উইথড্র সময়সূচি (ডিফল্ট: ঢাকার রাত ১১টা–সকাল ৭টা বন্ধ) KYC চেকের আগে চলে। জোর করে
+  // 'open' না করলে এই টেস্ট দিনের সময়ের ওপর নির্ভর করত — রাতে /payment/withdraw-এ রিডাইরেক্ট
+  // হয়ে ফেইল করত। (একই পদ্ধতি: tests/render/criticalPageUiStates.test.js)
+  let savedWindowMode = null;
+  beforeAll(async () => {
+    savedWindowMode = await withdrawalWindow.readConfig().then((c) => c.mode).catch(() => null);
+    await withdrawalWindow.saveConfig({ mode: 'open' });
+  });
+  afterAll(async () => {
+    if (savedWindowMode) await withdrawalWindow.saveConfig({ mode: savedWindowMode });
+  });
+
   test('রুট ডিফিনিশনে ইমেইল-ভেরিফাই, KYC ও rate-limit তিনটাই আছে', () => {
     const line = read('routes/payment.js').split('\n').find((l) => l.includes("router.post('/withdraw'"));
     expect(line).toBeDefined();
