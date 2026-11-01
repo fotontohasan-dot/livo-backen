@@ -119,3 +119,52 @@ describe('ফ্লোটিং প্রোমো JS', () => {
     expect(src).not.toMatch(/\bLP_IMG\b/);
   });
 });
+
+describe('ইনভাইট পেজ JS (extra-invitation.js) — ফ্র্যাগমেন্ট নয়, পূর্ণ ফাইল', () => {
+  const vm = require('vm');
+  const src = read('public/js/views/extra-invitation.js');
+
+  test('"এটা সম্পূর্ণ ফাইল নয়" টাইপের প্যাচ-নোট নেই', () => {
+    expect(src).not.toMatch(/সম্পূর্ণ ফাইল নয়|fragment|সঠিক জায়গায় বসান|আগে ছিল:/);
+  });
+
+  function run(cfg) {
+    const listeners = {};
+    const shareEls = ['whatsapp', 'facebook', 'messenger', 'viber', 'imo', 'instagram'].map((key) => ({
+      key, href: undefined, clicks: [],
+      getAttribute: () => key, addEventListener(ev, fn) { this.clicks.push([ev, fn]); }
+    }));
+    const copyBtn = { clicks: [], addEventListener(ev, fn) { this.clicks.push([ev, fn]); } };
+    const written = [];
+    const sandbox = {
+      document: {
+        getElementById: () => ({ textContent: JSON.stringify(cfg) }),
+        querySelectorAll: (sel) => (sel === '[data-share]' ? shareEls : sel === '[data-copy-ref]' ? [copyBtn] : []),
+        addEventListener: (ev, fn) => { listeners[ev] = fn; }
+      },
+      navigator: { clipboard: { writeText: (t) => { written.push(t); return Promise.resolve(); } } },
+      alert: () => {}, window: { location: {} }, encodeURIComponent, JSON, console
+    };
+    vm.runInNewContext(src, sandbox);   // কোনো ReferenceError হলে এখানেই ফেটে যাবে
+    listeners.DOMContentLoaded();
+    return { shareEls, copyBtn, written };
+  }
+
+  test('DOMContentLoaded-এ কপি বাটন ও শেয়ার লিংক যুক্ত হয়', () => {
+    const { shareEls, copyBtn, written } = run({ referralCode: 'ABC123', referralLink: 'https://x.test/r?c=ABC123', copied: 'ok' });
+    expect(copyBtn.clicks.length).toBe(1);
+    copyBtn.clicks[0][1]();
+    expect(written).toEqual(['ABC123']);
+    const byKey = Object.fromEntries(shareEls.map((e) => [e.key, e]));
+    expect(byKey.whatsapp.href).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    expect(byKey.facebook.href).toContain(encodeURIComponent('https://x.test/r?c=ABC123'));
+    expect(byKey.viber.href).toMatch(/^viber:\/\/forward/);
+    expect(byKey.instagram.clicks.length).toBe(1);
+  });
+
+  test('referralLink না থাকলে শেয়ার লিংক বসে না কিন্তু কপি বাটন চলে', () => {
+    const { shareEls, copyBtn } = run({ referralCode: 'ABC123' });
+    expect(shareEls.every((e) => e.href === undefined)).toBe(true);
+    expect(copyBtn.clicks.length).toBe(1);
+  });
+});
