@@ -1,3 +1,4 @@
+// Dependencies (package.json-এ ঘোষিত নয় — একবারের টুল): npm i --no-save cheerio css-select
 // Cascade-equivalence checker.
 //
 // The repo notes say an inline-style -> class migration cannot be validated
