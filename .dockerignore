@@ -14,3 +14,11 @@ docker-compose*.yml
 Dockerfile*
 public/uploads/*
 !public/uploads/.gitkeep
+
+# ইমেজে লাগে না (রানটাইমে কেউ লোড করে না; টেস্ট CI/হোস্টে চলে)
+tests
+verification
+test-results
+playwright-report
+assets/popups
+src
