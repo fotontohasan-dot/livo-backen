@@ -83,7 +83,7 @@
 
 ## যাচাই করে দেখা গেছে — কোনো পরিবর্তন লাগেনি
 
-- **`views/admin/backups.ejs`-এর `fmtSize()`** — `AUDIT_REPORT.md`-এ ছোট
+- **`views/admin/backups.ejs`-এর `fmtSize()`** — `docs/archive/AUDIT_REPORT.md`-এ ছোট
   সাইজে ক্র্যাশের কথা ছিল। কোডে ইতিমধ্যে `Number(bytes)` কনভার্শন ও
   `Number.isFinite` গার্ড আছে, তাই ১০২৪ বাইটের কম মানেও আর TypeError হয় না।
 - **`sports-api/`** — মূল অ্যাপের `services/providers/`-এর সাথে ধারণাগতভাবে

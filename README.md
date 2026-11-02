@@ -272,7 +272,7 @@ tests/
   admin.test.js, api.test.js, auth.test.js, health.test.js, payment.test.js, security.test.js
   unit/             # DB ছাড়া pure/mocked ইউনিট টেস্ট (validate.js, apiKeyAuth.js)
   integration/
-    backup.test.js   — Backup & Restore System পূর্ণাঙ্গ audit (দেখুন AUDIT_REPORT.md)
+    backup.test.js   — Backup & Restore System পূর্ণাঙ্গ audit (দেখুন docs/archive/AUDIT_REPORT.md)
     profile.test.js  — প্রোফাইল রুট (balance, security, change-password)
 ```
 
