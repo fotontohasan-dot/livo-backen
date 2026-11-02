@@ -378,7 +378,13 @@ describe('Authentication Security', () => {
     });
 
     test('SQL ইনজেকশন-সদৃশ ইনপুটে ইউজার টেবিল অক্ষত থাকে', async () => {
-      const before = await pool.query('SELECT COUNT(*)::int AS c FROM users');
+      // নিজস্ব canary ইউজার: পুরো টেবিলের COUNT প্যারালেল রানে অন্য টেস্টের ইউজার তৈরি/মোছায় ফ্লেকি
+      // হতো। ইনজেকশনে কিছু মুছলে/বদলালে canary হারাবে বা বদলে যাবে।
+      const canaryName = uniqueUsername();
+      const canary = await pool.query(
+        `INSERT INTO users (username, phone, password, coins) VALUES ($1, $2, 'x', 0) RETURNING id`,
+        [canaryName, uniquePhone()]
+      );
 
       const { agent, token } = await getCsrfAgent('/login');
       const res = await agent
@@ -388,8 +394,10 @@ describe('Authentication Security', () => {
 
       // লগইন সফল হয়নি (হোমপেজে রিডাইরেক্ট হয়নি) এবং টেবিল অক্ষত
       expect(res.headers.location).not.toBe('/');
-      const after = await pool.query('SELECT COUNT(*)::int AS c FROM users');
-      expect(after.rows[0].c).toBe(before.rows[0].c);
+      const after = await pool.query('SELECT username FROM users WHERE id = $1', [canary.rows[0].id]);
+      expect(after.rows).toHaveLength(1);
+      expect(after.rows[0].username).toBe(canaryName);
+      await pool.query('DELETE FROM users WHERE id = $1', [canary.rows[0].id]);
     });
   });
 });

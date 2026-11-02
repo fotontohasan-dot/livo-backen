@@ -35,9 +35,6 @@ var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventL
 var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
 
 
-var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
-
-
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     var menu = document.getElementById('sideMenu');

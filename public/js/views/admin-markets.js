@@ -1,17 +1,12 @@
 // views/admin/markets.ejs-এর ক্লায়েন্ট কোড।
-// docs/CSP.md ধাপ ৩: এই পেজের body একটা JS template literal, তাই সার্ভার
-// মান ${...} দিয়ে আসত। এখন সেগুলো JSON ডেটা ব্লক থেকে পড়া হয়।
+// মার্কেট আইডি বাটনের data-settle-id অ্যাট্রিবিউট থেকে আসে (সার্ভার-কনফিগ ব্লক লাগে না)।
 
 (function(){
-  var cfg = {};
-  var el = document.getElementById('admin-marketsConfig');
-  if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
-
   function showSettleModal(marketId, marketName) {
     document.getElementById('settle-modal').classList.remove('hidden');
     document.getElementById('settle-market-name').innerText = marketName;
     const form = document.getElementById('settle-form');
-    form.action = `/admin/markets/cfg.marketId/settle`;
+    form.action = `/admin/markets/${encodeURIComponent(marketId)}/settle`;
   }
 
   function hideSettleModal() {

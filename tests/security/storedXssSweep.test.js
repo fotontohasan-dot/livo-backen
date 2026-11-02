@@ -42,16 +42,15 @@ describe('Stored XSS sweep (PHASE 9)', () => {
     test('game name/provider escape ছাড়া innerHTML-এ বসে না', () => {
       expect(INDEX_EJS).not.toMatch(/game-title-premium">\$\{g\.name\}/);
       expect(INDEX_EJS).not.toMatch(/game-provider-premium">\$\{g\.provider\}/);
-      expect(INDEX_EJS).toMatch(/game-title-premium">\$\{escHtml\(g\.name\)\}/);
-      expect(INDEX_EJS).toMatch(/game-provider-premium">\$\{escHtml\(g\.provider\)\}/);
+      // renderGames()-এর অপ্রাপ্য গেম-কার্ড কোড (D1) সরানো হয়েছে; এখন হোমপেজ গেম ডেটা
+      // থেকে কোনো HTML বানায় না। ভবিষ্যতে ফেরালে `${g.name}` কাঁচা বসানো এখানে ধরা পড়বে।
+      expect(INDEX_EJS).not.toMatch(/\$\{g\.(name|provider)\}/);
     });
 
     test('slug, emoji, badge-ও escape করা হয়', () => {
       expect(INDEX_EJS).not.toMatch(/data-slug="\$\{g\.slug\}"/);
       expect(INDEX_EJS).not.toMatch(/game-emoji">\$\{g\.emoji\}/);
-      expect(INDEX_EJS).toMatch(/escHtml\(g\.slug\)/);
-      expect(INDEX_EJS).toMatch(/escHtml\(g\.emoji\)/);
-      expect(INDEX_EJS).toMatch(/escHtml\(g\.badge\)/);
+      expect(INDEX_EJS).not.toMatch(/\$\{g\.(slug|emoji|badge)\}/);
     });
 
     test('provider sidebar-এর নাম escape করা হয়', () => {
@@ -93,8 +92,9 @@ describe('Stored XSS sweep (PHASE 9)', () => {
 
       //   render path escHtml()  ,   
       //    HTML   
-      expect(INDEX_EJS).toMatch(/escHtml\(g\.name\)/);
-      expect(INDEX_EJS).toMatch(/escHtml\(g\.provider\)/);
+      // গেম-কার্ড রেন্ডার পাথ এখন নেই (D1), তাই ইনজেকশনের কোনো sink নেই; কাঁচা `${g.*}`
+      // ইন্টারপোলেশন কোথাও থাকলে টেস্ট ফেইল করবে।
+      expect(INDEX_EJS).not.toMatch(/\$\{g\.(name|provider|slug|emoji|badge)\}/);
 
       await pool.query('DELETE FROM games WHERE slug = $1', [slug]);
     });

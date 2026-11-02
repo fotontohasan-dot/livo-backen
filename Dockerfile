@@ -9,7 +9,7 @@ COPY package*.json ./
 # আগে নীরবে non-deterministic install চলত, ফলে প্রোডাকশন ইমেজে এমন ভার্সন
 # ঢুকতে পারত যা কেউ রিভিউ করেনি এবং বিল্ড লগে ব্যর্থতা দেখাই যেত না।
 # লকফাইল অবৈধ হলে বিল্ড এখন জোরে ব্যর্থ হবে।
-RUN npm ci --omit=dev --legacy-peer-deps
+RUN npm ci --omit=dev
 
 FROM base AS production
 ENV NODE_ENV=production
@@ -30,7 +30,7 @@ CMD ["node", "server.js"]
 FROM base AS development
 ENV NODE_ENV=development
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+RUN npm install
 COPY . .
 EXPOSE 3000
 CMD ["npx", "nodemon", "server.js"]

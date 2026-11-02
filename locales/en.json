@@ -3341,5 +3341,7 @@
   "txn_pwd_current": "Current transaction password",
   "txn_pwd_new": "New transaction password",
   "txn_pwd_confirm": "Confirm new transaction password",
-  "viph_total_count": "(Total {value})"
+  "viph_total_count": "(Total {value})",
+  "filter_warning": "⚠️ Your message contains inappropriate content. Please edit it and send again.",
+  "message_blocked": "The message could not be sent."
 }
