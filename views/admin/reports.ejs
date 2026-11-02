@@ -48,6 +48,7 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="application/json" id="admin-reportsConfig">${JSON.stringify({ ggrLabels: JSON.parse(ggrLabels), ggrData: JSON.parse(ggrData), userLabels: JSON.parse(userLabels), userData: JSON.parse(userData) }).replace(/</g, "\\u003c")}</script>\n<script src="/js/views/admin-reports.js"></script>
+<script type="application/json" id="admin-reportsConfig">${JSON.stringify({ ggrLabels: JSON.parse(ggrLabels), ggrData: JSON.parse(ggrData), userLabels: JSON.parse(userLabels), userData: JSON.parse(userData) }).replace(/</g, "\\u003c")}</script>
+<script src="/js/views/admin-reports.js"></script>
 ` 
 }) %>

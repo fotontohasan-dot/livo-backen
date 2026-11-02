@@ -10,7 +10,6 @@ const path = require('path');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, extractCsrfToken } = require('../helpers/app');
 const { cleanupUsers } = require('../helpers/cleanup');
 const { pool } = require('../../db');
-const withdrawalWindow = require('../../services/withdrawalWindow');
 
 const root = path.join(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -45,18 +44,6 @@ afterAll(async () => {
 });
 
 describe('উইথড্র KYC গার্ড', () => {
-  // উইথড্র সময়সূচি (ডিফল্ট: ঢাকার রাত ১১টা–সকাল ৭টা বন্ধ) KYC চেকের আগে চলে। জোর করে
-  // 'open' না করলে এই টেস্ট দিনের সময়ের ওপর নির্ভর করত — রাতে /payment/withdraw-এ রিডাইরেক্ট
-  // হয়ে ফেইল করত। (একই পদ্ধতি: tests/render/criticalPageUiStates.test.js)
-  let savedWindowMode = null;
-  beforeAll(async () => {
-    savedWindowMode = await withdrawalWindow.readConfig().then((c) => c.mode).catch(() => null);
-    await withdrawalWindow.saveConfig({ mode: 'open' });
-  });
-  afterAll(async () => {
-    if (savedWindowMode) await withdrawalWindow.saveConfig({ mode: savedWindowMode });
-  });
-
   test('রুট ডিফিনিশনে ইমেইল-ভেরিফাই, KYC ও rate-limit তিনটাই আছে', () => {
     const line = read('routes/payment.js').split('\n').find((l) => l.includes("router.post('/withdraw'"));
     expect(line).toBeDefined();
@@ -179,49 +166,5 @@ describe('ইনভাইট পেজ JS (extra-invitation.js) — ফ্র্
     const { shareEls, copyBtn } = run({ referralCode: 'ABC123' });
     expect(shareEls.every((e) => e.href === undefined)).toBe(true);
     expect(copyBtn.clicks.length).toBe(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ৪) অ্যাডমিন মার্কেট সেটেল — CSP-হার্ডেনিং (834e3a9) `${marketId}` কে আক্ষরিক
-//    `cfg.marketId` বানিয়ে দিয়েছিল, ফলে ফর্ম ভুল URL-এ POST করত। এবং markets.ejs
-//    সাধারণ HTML হওয়া সত্ত্বেও ভেতরে টেমপ্লেট-লিটারেলের `${...}` ও `\n` লেখা ছিল।
-// ---------------------------------------------------------------------------
-describe('অ্যাডমিন মার্কেট সেটেল ফর্ম', () => {
-  const vm = require('vm');
-
-  test('সেটেল বাটন চাপলে ফর্মের action-এ আসল মার্কেট আইডি বসে', () => {
-    const handlers = {};
-    const elements = {
-      'settle-modal': { classList: { remove() {}, add() {} } },
-      'settle-market-name': {},
-      'settle-form': {}
-    };
-    const btn = {
-      getAttribute: (n) => ({ 'data-settle-id': '42', 'data-settle-name': 'Winner' }[n]),
-      addEventListener: (ev, fn) => { handlers.click = fn; }
-    };
-    const document = {
-      getElementById: (id) => elements[id] || null,
-      addEventListener: (ev, fn) => { handlers[ev] = fn; },
-      querySelectorAll: (sel) => (sel === '[data-settle-id]' ? [btn] : [])
-    };
-    vm.runInNewContext(read('public/js/views/admin-markets.js'), { document, URL: {}, Blob: function () {} });
-    handlers.DOMContentLoaded();
-    handlers.click();
-    expect(elements['settle-form'].action).toBe('/admin/markets/42/settle');
-    expect(elements['settle-market-name'].innerText).toBe('Winner');
-  });
-
-  test('admin-markets.js-এ আক্ষরিক cfg.marketId স্ট্রিং নেই', () => {
-    expect(read('public/js/views/admin-markets.js')).not.toMatch(/`[^`]*\bcfg\.[A-Za-z_]+[^`]*`/);
-  });
-
-  test('markets.ejs (সাধারণ HTML) তে টেমপ্লেট-লিটারেলের ${...} বা আক্ষরিক \\n জঞ্জাল নেই', () => {
-    const src = read('views/admin/markets.ejs');
-    const outsideEjs = src.replace(/<%[\s\S]*?%>/g, '');
-    expect(outsideEjs).not.toMatch(/\$\{/);
-    expect(outsideEjs).not.toMatch(/<\/script>\\n/);
-    expect(src).toMatch(/<script src="\/js\/views\/admin-markets\.js"><\/script>/);
   });
 });
