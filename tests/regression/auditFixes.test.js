@@ -181,3 +181,47 @@ describe('ইনভাইট পেজ JS (extra-invitation.js) — ফ্র্
     expect(copyBtn.clicks.length).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ৪) অ্যাডমিন মার্কেট সেটেল — CSP-হার্ডেনিং (834e3a9) `${marketId}` কে আক্ষরিক
+//    `cfg.marketId` বানিয়ে দিয়েছিল, ফলে ফর্ম ভুল URL-এ POST করত। এবং markets.ejs
+//    সাধারণ HTML হওয়া সত্ত্বেও ভেতরে টেমপ্লেট-লিটারেলের `${...}` ও `\n` লেখা ছিল।
+// ---------------------------------------------------------------------------
+describe('অ্যাডমিন মার্কেট সেটেল ফর্ম', () => {
+  const vm = require('vm');
+
+  test('সেটেল বাটন চাপলে ফর্মের action-এ আসল মার্কেট আইডি বসে', () => {
+    const handlers = {};
+    const elements = {
+      'settle-modal': { classList: { remove() {}, add() {} } },
+      'settle-market-name': {},
+      'settle-form': {}
+    };
+    const btn = {
+      getAttribute: (n) => ({ 'data-settle-id': '42', 'data-settle-name': 'Winner' }[n]),
+      addEventListener: (ev, fn) => { handlers.click = fn; }
+    };
+    const document = {
+      getElementById: (id) => elements[id] || null,
+      addEventListener: (ev, fn) => { handlers[ev] = fn; },
+      querySelectorAll: (sel) => (sel === '[data-settle-id]' ? [btn] : [])
+    };
+    vm.runInNewContext(read('public/js/views/admin-markets.js'), { document, URL: {}, Blob: function () {} });
+    handlers.DOMContentLoaded();
+    handlers.click();
+    expect(elements['settle-form'].action).toBe('/admin/markets/42/settle');
+    expect(elements['settle-market-name'].innerText).toBe('Winner');
+  });
+
+  test('admin-markets.js-এ আক্ষরিক cfg.marketId স্ট্রিং নেই', () => {
+    expect(read('public/js/views/admin-markets.js')).not.toMatch(/`[^`]*\bcfg\.[A-Za-z_]+[^`]*`/);
+  });
+
+  test('markets.ejs (সাধারণ HTML) তে টেমপ্লেট-লিটারেলের ${...} বা আক্ষরিক \\n জঞ্জাল নেই', () => {
+    const src = read('views/admin/markets.ejs');
+    const outsideEjs = src.replace(/<%[\s\S]*?%>/g, '');
+    expect(outsideEjs).not.toMatch(/\$\{/);
+    expect(outsideEjs).not.toMatch(/<\/script>\\n/);
+    expect(src).toMatch(/<script src="\/js\/views\/admin-markets\.js"><\/script>/);
+  });
+});
