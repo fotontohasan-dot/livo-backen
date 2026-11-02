@@ -369,17 +369,14 @@ async function executeJob(key, def, triggeredBy) {
   let status = 'success';
   let message = '';
   let attempts = 0;
-  let lastErr = null;
 
   for (attempts = 1; attempts <= maxAttempts; attempts++) {
     try {
       message = (await def.handler()) || 'সম্পন্ন';
       status = 'success';
-      lastErr = null;
       break;
     } catch (err) {
       status = 'error';
-      lastErr = err;
       message = err.message;
       console.error(`cron job "${key}" ব্যর্থ (attempt ${attempts}/${maxAttempts}):`, err.message);
       if (attempts < maxAttempts) {

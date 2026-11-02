@@ -23,7 +23,7 @@ async function checkPostgres() {
   const t = Date.now();
   try {
     const { pool } = require('../db');
-    const r = await withTimeout(pool.query('SELECT 1'), 3000);
+    await withTimeout(pool.query('SELECT 1'), 3000);
     const row = await withTimeout(pool.query(`SELECT COUNT(*) FROM users`), 3000);
     return { status: 'healthy', latencyMs: ms(t), userCount: parseInt(row.rows[0].count) };
   } catch (err) {
@@ -41,7 +41,7 @@ async function checkRedis() {
       return { status: 'warning', latencyMs: ms(t), note: st.disabledReason || 'Redis unavailable' };
     }
     // ping via cache set/get
-    const { set, get, del } = require('./cache');
+    const { set, del } = require('./cache');
     const key = '_health_ping_' + Date.now();
     await withTimeout(set(key, '1', 5), 2000);
     await withTimeout(del(key), 2000);

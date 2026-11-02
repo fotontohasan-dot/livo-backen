@@ -209,7 +209,6 @@ router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => 
 // users.support_status কলাম (উপরে migrations.js) ও বিদ্যমান socket infra
 // (services/socket.js-এর user:<id>/admins room) ব্যবহার করে শুধু AI ও Human
 // chat-এর মধ্যে একটি স্পষ্ট status/handoff যুক্ত করা হচ্ছে।
-const SUPPORT_STATUSES = ['ai', 'waiting', 'connected', 'resolved'];
 
 // ইউজার নিজের বর্তমান support_status জানতে চাইলে (পেজ লোড/রিফ্রেশে)
 router.get('/status', isAuth, requireFeature('live_chat'), async (req, res) => {
