@@ -2147,7 +2147,7 @@ async function runMigrations() {
     // ==================== Phase 07: পোস্ট-মাস্টার-অডিট কোয়েরি পারফরম্যান্স ====================
     // প্রতিটা EXPLAIN দিয়ে যাচাই করা (tests/integration/dbQueryPerformance.test.js), আন্দাজে যোগ করা হয়নি।
     //
-    // users/bets — routes/admin.js-এর ড্যাশবোর্ড ও services/analytics.js প্রতিটাতেই
+    // users/bets — routes/admin.js-এর ড্যাশবোর্ড প্রতিটাতেই
     // `WHERE created_at::date = CURRENT_DATE` (বা `= d::date`) প্যাটার্নে চলে, অন্য কোনো
     // ফিল্টার ছাড়াই। কলামের ওপর ::date cast করায় সাধারণ btree(created_at) ইনডেক্স (যেটা
     // bets-এ আগে থেকেই আছে) ব্যবহার করা যায় না — planner পুরো টেবিল স্ক্যান করে প্রতিটা
