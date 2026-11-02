@@ -76,12 +76,14 @@ describe('login_logs ফরেন কী — চূড়ান্ত অবস�
     );
     expect(orphanBefore.rows[0].user_id).toBe(user.id);
 
-    const totalBefore = await pool.query('SELECT COUNT(*)::int AS c FROM login_logs');
+    // সারি-সংখ্যা শুধু এই টেস্টের নিজস্ব marker-এর ওপর গোনা হয় — পুরো টেবিলের গণনা প্যারালেল
+    // রানে অন্য টেস্টের লগইন-লগ ঢোকায় ফ্লেকি (860 vs 861) হতো।
+    const totalBefore = await pool.query('SELECT COUNT(*)::int AS c FROM login_logs WHERE ip = $1', [marker]);
 
     const runMigrations = require('../../migrations');
     await runMigrations();
 
-    const totalAfter = await pool.query('SELECT COUNT(*)::int AS c FROM login_logs');
+    const totalAfter = await pool.query('SELECT COUNT(*)::int AS c FROM login_logs WHERE ip = $1', [marker]);
     expect(totalAfter.rows[0].c).toBe(totalBefore.rows[0].c); // কোনো সারি মোছা হয়নি
 
     const repaired = await pool.query(
