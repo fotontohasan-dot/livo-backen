@@ -92,7 +92,6 @@
     'Playson':          { mono: 'PS',   color: '#F77F00', logo: '/images/providers/playson.jpg' },
     'Spinomenal':       { mono: 'SM',   color: '#4C3B8C', logo: '/images/providers/spinomenal.jpg' }
   };
-  const PROVIDERS = Object.keys(PROVIDER_META);
 
   let selectedCategory = 'all';
   let selectedProvider = 'all';
@@ -102,27 +101,6 @@
   // Live Casino এবং Sports-এ কোনো সেকেন্ডারি ট্যাব থাকবে না — শুধু প্রোভাইডার লিস্ট ও গেম গ্রিড দেখাবে।
   const SECONDARY_TAB_CATEGORIES = ['slots'];
   let selectedLayout = localStorage.getItem('bet420_game_layout') || 'standard';
-
-  // ==================== ফেভারিটস / রিসেন্ট (localStorage-ভিত্তিক) ====================
-  function getFavorites() {
-    try { return JSON.parse(localStorage.getItem('bet420_favorites') || '[]'); } catch (e) { return []; }
-  }
-  function toggleFavorite(slug) {
-    let favs = getFavorites();
-    if (favs.includes(slug)) favs = favs.filter(s => s !== slug);
-    else favs.push(slug);
-    localStorage.setItem('bet420_favorites', JSON.stringify(favs));
-    renderGames();
-  }
-  function getRecent() {
-    try { return JSON.parse(localStorage.getItem('bet420_recent') || '[]'); } catch (e) { return []; }
-  }
-  function pushRecent(slug) {
-    let recent = getRecent().filter(s => s !== slug);
-    recent.unshift(slug);
-    recent = recent.slice(0, 20);
-    localStorage.setItem('bet420_recent', JSON.stringify(recent));
-  }
 
   // ==================== বাম পাশের প্রোভাইডার কলাম (Slots/Live/Sports/Poker ক্যাটাগরির জন্য) ====================
   function renderCatalogProviderList() {
@@ -188,90 +166,6 @@
     // গেম কার্ড/গ্রিড হোমপেজে আপাতত দেখানো হচ্ছে না — #gameContainer ভবিষ্যতের
     // API কানেক্টিভিটির জন্য খালি রাখা হয়েছে। নিচের সব রেন্ডার লজিক বাইপাস।
     return;
-
-    const searchQ = document.getElementById('gameSearch') ? document.getElementById('gameSearch').value.toLowerCase() : '';
-    const favs = getFavorites();
-    const recent = getRecent();
-    const isCatalogCategory = CATALOG_CATEGORIES.includes(selectedCategory);
-
-    let source = allGames;
-    if (isCatalogCategory) {
-      // মূল ক্যাটাগরি (Slots/Live/Sports/Poker) অনুযায়ী নির্দিষ্ট, তার উপর secondary ট্যাব প্রয়োগ হয়
-      source = allGames.filter(g => g.type === selectedCategory);
-      if (selectedSecondaryTab === 'hot') {
-        source = source.filter(g => g.badge === 'hot');
-      } else if (selectedSecondaryTab === 'favorites') {
-        source = source.filter(g => favs.includes(g.slug));
-      } else if (selectedSecondaryTab === 'recent') {
-        const recentSlugsInCategory = recent.filter(slug => source.some(g => g.slug === slug));
-        source = recentSlugsInCategory.map(slug => source.find(g => g.slug === slug)).filter(Boolean);
-      }
-    } else if (selectedCategory === 'favorites') {
-      source = allGames.filter(g => favs.includes(g.slug));
-    } else if (selectedCategory === 'recent') {
-      source = recent.map(slug => allGames.find(g => g.slug === slug)).filter(Boolean);
-    }
-
-    const filtered = source.filter(g => {
-      const matchesSearch = g.name.toLowerCase().includes(searchQ);
-      const matchesCategory = isCatalogCategory || selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent'
-        || (selectedCategory === 'hot' ? g.badge === 'hot' : g.type === selectedCategory);
-      const matchesProvider = selectedProvider === 'all' || g.provider === selectedProvider;
-      return matchesSearch && matchesCategory && matchesProvider;
-    });
-
-    if (filtered.length === 0) {
-      const isFavView = (isCatalogCategory && selectedSecondaryTab === 'favorites') || selectedCategory === 'favorites';
-      const isRecentView = (isCatalogCategory && selectedSecondaryTab === 'recent') || selectedCategory === 'recent';
-      const msg = isFavView ? 'এখনো কোনো গেইম ফেভারিটে যোগ করা হয়নি ⭐'
-        : isRecentView ? 'সম্প্রতি কোনো গেইম খেলা হয়নি 🕒'
-        : cfg.noGamesFound;
-      c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;">${msg}</div>`;
-      return;
-    }
-
-    filtered.forEach(g => {
-      // PHASE 1: গেম "খেলা যায় কি না" আর কোড-সাইড স্লাগ তালিকা দিয়ে ঠিক হয় না।
-      // সার্ভারই সারির সাথে launch_url পাঠায় — সেটা থাকলে খেলা যায়, না থাকলে নয়।
-      const playable = !!g.launch_url;
-      const badgeHTML = !playable
-        ? `<div class="game-badge-premium badge-soon">শীঘ্রই</div>`
-        : (g.badge ? `<div class="game-badge-premium badge-${escHtml(g.badge)}">${escHtml(g.badge)}</div>` : '');
-      const isFav = favs.includes(g.slug);
-      const card = document.createElement('a');
-      card.href = playable ? g.launch_url : 'javascript:void(0)';
-      card.className = 'game-card-premium' + (playable ? '' : ' game-card-soon');
-      if (!playable) card.setAttribute('aria-disabled', 'true');
-      // থাম্বনেইল আর `/images/games/<slug>.svg` কনভেনশন থেকে অনুমান করা হয় না —
-      // প্রোভাইডার sync যে CDN URL দেয় সেটাই ব্যবহৃত হয়, না থাকলে ইমোজি ফলব্যাক।
-      const thumbHTML = g.thumbnail_url
-        ? `<img class="game-thumb-img" src="${escHtml(g.thumbnail_url)}" alt="" aria-hidden="true"
-               loading="lazy" decoding="async" width="300" height="300"
-               data-img-fallback="remove">`
-        : '';
-      card.innerHTML = `
-        <div class="game-thumb-wrapper">
-          <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${escHtml(g.slug)}"></i>
-          ${thumbHTML}
-          <span class="game-emoji">${escHtml(g.emoji)}</span>
-          ${badgeHTML}
-        </div>
-        <div class="game-info-premium">
-          <div class="game-title-premium">${escHtml(g.name)}</div>
-          <div class="game-provider-premium">${escHtml(g.provider)}</div>
-        </div>`;
-      card.addEventListener('click', (e) => {
-        if (!playable) { e.preventDefault(); return; }
-        pushRecent(g.slug);
-      });
-      const star = card.querySelector('.fav-star');
-      star.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleFavorite(g.slug);
-      });
-      c.appendChild(card);
-    });
   }
 
   // ==================== ক্যাটাগরি ট্যাব ====================
