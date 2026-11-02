@@ -7,7 +7,7 @@
   const btnInstagram = document.getElementById('btnInstagram');
   const btnViber     = document.getElementById('btnViber');
   const btnImo       = document.getElementById('btnImo');
-  const status       = document.getElementById('status');
+  const statusEl       = document.getElementById('status');
 
   function updateLinks() {
     const text = msgEl.value.trim();
@@ -25,9 +25,9 @@
       e.preventDefault();
       try {
         await navigator.clipboard.writeText(text + ' ' + link);
-        status.textContent = 'টেক্সট কপি হয়েছে — এখন Instagram-এ পেস্ট করুন';
+        statusEl.textContent = 'টেক্সট কপি হয়েছে — এখন Instagram-এ পেস্ট করুন';
       } catch {
-        status.textContent = 'কপি করা যায়নি, ম্যানুয়ালি কপি করুন';
+        statusEl.textContent = 'কপি করা যায়নি, ম্যানুয়ালি কপি করুন';
       }
       window.location.href = 'instagram://app';
     };
