@@ -115,6 +115,7 @@ const rows = (bets || []).map(betRow).join('') || '<tr><td colspan="6" class="px
         </div>
     </div>
 </div>
-<script type="application/json" id="admin-betsConfig">${JSON.stringify({ status: status || '', page: page }).replace(/</g, "\\u003c")}</script>\n<script src="/js/views/admin-bets.js"></script>
+<script type="application/json" id="admin-betsConfig">${JSON.stringify({ status: status || '', page: page }).replace(/</g, "\\u003c")}</script>
+<script src="/js/views/admin-bets.js"></script>
 `
 }) %>

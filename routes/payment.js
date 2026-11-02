@@ -8,7 +8,7 @@ const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
 const rbac = require('../services/rbac');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
-const { PublicError, publicMessage } = require('../utils/safeError');
+const { publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 const { requireFeature } = require('../middleware/featureGate');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
@@ -224,7 +224,6 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   // এখন ব্যবসায়িক টাইমজোন (Asia/Dhaka) থেকে, DB সার্ভারের CURRENT_DATE (UTC) নয়।
   // ডিপোজিট সীমা প্রাক-লেনদেন যাচাই। fail-closed: ডেটাবেজ অ্যাক্সেস ব্যর্থ হলে
   // ডিপোজিট ব্লক করা হয়, চুপচাপ পার করা হয় না।
-  let depositLimitOk = false;
   try {
     const limitRow = await pool.query('SELECT daily_deposit_limit FROM users WHERE id=$1', [userId]);
     const limit = limitRow.rows[0] && limitRow.rows[0].daily_deposit_limit ? Number(limitRow.rows[0].daily_deposit_limit) : null;
@@ -240,7 +239,6 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
         return res.redirect('/payment/deposit');
       }
     }
-    depositLimitOk = true;
   } catch (e) {
     console.error('deposit limit check error:', e.message);
     req.flash('error', req.t('payment_limit_check_failed'));
@@ -568,7 +566,7 @@ router.get('/withdraw/turnover-status', isAuth, requireFeature('withdrawal'), as
   }
 });
 
-router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), async (req, res) => {
+router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), requireVerifiedEmail, requireApprovedKyc, paymentLimiter, async (req, res) => {
   const { method, account_number, password, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -1255,25 +1253,6 @@ router.post('/sslcommerz/ipn', async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Single-Wallet Callback — নতুন পেমেন্ট প্রোভাইডারের সার্ভার-টু-সার্ভার কলব্যাক।
-// প্যাটার্ন হুবহু /sslcommerz/ipn অনুসরণ করে: gateway_tran_id দিয়ে pending
-// request লক করা, provider-এর কাছে গিয়ে independently verify করা, amount/
-// currency মিলিয়ে তবেই credit করা। **কখনো callback body-কে সরাসরি বিশ্বাস
-// করে ব্যালেন্স বদলানো হয় না** — নাহলে যে কেউ raw POST পাঠিয়ে টাকা ঢোকাতে
-// পারবে।
-//
-// TODO (পূরণ করা আবশ্যিক, নাহলে এই এন্ডপয়েন্ট প্রোডাকশনে চালু করা যাবে না):
-//   ১. signature/HMAC ভেরিফিকেশন — প্রোভাইডারের ডকুমেন্টেশন অনুযায়ী
-//      services/sslcommerz.js-এর ধাঁচে একটা services/<provider>.js বানিয়ে
-//      সেখানে validatePayment()/verifySignature() লিখুন।
-//   ২. req.body থেকে exact field নাম বসান (এখন placeholder হিসেবে
-//      trackingId, userId, status ধরা হয়েছে — প্রোভাইডার হয়তো ভিন্ন নাম
-//      পাঠায়, যেমন tran_id, ref_id, txn_status)।
-//   ৩. status-এর exact string ভ্যালু বসান (এখন 'SUCCESS'/'FAILED' ধরা)।
-//   ৪. amount ভেরিফিকেশন যোগ করুন — request.amount-এর সাথে প্রোভাইডারের
-//      পাঠানো amount না মিললে credit করবেন না (দেখুন উপরে amountMatches)।
-// ---------------------------------------------------------------------------
 // (নিরাপত্তা) POST /single-wallet/callback সরানো হয়েছে — signature যাচাই ছাড়া যে কেউ ডিপোজিট ক্রেডিট করাতে পারত।
 // স্বাক্ষর-যাচাইসহ বৈধ রুট: POST /wallet-callback/:provider (routes/walletCallback.js)।
 
