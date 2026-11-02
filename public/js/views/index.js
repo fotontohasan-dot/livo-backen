@@ -95,7 +95,6 @@
 
   let selectedCategory = 'all';
   let selectedProvider = 'all';
-  let selectedSecondaryTab = 'all';
   const CATALOG_CATEGORIES = ['slots', 'live', 'sports', 'poker'];
   // শুধুমাত্র এই ক্যাটাগরিগুলোতে উপরে Hot | Favorite | Recent সেকেন্ডারি ট্যাব দেখাবে।
   // Live Casino এবং Sports-এ কোনো সেকেন্ডারি ট্যাব থাকবে না — শুধু প্রোভাইডার লিস্ট ও গেম গ্রিড দেখাবে।
@@ -179,7 +178,6 @@
       // সেকেন্ডারি ট্যাব (Hot | Favorite | Recent) শুধুমাত্র Slots ক্যাটাগরিতে দেখাবে।
       // Live Casino ও Sports-এ ক্লিক করলে সরাসরি সেই ক্যাটাগরির গেম + প্রোভাইডার লিস্ট দেখাবে, কোনো সেকেন্ডারি ট্যাব ছাড়াই।
       const showSecondaryTabs = SECONDARY_TAB_CATEGORIES.includes(selectedCategory);
-      selectedSecondaryTab = showSecondaryTabs ? 'hot' : 'all';
       const secTabs = document.getElementById('secondaryTabs');
       if (secTabs) {
         secTabs.style.display = showSecondaryTabs ? 'flex' : 'none';
@@ -198,7 +196,6 @@
     el.addEventListener('click', () => {
       document.querySelectorAll('.secondary-tab-item').forEach(item => item.classList.remove('active'));
       el.classList.add('active');
-      selectedSecondaryTab = el.dataset.secondary;
       renderGames();
     });
   });
