@@ -52,7 +52,21 @@ function resolveSslConfig() {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: resolveSslConfig()
+  ssl: resolveSslConfig(),
+  // ম্যানেজড হোস্টে (Render ইত্যাদি) নিষ্ক্রিয় TCP কানেকশন মাঝপথে কেটে দেওয়া হয়। keepAlive
+  // থাকলে কানেকশন সজীব থাকে এবং কাটা কানেকশন দ্রুত ধরা পড়ে।
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+  connectionTimeoutMillis: 10000
+});
+
+// নিষ্ক্রিয় (idle) ক্লায়েন্টে এরর এলে pg পুল 'error' ইভেন্ট ছোঁড়ে। কোনো লিসনার না থাকলে সেটা
+// uncaughtException হয়ে যেত, আর server.js তখন প্রসেস রিস্টার্ট করে দেয় — ফলে ডাটাবেস
+// কানেকশন কেটে গেলেই সাইট কিছুক্ষণের জন্য ডাউন হতো (সেশন স্টোরও এই পুল ব্যবহার করে,
+// তাই ইউজাররা হঠাৎ লগইন পেজে ফেরত যেতে পারত)। এখন এরর লগ হয়, পুল পরের রিকোয়েস্টে নতুন
+// কানেকশন নেয়, প্রসেস চালু থাকে।
+pool.on('error', (err) => {
+  console.error('[pg-pool] idle client error (প্রসেস চালু আছে):', err.message);
 });
 
 const connectDB = async () => {

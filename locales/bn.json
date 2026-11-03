@@ -275,7 +275,7 @@
   "login_to_predict": "লগইন করে Predict করুন",
   "connection_status": "কানেকশন চলছে...",
   "live_status_ok": "লাইভ — অটো আপডেট চালু",
-  "live_status_error": "Connection closed — retrying...",
+  "live_status_error": "সংযোগ বিচ্ছিন্ন — আবার চেষ্টা করা হচ্ছে...",
   "error_title": "কিছু একটা সমস্যা হয়েছে",
   "server_error": "সার্ভারে সমস্যা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।",
   "page_not_found": "পেজটি খুঁজে পাওয়া যায়নি",
@@ -3343,5 +3343,11 @@
   "viph_total_count": "(মোট {value})",
   "viph_total_label": "মোট",
   "filter_warning": "⚠️ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট আছে। অনুগ্রহ করে ঠিক করে আবার পাঠান।",
-  "message_blocked": "মেসেজটি পাঠানো যায়নি।"
+  "message_blocked": "মেসেজটি পাঠানো যায়নি।",
+  "bet_slip_title": "বেট স্লিপ",
+  "bet_slip_stake": "বাজির পরিমাণ (টাকা)",
+  "bet_slip_return": "সম্ভাব্য প্রাপ্তি",
+  "bet_slip_cancel": "বাতিল",
+  "bet_slip_place": "বাজি ধরুন",
+  "bet_slip_session_expired": "আপনার সেশনের মেয়াদ শেষ হয়েছে। আবার লগইন করুন।"
 }

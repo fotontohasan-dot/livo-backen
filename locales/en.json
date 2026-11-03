@@ -265,7 +265,7 @@
   "app_download": "App Download",
   "version": "Version",
   "accumulator_bet": "Accumulator Bet",
-  "accumulator_desc": "Multiple bets together â up to 30% boost!",
+  "accumulator_desc": "Multiple bets together — up to 30% boost!",
   "all": "All",
   "live_now": "LIVE Now",
   "upcoming_matches": "Upcoming Matches",
@@ -274,8 +274,8 @@
   "predict_now": "Predict Now",
   "login_to_predict": "Login to Predict",
   "connection_status": "Connecting...",
-  "live_status_ok": "Live â Auto update on",
-  "live_status_error": "Connection closed â retrying...",
+  "live_status_ok": "Live • Auto update on",
+  "live_status_error": "Connection closed — retrying...",
   "error_title": "Something went wrong",
   "server_error": "A server error occurred. Please try again later.",
   "page_not_found": "Page not found",
@@ -3343,5 +3343,11 @@
   "txn_pwd_confirm": "Confirm new transaction password",
   "viph_total_count": "(Total {value})",
   "filter_warning": "⚠️ Your message contains inappropriate content. Please edit it and send again.",
-  "message_blocked": "The message could not be sent."
+  "message_blocked": "The message could not be sent.",
+  "bet_slip_title": "Bet Slip",
+  "bet_slip_stake": "Stake (Taka)",
+  "bet_slip_return": "Potential return",
+  "bet_slip_cancel": "Cancel",
+  "bet_slip_place": "Place Bet",
+  "bet_slip_session_expired": "Your session has expired. Please log in again."
 }

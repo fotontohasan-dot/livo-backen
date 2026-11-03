@@ -157,7 +157,7 @@
                   </form>
                   
                   <% if(m.status === 'open') { %>
-                  <button data-settle-id="<%= m.id %>" data-settle-name="<%= m.name %>" 
+                  <button data-settle-id="<%= m.id %>" data-settle-name="<%= m.name %>" data-settle-runners="<%= (m.odds && typeof m.odds === 'object' ? Object.keys(m.odds) : (m.type === 'bookmaker' ? ['0','1'] : [])).join(',') %>" 
                           class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs text-white transition-all flex items-center gap-1">
                     <i class="fas fa-check"></i>
                     <span><%= t('admin_btn_settle') %></span>
@@ -188,8 +188,10 @@
         <form id="settle-form" method="POST">
           <div class="mb-5">
             <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_field_winning_runner') %></label>
-            <input type="text" name="result" required placeholder="<%= t('admin_ph_eg_team_a') %>" 
+            <input type="text" name="winning_runner" id="settle-runner" list="settle-runner-list" required autocomplete="off" placeholder="<%= t('admin_ph_eg_team_a') %>" 
                    class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            <datalist id="settle-runner-list"></datalist>
+            <p id="settle-runner-hint" class="text-xs text-gray-500 mt-1.5"></p>
           </div>
           
           <div class="flex gap-3">
