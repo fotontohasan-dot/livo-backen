@@ -160,7 +160,9 @@ const makeIsAdmin = (denyResponseFor) => async (req, res, next) => {
         path: req.originalUrl,
         reason: { is_banned: row && row.is_banned, deleted_at: row && row.deleted_at, role: currentRole }
       });
-      req.session.destroy(() => {});
+      // শুধু ডিমোট হওয়া অ্যাডমিনের সেশন বাতিল হয়। সাধারণ ইউজার ভুলে/স্বয়ংক্রিয়ভাবে
+      // অ্যাডমিন URL ছুঁলে তাকে লগআউট করা হতো — সেটাই "বারবার লগআউট"-এর একটা কারণ।
+      if (req.session.user.role === 'admin') req.session.destroy(() => {});
       return denyResponse();
     }
 

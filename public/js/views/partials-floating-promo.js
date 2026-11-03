@@ -192,10 +192,21 @@
         try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; lastVer = localStorage.getItem(LP_VER_KEY) || ''; } catch (e) { last = 0; lastVer = ''; }
         var versionBumped = (lastVer !== ver) && !(lastVer === '' && ver === '0');
         if (versionBumped || intervalMs === 0 || now - last > intervalMs) {
-          setTimeout(function(){
+          // অন্য ওভারলে (বয়স-নিশ্চিতকরণ গেট, অ্যানাউন্সমেন্ট পপআপ) খোলা থাকলে পপআপ তার নিচে
+          // চাপা পড়ে দেখা যেত না, অথচ "দেখানো হয়েছে" ধরে নিয়ে টাইমস্ট্যাম্প বসে যেত।
+          // তাই ওগুলো বন্ধ হওয়া পর্যন্ত অপেক্ষা করে, আসলে দেখানোর মুহূর্তেই টাইমস্ট্যাম্প বসে।
+          var blockers = ['age-gate-overlay', 'bet420AnnouncePopupOverlay'];
+          function blocked(){ for (var bi = 0; bi < blockers.length; bi++) { if (_g(blockers[bi])) return true; } return false; }
+          var waited = 0;
+          function tryShow(){
+            if (blocked() && waited < 600000) { waited += 500; return setTimeout(tryShow, 500); }
             lpShowPopup();
             try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); localStorage.setItem(LP_VER_KEY, ver); } catch (e) {}
-          }, Math.max(0, (PP_SET.delaySeconds == null ? 1.2 : PP_SET.delaySeconds) * 1000));
+          }
+          var startDelay = Math.max(0, (PP_SET.delaySeconds == null ? 1.2 : PP_SET.delaySeconds) * 1000);
+          // age-gate.js defer হয়ে লোড হয়, তাই DOM রেডি হওয়ার পর শুরু করা হয়
+          function begin(){ setTimeout(tryShow, startDelay); }
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin); else begin();
         }
       }
 

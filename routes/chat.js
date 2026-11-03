@@ -47,7 +47,8 @@ const isAdmin = async (req, res, next) => {
       return res.status(403).send('Access denied');
     }
     if (currentRole !== 'admin') {
-      req.session.destroy(() => {});
+      // সাধারণ ইউজারকে লগআউট নয়, শুধু প্রত্যাখ্যান; ডিমোট হওয়া অ্যাডমিনের সেশন বাতিল
+      if (req.session.user.role === 'admin') req.session.destroy(() => {});
       return res.status(403).send('Access denied');
     }
     req.session.user.role = currentRole;
