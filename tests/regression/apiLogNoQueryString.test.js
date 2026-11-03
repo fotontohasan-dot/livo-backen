@@ -1,6 +1,6 @@
 // D14: /api/* রিকোয়েস্ট লগে কোয়েরি-স্ট্রিং (টোকেন/কোড) যেন না যায়
 const request = require('supertest');
-const app = require('../../app');
+const { app } = require('../helpers/app');
 
 describe('API gateway লগ', () => {
   test('কোয়েরি-স্ট্রিং লগে আসে না, শুধু পাথ আসে', async () => {
