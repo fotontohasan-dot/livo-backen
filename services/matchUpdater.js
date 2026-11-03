@@ -12,6 +12,7 @@
 
 const { pool } = require('../db');
 const { getEnabledProviders, getSyncIntervalMs } = require('./providers');
+const { ensureDefaultMarkets, closeFinishedMatchMarkets, backfillMissingMarkets } = require('./autoMarkets');
 
 /**
  * একটা normalized ম্যাচ সেভ করে। নতুন হলে INSERT, আগে থেকে থাকলে UPDATE।
@@ -84,6 +85,10 @@ async function syncOnce() {
     for (const m of matches) {
       try {
         const row = await upsertMatch(m);
+        if (row) {
+          await ensureDefaultMarkets(row.id, m.status).catch((e) =>
+            console.error(`[markets] তৈরি ব্যর্থ (match ${row.id}):`, e.message));
+        }
         if (row && row.inserted) pInserted += 1;
         else pUpdated += 1;
       } catch (err) {
@@ -97,6 +102,14 @@ async function syncOnce() {
     updated += pUpdated;
     summary.push({ provider: provider.name, inserted: pInserted, updated: pUpdated, count: matches.length });
     console.log(`✅ ${provider.name} synced: ${matches.length} matches (${pInserted} new, ${pUpdated} updated)`);
+  }
+
+  try {
+    const backfilled = await backfillMissingMarkets();
+    const closed = await closeFinishedMatchMarkets();
+    if (backfilled || closed) console.log(`🎯 markets: ${backfilled} নতুন তৈরি, ${closed} বন্ধ (শেষ ম্যাচ)`);
+  } catch (err) {
+    console.error('[markets] ব্যাকফিল/ক্লোজ ব্যর্থ:', err.message);
   }
 
   return { inserted, updated, failed, providers: summary };

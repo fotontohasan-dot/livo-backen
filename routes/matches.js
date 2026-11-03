@@ -21,6 +21,7 @@ const { getSetting } = require('../services/settings');
 const { resolveOdd } = require('../services/oddsResolver');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
+const { ensureDefaultMarkets } = require('../services/autoMarkets');
 
 function formatMatch(row) {
   return {
@@ -156,6 +157,8 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
 
     let markets = [];
     try {
+      // হাতে/পুরনো সিঙ্কে তৈরি ম্যাচে মার্কেট না থাকলে এখানেই তৈরি হয়ে যাবে
+      await ensureDefaultMarkets(row.id, row.status);
       const marketRes = await pool.query(
         `SELECT * FROM markets WHERE match_id = $1 AND status = 'open' ORDER BY id ASC`,
         [req.params.id]
