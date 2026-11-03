@@ -17,51 +17,108 @@
   .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
   @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+  /* ===== Match detail: theme-independent colours (বাংলাদেশ গ্রিন থিমে কালো লেখা মিশে যেত) ===== */
+  .md-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #fff !important; text-decoration: none; font-weight: 600; font-size: 14px;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+    padding: 8px 14px; border-radius: 999px; margin-bottom: 12px;
+  }
+  .md-back:active { background: rgba(255,255,255,.26); }
+
+  .md-score {
+    background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid #334155; border-radius: 16px; overflow: hidden;
+    margin-bottom: 16px; color: #f8fafc;
+  }
+  .md-score-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 16px; background: rgba(0,0,0,.28);
+    font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: #cbd5e1;
+  }
+  .md-league { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-badge { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+  .md-badge-live { background: #dc2626; color: #fff; }
+  .md-badge-up { background: #334155; color: #e2e8f0; }
+  .md-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #fff; margin-right: 5px; }
+  .md-teams { padding: 6px 16px 12px; }
+  .md-team-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid rgba(148,163,184,.18);
+  }
+  .md-team-row:last-child { border-bottom: 0; }
+  .md-shirt {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; color: #fff;
+  }
+  .md-shirt-a { background: #2563eb; }
+  .md-shirt-b { background: #ea580c; }
+  .md-team-name { flex: 1; font-size: 17px; font-weight: 700; color: #f8fafc; min-width: 0; }
+  .md-team-score { font-size: 20px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+  .md-overs { padding: 0 16px 14px; font-size: 13px; color: #94a3b8; }
+  .md-status { padding: 0 16px 14px; font-size: 13px; font-weight: 600; color: #fbbf24; }
+
   .market-box {
-    background: #1f2937;
-    border-radius: 12px;
-    margin-bottom: 18px;
-    overflow: hidden;
-    border: 1px solid #334155;
+    background: #1f2937; border-radius: 14px; margin-bottom: 14px;
+    overflow: hidden; border: 1px solid #334155;
   }
   .market-header {
-    padding: 12px 16px;
-    background: #111827;
-    font-weight: 700;
-    font-size: 15px;
-    color: #fbbf24;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    padding: 13px 16px; background: #111827; font-weight: 800; font-size: 15px;
+    color: #fbbf24; display: flex; align-items: center; gap: 8px;
   }
   .market-row {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    border-top: 1px solid #334155;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-top: 1px solid #334155; background: #1f2937;
   }
-  .market-team { flex: 1; font-size: 15px; font-weight: 600; }
+  .market-team { flex: 1; font-size: 16px; font-weight: 700; color: #f8fafc; min-width: 0; }
   .odds {
-    padding: 12px 16px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 16px;
-    min-width: 85px;
-    text-align: center;
-    cursor: pointer;
+    padding: 12px 16px; border-radius: 10px; font-weight: 800; font-size: 17px;
+    min-width: 88px; text-align: center; cursor: pointer; user-select: none;
+    transition: transform .08s ease, filter .15s ease;
   }
-  .back { background: #22c55e; color: #000; }
+  .odds:active { transform: scale(.95); }
+  .back { background: #22c55e; color: #06240f; }
+  .back:hover { filter: brightness(1.08); }
   .lay { background: #ef4444; color: #fff; }
+
+  .md-empty { background: #1f2937; border: 1px solid #334155; border-radius: 14px; color: #f8fafc; }
+  .md-empty .dz83-7 { color: #94a3b8; }
 </style>
 
 <div class="container dz83-1">
 
-  <a href="/matches"><%= t.back_to_all_matches %></a>
+  <%
+    var teamA = match.teams ? match.teams[0] : t.team_a;
+    var teamB = match.teams ? match.teams[1] : t.team_b;
+    var isLive = /live|in.?play|running/i.test(String(match.status || ''));
+  %>
+  <a href="/matches" class="md-back">← <%= t.back_to_all_matches %></a>
 
   <!-- Match Header -->
-  <div class="card dz83-2">
-    <h4><%= match.teams ? match.teams[0] + " " + t.vs + " " + match.teams[1] : match.title %></h4>
-    <p class="dz83-3"><%= match.status || t.upcoming_matches %></p>
+  <div class="md-score">
+    <div class="md-score-top">
+      <span class="md-league"><%= match.league || match.sport || '' %></span>
+      <% if (isLive) { %>
+        <span class="md-badge md-badge-live"><span class="md-dot pulse-live"></span>LIVE</span>
+      <% } else { %>
+        <span class="md-badge md-badge-up"><%= match.status || t.upcoming_matches %></span>
+      <% } %>
+    </div>
+    <div class="md-teams">
+      <div class="md-team-row">
+        <div class="md-shirt md-shirt-a"><%= String(teamA).charAt(0).toUpperCase() %></div>
+        <div class="md-team-name"><%= teamA %></div>
+        <% if (match.score_a) { %><div class="md-team-score"><%= match.score_a %></div><% } %>
+      </div>
+      <div class="md-team-row">
+        <div class="md-shirt md-shirt-b"><%= String(teamB).charAt(0).toUpperCase() %></div>
+        <div class="md-team-name"><%= teamB %></div>
+        <% if (match.score_b) { %><div class="md-team-score"><%= match.score_b %></div><% } %>
+      </div>
+    </div>
+    <% if (match.overs) { %><div class="md-overs"><%= match.overs %></div><% } %>
+    <% if (isLive && match.status) { %><div class="md-status"><%= match.status %></div><% } %>
   </div>
 
   <!-- Dynamic Markets -->
@@ -105,7 +162,7 @@
       </div>
     <% }) %>
   <% } else { %>
-    <div class="card text-center dz83-4">
+    <div class="md-empty text-center dz83-4">
       <div class="dz83-5">⏳</div>
       <p class="dz83-6"><%= t.betting_options_soon %></p>
       <small class="dz83-7"><%= t.check_back_later_short %></small>
