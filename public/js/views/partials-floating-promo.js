@@ -58,11 +58,14 @@
   var PP_SET = { enabled: true, delaySeconds: 1.2, slideSeconds: 6, autoAdvance: true, autoClose: false, showIntervalHours: 24, resetVersion: 0,
                  shape: 'auto', maxWidthPx: 480, radiusPx: 18, borderWidthPx: 0, borderColor: '#ffffff', frameBg: '#ffffff', overlayOpacity: 55, blurPx: 8,
                  imageFit: 'cover', position: 'center', animation: 'fade', showCaption: true, showDots: true, showNav: true };
-  if (POP && POP.slides) {
+  if (POP && POP.slides && POP.slides.length) {
     PP_SLIDES = POP.slides;
     PP_RATIO = Number(POP.ratio) || 0;
     for (var k in (POP.settings || {})) { if (Object.prototype.hasOwnProperty.call(POP.settings, k)) PP_SET[k] = POP.settings[k]; }
   } else {
+    // DB কনফিগ না এলে, বা কোনো সক্রিয় স্লাইড না থাকলে, আগের ৪টা ছবি দেখানো হয়
+    // (অ্যাডমিন সেটিংস পেলে সেগুলোও প্রযোজ্য থাকে)
+    if (POP && POP.settings) { for (var sk in POP.settings) { if (Object.prototype.hasOwnProperty.call(POP.settings, sk)) PP_SET[sk] = POP.settings[sk]; } }
     var legacy = cfg.images || [];
     for (var li = 0; li < legacy.length; li++) PP_SLIDES.push({ image: legacy[li], title: LP_TIT[li] || '', text: LP_TXT[li] || '', link: '', duration: 0 });
   }
@@ -191,10 +194,16 @@
         var last = 0, lastVer = '';
         try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; lastVer = localStorage.getItem(LP_VER_KEY) || ''; } catch (e) { last = 0; lastVer = ''; }
         var versionBumped = (lastVer !== ver) && !(lastVer === '' && ver === '0');
-        if (versionBumped || intervalMs === 0 || now - last > intervalMs) {
+        // নতুন ভিজিট = নতুন ব্রাউজার সেশন (ট্যাব/অ্যাপ নতুন করে খোলা)। আগে শুধু ২৪ ঘণ্টার
+        // ব্যবধান দেখা হতো, তাই ফিরে আসা ইউজার পপআপ পেত না। এখন প্রতিটা নতুন সেশনের
+        // প্রথম হোমপেজ ভিজিটে দেখায়; একই সেশনে রিলোড/ফিরে এলে ব্যবধান-সেটিং মানা হয়।
+        var newSession = true;
+        try { newSession = sessionStorage.getItem('bk_popup_session') !== '1'; } catch (e) { newSession = true; }
+        if (newSession || versionBumped || intervalMs === 0 || now - last > intervalMs) {
           setTimeout(function(){
             lpShowPopup();
             try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); localStorage.setItem(LP_VER_KEY, ver); } catch (e) {}
+            try { sessionStorage.setItem('bk_popup_session', '1'); } catch (e) {}
           }, Math.max(0, (PP_SET.delaySeconds == null ? 1.2 : PP_SET.delaySeconds) * 1000));
         }
       }
