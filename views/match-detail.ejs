@@ -148,6 +148,24 @@
               <%= market.odds && market.odds['1'] ? market.odds['1'] : 2.10 %>
             </div>
           </div>
+        <% } else if (market.type === 'multi' && market.odds && typeof market.odds === 'object') { %>
+          <%
+            /* JSONB কী-এর ক্রম বদলে দেয় — তাই দেখানোর ক্রম এখানে ঠিক করা: দল১, ড্র, দল২ / Over, Under / Yes, No */
+            const tA = match.teams ? match.teams[0] : '', tB = match.teams ? match.teams[1] : '';
+            const runnerRank = (k) => k === tA ? 0 : k === 'Draw' ? 1 : k === tB ? 2 : (/^over/i.test(k) || k === 'Yes') ? 0 : (/^under/i.test(k) || k === 'No') ? 1 : 5;
+            const runnerKeys = Object.keys(market.odds).sort((x, y) => runnerRank(x) - runnerRank(y));
+          %>
+          <% runnerKeys.forEach(runnerKey => { %>
+            <div class="market-row">
+              <div class="market-team"><%= runnerKey %></div>
+              <div class="odds back"
+                   data-market-id="<%= market.id %>"
+                   data-runner="<%= runnerKey %>"
+                   data-odd="<%= market.odds[runnerKey] %>">
+                <%= market.odds[runnerKey] %>
+              </div>
+            </div>
+          <% }) %>
         <% } else { %>
           <div class="market-row">
             <div class="market-team"><%= t.yes %></div>
