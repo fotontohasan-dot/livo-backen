@@ -39,7 +39,27 @@ async function tryWithdraw(user) {
 const countRequests = async (id) =>
   (await pool.query('SELECT COUNT(*)::int AS c FROM payment_requests WHERE user_id = $1', [id])).rows[0].c;
 
+// KYC গার্ডের টেস্ট উইথড্র-উইন্ডো (ডিফল্ট ২৩:০০–০৭:০০ ঢাকা) বন্ধ থাকলে ভুলভাবে ফেইল করত।
+// তাই এই ফাইল চলার সময় উইন্ডো মোড 'open' করা হয়, শেষে আগের মান ফেরানো হয়।
+const WINDOW_KEY = 'withdrawal_window_mode';
+let previousWindowMode;
+
+beforeAll(async () => {
+  const r = await pool.query('SELECT value FROM site_settings WHERE key = $1', [WINDOW_KEY]);
+  previousWindowMode = r.rows.length ? r.rows[0].value : null;
+  await pool.query(
+    `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, 'open', NOW())
+     ON CONFLICT (key) DO UPDATE SET value = 'open', updated_at = NOW()`,
+    [WINDOW_KEY]
+  );
+});
+
 afterAll(async () => {
+  if (previousWindowMode === null) {
+    await pool.query('DELETE FROM site_settings WHERE key = $1', [WINDOW_KEY]);
+  } else {
+    await pool.query('UPDATE site_settings SET value = $2, updated_at = NOW() WHERE key = $1', [WINDOW_KEY, previousWindowMode]);
+  }
   await cleanupUsers(createdUserIds);
 });
 

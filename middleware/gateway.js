@@ -21,7 +21,9 @@ function apiLogger(req, res, next) {
   const userId = (req.session && req.session.user) ? req.session.user.id : 'guest';
   res.on('finish', () => {
     const ms = Date.now() - start;
-    console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms) user=${userId}`);
+    // কোয়েরি-স্ট্রিং (টোকেন, কোড ইত্যাদি থাকতে পারে) লগে রাখা হয় না — শুধু পাথ
+    const loggedPath = String(req.originalUrl || '').split('?')[0];
+    console.log(`[API] ${req.method} ${loggedPath} → ${res.statusCode} (${ms}ms) user=${userId}`);
   });
   next();
 }
