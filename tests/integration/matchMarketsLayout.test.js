@@ -3,14 +3,11 @@
 // অ্যাডমিন সেটেল ফর্মের ফিল্ডের নাম সার্ভারের সাথে মেলে।
 const fs = require('fs');
 const path = require('path');
-const request = require('supertest');
 const { pool } = require('../../db');
 const { ensureDefaultMarkets } = require('../../services/autoMarkets');
 const { buildMarketView } = require('../../services/marketLayout');
 const { resolveOdd } = require('../../services/oddsResolver');
-
-let app;
-beforeAll(() => { app = require('../../app'); });
+const { freshRequest } = require('../helpers/app');
 
 async function makeMatch(over) {
   const m = Object.assign({ title: 'Layout Test', team_a: 'Alpha', team_b: 'Beta', sport: 'cricket', status: 'live', league: '1st Test' }, over);
@@ -85,7 +82,7 @@ describe('ম্যাচ পেজ', () => {
   test('ট্যাব, ভাঁজযোগ্য কার্ড ও বেট স্লিপ রেন্ডার হয়; ব্রাউজারের prompt/confirm নেই', async () => {
     const id = await makeMatch();
     await ensureDefaultMarkets(id, 'live');
-    const res = await request(app).get(`/matches/${id}`);
+    const res = await freshRequest().get(`/matches/${id}`);
     expect(res.status).toBe(200);
     expect(res.text).toContain('md-tabs');
     expect(res.text).toContain('data-tab="innings"');
