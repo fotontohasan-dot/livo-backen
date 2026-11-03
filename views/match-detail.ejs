@@ -2,120 +2,117 @@
 <%- include('partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). Every migrated declaration was proved cascade-equivalent:
-     see tools/cascade-check.js. */
-  .dz83-1 { padding-top: 14px; padding-bottom: 90px; }
-  .dz83-2 { padding: 16px; margin: 20px 0; }
-  .dz83-3 { color: var(--text-accent); }
-  .dz83-4 { padding: 50px 20px; }
-  .dz83-5 { font-size: 40px; margin-bottom: 12px; }
-  .dz83-6 { font-size: 16px; font-weight: 600; }
-  .dz83-7 { color: var(--text-muted); }
-  .dz83-8 { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #334155; }
-  .dz83-9 { border-radius: 8px; padding: 10px 20px; }
-  .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
-  @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  /* ম্যাচ-ডিটেইল পেজ — সব রং এখানে স্পষ্ট করে দেওয়া, যাতে সাইটের ব্যাকগ্রাউন্ড/বডি
+     রঙের সাথে মিশে লেখা অদৃশ্য না হয় (আগে টিম নাম গাঢ় রঙে গাঢ় কার্ডে হারিয়ে যেত)। */
+  .md-page { padding-top: 12px; padding-bottom: 96px; max-width: 720px; margin: 0 auto; color: #f1f5f9; }
+  .md-page a { color: inherit; }
+  .md-back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; margin-bottom: 12px; border-radius: 999px; background: rgba(0,0,0,0.35); color: #fff !important; font-size: 13px; font-weight: 700; text-decoration: none; }
+  .md-score { background: linear-gradient(160deg,#111827,#1f2937); border: 1px solid #334155; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+  .md-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
+  .md-league { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: .4px; }
+  .md-pill { flex: 0 0 auto; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #334155; color: #e2e8f0; }
+  .md-pill.live { background: #dc2626; color: #fff; }
+  .md-pill.live::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: #fff; animation: mdPulse 1.2s ease-in-out infinite; }
+  @keyframes mdPulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .md-team { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+  .md-team + .md-team { border-top: 1px solid #334155; }
+  .md-badge { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #fff; }
+  .md-badge.a { background: #2563eb; }
+  .md-badge.b { background: #ea580c; }
+  .md-tname { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .md-tscore { font-size: 20px; font-weight: 800; color: #fbbf24; font-variant-numeric: tabular-nums; }
+  .md-overs { text-align: right; font-size: 12px; color: #94a3b8; margin-top: 4px; }
 
-  .market-box {
-    background: #1f2937;
-    border-radius: 12px;
-    margin-bottom: 18px;
-    overflow: hidden;
-    border: 1px solid #334155;
-  }
-  .market-header {
-    padding: 12px 16px;
-    background: #111827;
-    font-weight: 700;
-    font-size: 15px;
-    color: #fbbf24;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .market-row {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    border-top: 1px solid #334155;
-  }
-  .market-team { flex: 1; font-size: 15px; font-weight: 600; }
-  .odds {
-    padding: 12px 16px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 16px;
-    min-width: 85px;
-    text-align: center;
-    cursor: pointer;
-  }
-  .back { background: #22c55e; color: #000; }
-  .lay { background: #ef4444; color: #fff; }
+  .md-title { display: flex; align-items: center; gap: 8px; margin: 18px 2px 10px; font-size: 14px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: .5px; }
+  .md-title::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.25); }
+
+  .market-box { background: #1f2937; border-radius: 14px; margin-bottom: 12px; overflow: hidden; border: 1px solid #334155; }
+  .market-box > summary { list-style: none; cursor: pointer; padding: 13px 16px; background: #111827; font-weight: 800; font-size: 14px; color: #fbbf24; display: flex; align-items: center; gap: 8px; }
+  .market-box > summary::-webkit-details-marker { display: none; }
+  .market-box > summary::after { content: '−'; margin-left: auto; width: 22px; height: 22px; line-height: 20px; text-align: center; border: 1px solid #475569; border-radius: 6px; color: #cbd5e1; font-size: 16px; }
+  .market-box:not([open]) > summary::after { content: '+'; }
+  .market-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-top: 1px solid #334155; }
+  .market-team { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: #f8fafc; }
+  .odds { padding: 11px 14px; border-radius: 10px; font-weight: 800; font-size: 16px; min-width: 88px; text-align: center; cursor: pointer; user-select: none; transition: transform .08s, filter .15s; }
+  .odds:active { transform: scale(.96); }
+  .odds:hover { filter: brightness(1.08); }
+  .back { background: #86efac; color: #052e16; }
+  .lay { background: #fca5a5; color: #450a0a; }
+
+  .md-empty { background: #1f2937; border: 1px solid #334155; border-radius: 14px; text-align: center; padding: 40px 20px; color: #f1f5f9; }
+  .md-empty .ico { font-size: 40px; margin-bottom: 10px; }
+  .md-empty p { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: #fff; }
+  .md-empty small { color: #94a3b8; }
+  .md-admin { margin-top: 18px; padding-top: 14px; border-top: 1px dashed #334155; }
 </style>
 
-<div class="container dz83-1">
+<%
+  const _st = String(match.status || 'upcoming').toLowerCase();
+  const _live = _st === 'live' || _st === 'inplay' || _st === 'in_play';
+  const _ini = (n) => String(n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const _hasScore = match.score_a != null || match.score_b != null;
+%>
+<div class="container md-page">
 
-  <a href="/matches"><%= t.back_to_all_matches %></a>
+  <a class="md-back" href="/matches">← <%= t.back_to_all_matches %></a>
 
-  <!-- Match Header -->
-  <div class="card dz83-2">
-    <h4><%= match.teams ? match.teams[0] + " " + t.vs + " " + match.teams[1] : match.title %></h4>
-    <p class="dz83-3"><%= match.status || t.upcoming_matches %></p>
+  <!-- Scoreboard -->
+  <div class="md-score">
+    <div class="md-meta">
+      <span class="md-league"><%= match.league || match.title || '' %></span>
+      <span class="md-pill<%= _live ? ' live' : '' %>"><%= _live ? 'LIVE' : (match.status || t.upcoming_matches) %></span>
+    </div>
+    <div class="md-team">
+      <div class="md-badge a"><%= _ini(match.teams[0]) %></div>
+      <div class="md-tname"><%= match.teams[0] %></div>
+      <% if (_hasScore) { %><div class="md-tscore"><%= match.score_a != null ? match.score_a : '-' %></div><% } %>
+    </div>
+    <div class="md-team">
+      <div class="md-badge b"><%= _ini(match.teams[1]) %></div>
+      <div class="md-tname"><%= match.teams[1] %></div>
+      <% if (_hasScore) { %><div class="md-tscore"><%= match.score_b != null ? match.score_b : '-' %></div><% } %>
+    </div>
+    <% if (match.overs) { %><div class="md-overs"><%= match.overs %> Ovs</div><% } %>
   </div>
 
-  <!-- Dynamic Markets -->
   <% if (markets && markets.length > 0) { %>
-    <% markets.forEach(market => { %>
-      <div class="market-box">
-        <div class="market-header">
-          <%= market.type === 'bookmaker' ? '🏆' : '⚡' %> <%= market.name %>
-        </div>
+    <div class="md-title"><%= match.sport === 'cricket' ? 'Premium Cricket' : 'Markets' %></div>
+    <% markets.forEach(market => {
+         const o = market.odds || {};
+         const keys = Object.keys(o).filter(k => o[k]);
+    %>
+      <details class="market-box" open>
+        <summary><%= market.type === 'bookmaker' ? '🏆' : '⚡' %> <%= market.name %></summary>
 
         <% if (market.type === 'bookmaker') { %>
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[0] : t.team_a %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="0" 
-                 data-odd="<%= market.odds && market.odds['0'] ? market.odds['0'] : 1.85 %>">
-              <%= market.odds && market.odds['0'] ? market.odds['0'] : 1.85 %>
+          <% [0, 1].forEach(i => { const od = o[String(i)] ? o[String(i)] : (i === 0 ? 1.85 : 2.10); %>
+            <div class="market-row">
+              <div class="market-team"><%= match.teams[i] %></div>
+              <div class="odds back" data-market-id="<%= market.id %>" data-runner="<%= i %>" data-odd="<%= od %>"><%= od %></div>
             </div>
-          </div>
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[1] : t.team_b %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="1" 
-                 data-odd="<%= market.odds && market.odds['1'] ? market.odds['1'] : 2.10 %>">
-              <%= market.odds && market.odds['1'] ? market.odds['1'] : 2.10 %>
+          <% }) %>
+        <% } else if (keys.length) { %>
+          <% keys.forEach(k => { %>
+            <div class="market-row">
+              <div class="market-team"><%= k === 'yes' ? t.yes : (k === 'no' ? (t.no || 'No') : k) %></div>
+              <div class="odds back" data-market-id="<%= market.id %>" data-runner="<%= k %>" data-odd="<%= o[k] %>"><%= o[k] %></div>
             </div>
-          </div>
+          <% }) %>
         <% } else { %>
           <div class="market-row">
             <div class="market-team"><%= t.yes %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="yes" 
-                 data-odd="<%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>">
-              <%= t.yes %> <%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>
-            </div>
+            <div class="odds back" data-market-id="<%= market.id %>" data-runner="yes" data-odd="1.75">1.75</div>
           </div>
         <% } %>
-      </div>
+      </details>
     <% }) %>
   <% } else { %>
-    <div class="card text-center dz83-4">
-      <div class="dz83-5">⏳</div>
-      <p class="dz83-6"><%= t.betting_options_soon %></p>
-      <small class="dz83-7"><%= t.check_back_later_short %></small>
-
+    <div class="md-empty">
+      <div class="ico">⏳</div>
+      <p><%= t.betting_options_soon %></p>
+      <small><%= t.check_back_later_short %></small>
       <% if (locals.user && user.role === 'admin') { %>
-        <div class="dz83-8">
-          <a href="/admin/markets/<%= match.id %>" class="btn btn-primary dz83-9">
-            <%= t.add_market_admin %>
-          </a>
-        </div>
+        <div class="md-admin"><a href="/admin/markets/<%= match.id %>" class="btn btn-primary"><%= t.add_market_admin %></a></div>
       <% } %>
     </div>
   <% } %>
