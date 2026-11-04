@@ -83,7 +83,12 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
   }
 
   afterAll(async () => {
-    if (matchIds.length) await pool.query('DELETE FROM matches WHERE id = ANY($1)', [matchIds]);
+    if (matchIds.length) {
+      // বাজি-টেস্ট bets সারি রেখে যায়; ম্যাচ মোছার আগে সেগুলো (ও সংশ্লিষ্ট সারি) সরাতে হয়
+      await pool.query('DELETE FROM bets WHERE match_id = ANY($1)', [matchIds]);
+      await pool.query('DELETE FROM markets WHERE match_id = ANY($1)', [matchIds]);
+      await pool.query('DELETE FROM matches WHERE id = ANY($1)', [matchIds]);
+    }
     await cleanupUsers(userIds);
   });
 
