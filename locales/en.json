@@ -3355,5 +3355,11 @@
   "admin_cricket_tpl_under_odds": "Under odds",
   "admin_cricket_tpl_open_now": "Open now (users can bet immediately)",
   "admin_cricket_tpl_btn": "Create markets",
-  "admin_cricket_tpl_invalid": "Invalid input: odds must be above 1.00, lines must be positive, and Over/Under odds are needed with any line."
+  "admin_cricket_tpl_invalid": "Invalid input: odds must be above 1.00, lines must be positive, and Over/Under odds are needed with any line.",
+  "bet_slip_title": "Bet Slip",
+  "bet_slip_stake": "Stake (Taka)",
+  "bet_slip_return": "Potential return",
+  "bet_slip_cancel": "Cancel",
+  "bet_slip_place": "Place Bet",
+  "bet_slip_session_expired": "Your session has expired. Please log in again."
 }
