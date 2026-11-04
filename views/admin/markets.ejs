@@ -109,6 +109,60 @@
       </form>
     </div>
 
+    <% if (match && String(match.sport || '').toLowerCase() === 'cricket') { %>
+    <!-- Cricket quick-create template -->
+    <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 mb-6">
+      <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+        <i class="fas fa-baseball-ball text-[#f59e0b]"></i> <%= t('admin_cricket_tpl_title') %>
+      </h3>
+      <p class="text-xs text-gray-400 mb-4"><%= t('admin_cricket_tpl_hint') %></p>
+
+      <form action="/admin/markets/<%= match.id %>/cricket-template" method="POST" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_home_odds') %></label>
+          <input type="number" step="0.01" min="1.01" name="home_odds" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_away_odds') %></label>
+          <input type="number" step="0.01" min="1.01" name="away_odds" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div class="hidden md:block md:col-span-2"></div>
+
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_runs_line') %></label>
+          <input type="number" step="0.5" min="0.5" name="runs_line" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_wickets_line') %></label>
+          <input type="number" step="0.5" min="0.5" name="wickets_line" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_overs_line') %></label>
+          <input type="number" step="0.5" min="0.5" name="overs_line" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div class="hidden md:block"></div>
+
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_over_odds') %></label>
+          <input type="number" step="0.01" min="1.01" name="over_odds" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_cricket_tpl_under_odds') %></label>
+          <input type="number" step="0.01" min="1.01" name="under_odds" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+        <label class="col-span-2 flex items-center gap-2 text-sm text-gray-300 self-end pb-3">
+          <input type="checkbox" name="open_now" value="1"> <%= t('admin_cricket_tpl_open_now') %>
+        </label>
+
+        <div class="col-span-2 md:col-span-4">
+          <button type="submit" class="w-full py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl text-sm transition-all active:scale-[0.985]">
+            <%= t('admin_cricket_tpl_btn') %>
+          </button>
+        </div>
+      </form>
+    </div>
+    <% } %>
+
     <!-- Markets Table -->
     <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-x-auto">
       <div class="px-6 py-4 border-b border-[#334155] flex items-center justify-between">
