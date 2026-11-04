@@ -90,4 +90,12 @@ function buildRows(match, body) {
   return { rows, error: null };
 }
 
-module.exports = { buildRows, parseOdd, parseLine, TYPES, MAX_LINE };
+// অডস JSONB-তে কোন আকারে যাবে। match-detail ভিউ non-bookmaker সারিতে market.odds['yes'] পড়ে,
+// bookmaker-এ market.odds['0'] / ['1']। সংখ্যা (1.9) রাখলে ভিউ কোনো কী পায় না ও ১.৭৫ ফলব্যাক
+// দেখায়, অথচ oddsResolver সংখ্যাটাই ধরে — ইউজার যা দেখে আর যা পায় তা আলাদা হয়ে যায়।
+// তাই সবসময় ভিউ-বোধ্য অবজেক্ট আকারে।
+function oddsShape(type, odd) {
+  return type === 'bookmaker' ? { '0': odd, '1': odd } : { yes: odd };
+}
+
+module.exports = { buildRows, parseOdd, parseLine, oddsShape, TYPES, MAX_LINE };
