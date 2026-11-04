@@ -31,10 +31,9 @@ describe('রিগ্রেশন গার্ড — সমান্তরা�
     expect(fs.existsSync(removedPath)).toBe(false);
   });
 
-  test('src/pages/register.tsx এখন Express-এর /register-এই রিডাইরেক্ট করে, নিজস্ব API কল করে না', () => {
-    const src = fs.readFileSync(path.join(ROOT, 'src', 'pages', 'register.tsx'), 'utf8');
-    expect(src).not.toMatch(/fetch\(\s*['"]\/api\/register['"]/);
-    expect(src).toMatch(/['"]\/register['"]/);
+  test('সমান্তরাল Next.js রেজিস্ট্রেশন ফ্রন্টএন্ড (src/pages/register.tsx) আর নেই', () => {
+    // src/ ফ্রন্টএন্ড মুছে ফেলা হয়েছে; Express-এর /register-ই একমাত্র পথ।
+    expect(fs.existsSync(path.join(ROOT, 'src', 'pages', 'register.tsx'))).toBe(false);
   });
 
   test('routes/auth.js-ই একমাত্র POST /register হ্যান্ডলার — অন্য কোনো routes/*.js ফাইলে ডুপ্লিকেট নেই', () => {
