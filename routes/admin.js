@@ -5,6 +5,8 @@ const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
+const { buildRows: buildCricketTemplateRows, parseOdd: parseCricketOdd, oddsShape } = require('../services/cricketMarketTemplate');
+const { upsertMarket } = require('../services/marketUpsert');
 const rbac = require('../services/rbac');
 const scheduler = require('../services/scheduler');
 // publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
@@ -2813,14 +2815,67 @@ router.get('/markets/:matchId', rbac.requirePermission('matches_manage'), async 
 router.post('/markets/update', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { match_id, type, name, odds, status } = req.body;
-    await pool.query(`
-      INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,$2,$3,$4,$5)
-      ON CONFLICT (match_id, type, name) DO UPDATE SET odds = EXCLUDED.odds, status = EXCLUDED.status, updated_at = NOW()
-    `, [match_id, type, name, odds, status || 'open']);
-    await cache.del(cacheKeys.matchDetail(match_id)).catch(() => {});
+    // ON CONFLICT (match_id, type, name) এখানে কাজ করত না — ওই কলামগুলোয় ইউনিক ইনডেক্স নেই,
+    // তাই প্রতিবার SQL এরর হতো ও কোনো মার্কেট তৈরি হতো না। services/marketUpsert.js দেখুন।
+    // সেটেল হওয়া মার্কেট এই ফর্ম দিয়ে আর বদলানো/খোলা যায় না।
+    // অডস যাচাই (1 < odd <= MAX_ODD, সংখ্যা হিসেবে সংরক্ষণ) এবং status শুধু open/suspended —
+    // আগে অযাচাইকৃত স্ট্রিং সরাসরি JSONB-তে যেত, আর status-এ 'settled'-ও বসানো যেত
+    // (settle গার্ড এড়িয়ে)। সেটেলমেন্ট শুধু /markets/:id/settle দিয়ে।
+    const oddNum = parseCricketOdd(odds);
+    const safeName = String(name || '').trim().slice(0, 200);
+    const safeType = String(type || '').trim().slice(0, 50);
+    const mid = parseInt(match_id, 10);
+    if (!Number.isInteger(mid) || mid <= 0 || oddNum === null || Number.isNaN(oddNum) || !safeName || !safeType) {
+      req.flash('error', req.t('admin_something_went_wrong_x'));
+      return res.redirect(Number.isInteger(mid) && mid > 0 ? `/admin/markets/${mid}` : '/admin/matches');
+    }
+    const safeStatus = MARKET_TOGGLE_STATUSES.includes(status) ? status : null;
+    const result = await upsertMarket(pool, { matchId: mid, type: safeType, name: safeName, odds: oddsShape(safeType, oddNum), status: safeStatus, insertStatus: 'open' });
+    await cache.del(cacheKeys.matchDetail(mid)).catch(() => {});
+    if (result === 'skipped_settled') req.flash('error', req.t('admin_market_already_settled'));
+    else req.flash('success', req.t('admin_market_updated'));
+    res.redirect(`/admin/markets/${mid}`);
+  } catch (err) { console.error('markets/update error:', err.message); req.flash('error', req.t('admin_something_went_wrong_x')); res.redirect('/admin/matches'); }
+});
+
+// ক্রিকেট মার্কেট টেমপ্লেট: ম্যাচ উইনার + মোট রান/উইকেট/ওভারের ওভার-আন্ডার সারিগুলো একসাথে।
+// অডস অ্যাডমিন ফর্মে দেন (কোনো ডিফল্ট নেই)। সারিগুলো ডিফল্টে 'suspended' — ব্যবহারকারী
+// তখনই দেখে ও বাজি ধরে যখন 'open' হয়, যাতে চলমান ম্যাচে পুরনো অডস অনিচ্ছায় খোলা না থাকে।
+// একই নামে আবার জমা দিলে শুধু অডস হালনাগাদ হয়; সেটেল হওয়া সারি অক্ষত থাকে।
+router.post('/markets/:matchId/cricket-template', rbac.requirePermission('matches_manage'), async (req, res) => {
+  const matchId = parseInt(req.params.matchId, 10);
+  if (!Number.isInteger(matchId) || matchId <= 0) return res.redirect('/admin/matches');
+  const client = await pool.connect();
+  try {
+    const mr = await client.query('SELECT id, team_a, team_b FROM matches WHERE id = $1', [matchId]);
+    if (!mr.rows[0]) return res.status(404).send('Match not found');
+
+    const { rows, error } = buildCricketTemplateRows(mr.rows[0], req.body);
+    if (error) {
+      req.flash('error', req.t('admin_cricket_tpl_invalid'));
+      return res.redirect(`/admin/markets/${matchId}`);
+    }
+
+    const openNow = req.body.open_now === '1' || req.body.open_now === 'on';
+    await client.query('BEGIN');
+    for (const r of rows) {
+      // status=null → বিদ্যমান সারির status অপরিবর্তিত; open_now হলে 'open'। নতুন সারি ডিফল্টে 'suspended'।
+      await upsertMarket(client, { matchId, type: r.type, name: r.name, odds: oddsShape(r.type, r.odds), status: openNow ? 'open' : null, insertStatus: 'suspended' });
+    }
+    await client.query('COMMIT');
+    await cache.del(cacheKeys.matchDetail(matchId)).catch(() => {});
+    await logAdminAction(req.session.user.id, req.session.user.username, 'CRICKET_MARKETS_TEMPLATE',
+      `Match #${matchId}: ${rows.length} market row(s) ${openNow ? 'opened' : 'saved as suspended'} — ${rows.map(r => `${r.name}@${r.odds}`).join(', ')}`.slice(0, 900), req.ip);
     req.flash('success', req.t('admin_market_updated'));
-    res.redirect(`/admin/markets/${match_id}`);
-  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); res.redirect('/admin/matches'); }
+    res.redirect(`/admin/markets/${matchId}`);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    console.error('cricket template error:', err.message);
+    req.flash('error', req.t('admin_something_went_wrong_x'));
+    res.redirect(`/admin/markets/${matchId}`);
+  } finally {
+    client.release();
+  }
 });
 
 // মার্কেট toggle-এ যেসব status বসানো যায়। 'settled' ইচ্ছাকৃতভাবে বাদ — সেটেলমেন্ট

@@ -16,9 +16,9 @@
   function lpOpenFrame(url){ lpClosePanelFn(); var f=_g('lpFrame'); if(f) f.src=url; var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='flex'; }
   function lpCloseFrame(){ var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='none'; var f=_g('lpFrame'); if(f) f.src='about:blank'; }
 
-  function drOpenRedFn(){ lpClosePanelFn(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নওয়া হয়েছে';}else if(lpStatus.redPacket.locked){btn.disabled=true;btn.textContent='🔒 আজ ডিপোজিট করুন';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; }
+  function drOpenRedFn(){ lpClosePanelFn(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নেওয়া হয়েছে';}else if(lpStatus.redPacket.locked){btn.disabled=true;btn.textContent='🔒 আজ ডিপোজিট করুন';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; }
   function drCloseRedFn(){ var e=_g('drRedOverlay'); if(e) e.style.display='none'; }
-  function drClaimRedFn(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কযন!</div>'; btn.textContent='সফল হয়েছে'; if(window.confetti) confetti({particleCount:120,spread:80,origin:{y:0.6}}); setTimeout(drCloseRedFn,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাব করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); }
+  function drClaimRedFn(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; btn.textContent='সফল হয়েছে'; if(window.confetti) confetti({particleCount:120,spread:80,origin:{y:0.6}}); setTimeout(drCloseRedFn,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাবি করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); }
 
   var _eggClaimed=false;
   function drOpenEggFn(){ lpClosePanelFn(); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<div class="egg-glow"></div><span class="egg-emoji">🥚</span><div class="egg-stand"></div><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } else if(lpStatus.goldenEgg.locked){ if(hint) hint.textContent='🔒 ডিম লক করা আছে। আজ ডিপোজিট করুন।'; var items2=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var k=0;k<items2.length;k++){ items2[k].style.opacity='.4'; items2[k].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; }
@@ -58,11 +58,14 @@
   var PP_SET = { enabled: true, delaySeconds: 1.2, slideSeconds: 6, autoAdvance: true, autoClose: false, showIntervalHours: 24, resetVersion: 0,
                  shape: 'auto', maxWidthPx: 480, radiusPx: 18, borderWidthPx: 0, borderColor: '#ffffff', frameBg: '#ffffff', overlayOpacity: 55, blurPx: 8,
                  imageFit: 'cover', position: 'center', animation: 'fade', showCaption: true, showDots: true, showNav: true };
-  if (POP && POP.slides) {
+  if (POP && POP.slides && POP.slides.length) {
     PP_SLIDES = POP.slides;
     PP_RATIO = Number(POP.ratio) || 0;
     for (var k in (POP.settings || {})) { if (Object.prototype.hasOwnProperty.call(POP.settings, k)) PP_SET[k] = POP.settings[k]; }
   } else {
+    // DB কনফিগ না এলে, বা কোনো সক্রিয় স্লাইড না থাকলে, আগের ৪টা ছবি দেখানো হয়
+    // (অ্যাডমিন সেটিংস পেলে সেগুলোও প্রযোজ্য থাকে)
+    if (POP && POP.settings) { for (var sk in POP.settings) { if (Object.prototype.hasOwnProperty.call(POP.settings, sk)) PP_SET[sk] = POP.settings[sk]; } }
     var legacy = cfg.images || [];
     for (var li = 0; li < legacy.length; li++) PP_SLIDES.push({ image: legacy[li], title: LP_TIT[li] || '', text: LP_TXT[li] || '', link: '', duration: 0 });
   }
@@ -148,9 +151,31 @@
   function lpNextFn(){ lpStop(); if (lpCur < PP_SLIDES.length - 1) { lpCur++; lpRender(); } else { lpClosePopupFn(); } }
   function lpPrevFn(){ lpStop(); if (lpCur > 0) { lpCur--; lpRender(); } }
   function lpClosePopupFn(){ lpStop(); var e = _g('lpPopup'); if (e) e.style.display = 'none'; }
+  // ছবি আগে লোড, তারপর পপআপ দেখানো। আগে পপআপ ফাঁকা বক্স হিসেবে খুলে ভেতরে ছবি পরে আসত
+  // (বড় PNG/WebP-এ মোবাইল নেটওয়ার্কে কয়েক সেকেন্ড) — তাই "ঠিকমতো শো করে না" মনে হতো।
+  // প্রথম স্লাইড লোড (বা ব্যর্থ/৫ সেকেন্ড টাইমআউট) হলে দেখানো হয়; বাকিগুলো ব্যাকগ্রাউন্ডে প্রিলোড।
+  function lpLoadImage(raw, done){
+    var finished = false;
+    function fin(){ if (finished) return; finished = true; done(); }
+    var im = new Image();
+    im.onload = fin;
+    im.onerror = function(){
+      // WebP ব্যর্থ হলে PNG ফলব্যাক চেষ্টা, সেটাও ব্যর্থ হলে আর আটকে না থাকা
+      var fb = pngFallbackOf(raw);
+      if (im.src && im.src.indexOf(fb) !== -1) { fin(); return; }
+      im.onerror = fin;
+      im.src = fb;
+    };
+    im.src = resolveImgSrc(raw);
+    setTimeout(fin, 5000);
+  }
   function lpShowPopup(){
     var e = _g('lpPopup'); if (!e || !PP_SLIDES.length) return;
-    lpStop(); lpCur = 0; lpApplyFrame(); lpRender(); e.style.display = 'flex'; lpSchedule();
+    lpLoadImage(PP_SLIDES[0].image, function(){
+      if (e.style.display === 'flex') return;
+      lpStop(); lpCur = 0; lpApplyFrame(); lpRender(); e.style.display = 'flex'; lpSchedule();
+      for (var i = 1; i < PP_SLIDES.length; i++) { lpLoadImage(PP_SLIDES[i].image, function(){}); }
+    });
   }
   function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.setHours(24,0,0,0); var df=Math.max(0,Math.floor((e-n)/1000)); function p(x){return x<10?'0'+x:''+x;} var a=_g(h),b=_g(m),c=_g(s); if(a)a.textContent=p(Math.floor(df/3600)); if(b)b.textContent=p(Math.floor((df%3600)/60)); if(c)c.textContent=p(df%60); } tk(); setInterval(tk,1000); }
 
@@ -191,10 +216,16 @@
         var last = 0, lastVer = '';
         try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; lastVer = localStorage.getItem(LP_VER_KEY) || ''; } catch (e) { last = 0; lastVer = ''; }
         var versionBumped = (lastVer !== ver) && !(lastVer === '' && ver === '0');
-        if (versionBumped || intervalMs === 0 || now - last > intervalMs) {
+        // নতুন ভিজিট = নতুন ব্রাউজার সেশন (ট্যাব/অ্যাপ নতুন করে খোলা)। আগে শুধু ২৪ ঘণ্টার
+        // ব্যবধান দেখা হতো, তাই ফিরে আসা ইউজার পপআপ পেত না। এখন প্রতিটা নতুন সেশনের
+        // প্রথম হোমপেজ ভিজিটে দেখায়; একই সেশনে রিলোড/ফিরে এলে ব্যবধান-সেটিং মানা হয়।
+        var newSession = true;
+        try { newSession = sessionStorage.getItem('bk_popup_session') !== '1'; } catch (e) { newSession = true; }
+        if (newSession || versionBumped || intervalMs === 0 || now - last > intervalMs) {
           setTimeout(function(){
             lpShowPopup();
             try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); localStorage.setItem(LP_VER_KEY, ver); } catch (e) {}
+            try { sessionStorage.setItem('bk_popup_session', '1'); } catch (e) {}
           }, Math.max(0, (PP_SET.delaySeconds == null ? 1.2 : PP_SET.delaySeconds) * 1000));
         }
       }

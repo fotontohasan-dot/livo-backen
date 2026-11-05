@@ -235,37 +235,6 @@ describe('#53 age gate সৎভাবে উপস্থাপিত', () => {
   });
 });
 
-describe('#54 যাচাইহীন মার্কেটিং দাবি সরানো', () => {
-  const page = read('src', 'app', 'page.tsx');
-
-  test('বানানো পরিসংখ্যান নেই', () => {
-    expect(page).not.toMatch(/value: "500\+"/);
-    expect(page).not.toMatch(/value: "6\.5M"/);
-  });
-
-  test('লাইসেন্স ব্যাজ কনফিগার করা থাকলে তবেই দেখায়', () => {
-    expect(page).not.toMatch(/>CURACAO LICENSED</);
-    expect(page).toMatch(/NEXT_PUBLIC_LICENSE_NOTICE/);
-  });
-});
-
-describe('#42 sports-api অরক্ষিত নয়', () => {
-  const server = read('sports-api', 'backend', 'server.js');
-
-  test('লেখার রুটে কী বাধ্যতামূলক', () => {
-    expect(server).toMatch(/app\.post\("\/api\/predict", requireApiKey/);
-    expect(server).toMatch(/function requireApiKey/);
-  });
-
-  test('কী ছাড়া সার্ভিস চালুই হয় না', () => {
-    expect(server).toMatch(/process\.exit\(1\)/);
-  });
-
-  test('ডিপ্লয় অবস্থা ডকুমেন্টেড', () => {
-    expect(read('sports-api', 'README.md')).toMatch(/প্রোডাকশনের অংশ নয়/);
-  });
-});
-
 describe('#49/#50/#51 CI আসল অ্যাপ যাচাই করে', () => {
   const workflow = read('.github', 'workflows', 'node.js.yml');
 

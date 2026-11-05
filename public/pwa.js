@@ -18,7 +18,7 @@
     btn.id = 'pwaInstallBtn';
     btn.innerHTML = '📲 অ্যাপ ইনস্টল করুন';
     btn.style.cssText = [
-      'position:fixed', 'right:16px', 'bottom:16px', 'z-index:9999',
+      'position:fixed', 'right:16px', 'bottom:calc(86px + env(safe-area-inset-bottom, 0px))', 'z-index:9999',
       'background:#f59e0b', 'color:#111', 'border:none', 'padding:12px 18px',
       'border-radius:999px', 'font-weight:700', 'font-size:13px',
       'box-shadow:0 8px 24px rgba(0,0,0,0.35)', 'cursor:pointer',
@@ -71,7 +71,7 @@
     var bar = document.createElement('div');
     bar.id = 'iosInstallHint';
     bar.style.cssText = [
-      'position:fixed', 'left:12px', 'right:12px', 'bottom:12px', 'z-index:9999',
+      'position:fixed', 'left:12px', 'right:12px', 'bottom:calc(86px + env(safe-area-inset-bottom, 0px))', 'z-index:9999',
       'background:#171b23', 'color:#fff', 'padding:12px 16px', 'border-radius:14px',
       'font-size:12px', 'box-shadow:0 8px 24px rgba(0,0,0,0.4)',
       'font-family:Segoe UI, Hind Siliguri, sans-serif', 'display:flex',
