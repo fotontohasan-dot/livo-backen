@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const { pool } = require('../db');
 const cache = require('../services/cache');
 const { emitFeedUpdate } = require('../services/socket');
+const { sanitizeLive } = require('../services/liveData');
 
 const router = express.Router();
 
@@ -44,6 +45,14 @@ const str = (v, max = 200) => (v === undefined || v === null ? null : String(v).
 function odd(v) {
   const n = typeof v === 'number' ? v : parseFloat(v);
   return Number.isFinite(n) && n > 1 && n <= MAX_ODD ? n : null;
+}
+// CSP is `img-src 'self' data:` — only local paths or small data: images can render.
+function logo(v) {
+  const s = str(v, 20000);
+  if (!s) return null;
+  if (/^\/(?!\/)[\w\-./]+\.(png|jpe?g|webp|svg)$/i.test(s)) return s;
+  if (/^data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length <= 20000) return s;
+  return null;
 }
 function size(v) {
   const n = Number(v);
@@ -90,6 +99,9 @@ router.post('/', async (req, res) => {
           str(m.sport, 30).toLowerCase(), str(m.league), str(m.team_a), str(m.team_b),
           `${str(m.team_a)} vs ${str(m.team_b)}`, status, str(m.score_a, 50), str(m.score_b, 50), str(m.overs, 50), startTime
         ];
+        const liveObj = sanitizeLive(fields[0], m.live);
+        const liveJson = liveObj ? JSON.stringify(liveObj) : null;
+        const logoA = logo(m.logo_a), logoB = logo(m.logo_b);
         const found = await client.query(
           'SELECT id FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
         let matchId;
@@ -97,13 +109,15 @@ router.post('/', async (req, res) => {
           matchId = found.rows[0].id;
           await client.query(
             `UPDATE matches SET sport=$1, league=$2, team_a=$3, team_b=$4, title=$5, status=$6,
-                    score_a=$7, score_b=$8, overs=$9, start_time=COALESCE($10, start_time), synced_at=NOW()
-             WHERE id=$11`, [...fields, matchId]);
+                    score_a=$7, score_b=$8, overs=$9, start_time=COALESCE($10, start_time), synced_at=NOW(),
+                    logo_a=COALESCE($12, logo_a), logo_b=COALESCE($13, logo_b), live_data=COALESCE($14::jsonb, live_data)
+             WHERE id=$11`, [...fields, matchId, logoA, logoB, liveJson]);
         } else {
           const ins = await client.query(
             `INSERT INTO matches (sport, league, team_a, team_b, title, status, score_a, score_b, overs, start_time,
-                                  provider, external_id, synced_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW()) RETURNING id`, [...fields, provider, externalId]);
+                                  provider, external_id, synced_at, logo_a, logo_b, live_data)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),$13,$14,$15::jsonb) RETURNING id`,
+            [...fields, provider, externalId, logoA, logoB, liveJson]);
           matchId = ins.rows[0].id;
         }
 
@@ -145,7 +159,7 @@ router.post('/', async (req, res) => {
           marketPush.push(row);
         }
         await client.query('RELEASE SAVEPOINT m');
-        pushes.push({ match: { id: matchId, status, score_a: fields[6], score_b: fields[7], overs: fields[8] }, markets: marketPush });
+        pushes.push({ match: { id: matchId, status, score_a: fields[6], score_b: fields[7], overs: fields[8], live: liveObj }, markets: marketPush });
         results.push({ index: i, ok: true, match_id: matchId, markets: marketPush.length });
       } catch (err) {
         await client.query('ROLLBACK TO SAVEPOINT m');

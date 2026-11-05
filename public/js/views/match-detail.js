@@ -150,6 +150,26 @@
     });
   }
 
+  // ===== On-screen numeric keypad =====
+  var kpToggle = $('bsKpToggle'), kp = $('bsKeypad');
+  if (kpToggle && kp) {
+    kpToggle.addEventListener('click', function () { kp.classList.toggle('open'); });
+    kp.addEventListener('click', function (e) {
+      var b = e.target.closest('.bs-key');
+      if (!b) return;
+      var k = b.getAttribute('data-key');
+      var cur = stakeEl.value || '';
+      if (k === 'C') cur = '';
+      else if (k === '\u232b') cur = cur.slice(0, -1);
+      else if (cur.length < 9) cur = (cur === '0' ? '' : cur) + k;
+      var n = parseInt(cur || '0', 10);
+      if (n > MAX_BET) cur = String(MAX_BET);
+      stakeEl.value = cur;
+      setError('');
+      refreshReturn();
+    });
+  }
+
   function placeBet() {
     if (!current) return;
     var stake = stakeValue();
@@ -187,7 +207,11 @@
         if (data.success) {
           closeSlip();
           toast(data.message || 'OK', 'ok');
-          setTimeout(function () { location.reload(); }, 1400);
+          if (data.newBalance != null) {
+            document.querySelectorAll('.js-balance').forEach(function (n) { n.textContent = Number(data.newBalance).toLocaleString(); });
+          }
+          loadMyBets(true); // bet shows up instantly in My Bets
+          placeBtn.disabled = false;
           return;
         }
         if (data.code === 'CSRF_TOKEN_INVALID' || res.status === 401) {
@@ -203,6 +227,141 @@
       });
   }
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
+
+
+  // ===== My Bets drawer =====
+  var mbDrawer = $('mbDrawer'), mbList = $('mbList'), mbCount = $('mbCount');
+  function mk(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function mbRow(label, value) {
+    var r = mk('div', 'mb-row');
+    r.appendChild(mk('span', null, label));
+    r.appendChild(mk('b', null, value));
+    return r;
+  }
+  function renderBets(bets) {
+    if (!mbList) return;
+    mbList.textContent = '';
+    if (!bets.length) { mbList.appendChild(mk('div', 'mb-row', 'No bets yet')); }
+    bets.forEach(function (b) {
+      var c = mk('div', 'mb-card ' + b.betType);
+      var top = mk('div', 'mb-row');
+      top.appendChild(mk('span', 'mb-title', b.match));
+      top.appendChild(mk('span', 'mb-st ' + b.status, b.status.charAt(0).toUpperCase() + b.status.slice(1)));
+      c.appendChild(top);
+      c.appendChild(mbRow('Market', b.market));
+      c.appendChild(mbRow('Selection', (b.betType === 'lay' ? 'LAY ' : 'BACK ') + b.selection));
+      c.appendChild(mbRow('Odds', String(b.odds)));
+      c.appendChild(mbRow('Stake', money(b.stake)));
+      if (b.betType === 'lay') c.appendChild(mbRow('Liability', money(b.liability)));
+      c.appendChild(mbRow(b.status === 'won' ? 'Return' : 'Potential return', b.status === 'lost' ? '0' : money(b.potentialReturn)));
+      mbList.appendChild(c);
+    });
+    var pending = bets.filter(function (b) { return b.status === 'pending'; }).length;
+    if (mbCount) mbCount.textContent = pending ? String(pending) : '';
+  }
+  function loadMyBets(openAfter) {
+    if (!mbDrawer) return;
+    fetch('/matches/api/my-bets', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) {
+        if ((r.headers.get('content-type') || '').indexOf('application/json') === -1) throw new Error('auth');
+        return r.json();
+      })
+      .then(function (d) { if (d && d.success) { renderBets(d.bets || []); if (openAfter) openDrawer(); } })
+      .catch(function () { /* signed out or offline: leave drawer as is */ });
+  }
+  function openDrawer() { if (mbDrawer) { mbDrawer.classList.add('open'); mbDrawer.setAttribute('aria-hidden', 'false'); } }
+  function closeDrawer() { if (mbDrawer) { mbDrawer.classList.remove('open'); mbDrawer.setAttribute('aria-hidden', 'true'); } }
+  if (mbDrawer) {
+    $('mbOpen').addEventListener('click', function () { loadMyBets(true); });
+    $('mbClose').addEventListener('click', closeDrawer);
+    loadMyBets(false);
+  }
+
+  // ===== Live scoreboard (cricket / football / tennis) =====
+  var board = $('liveBoard');
+  function renderLive(live) {
+    if (!board) return;
+    board.textContent = '';
+    if (!live || !live.kind) return;
+    if (live.kind === 'cricket') {
+      var head = mk('div');
+      head.appendChild(mk('span', 'lb-main', (live.runs != null ? live.runs : '-') + '/' + (live.wickets != null ? live.wickets : '-')));
+      var sub = [];
+      if (live.overs) sub.push('(' + live.overs + ' ov)');
+      if (live.runRate != null) sub.push('RR ' + live.runRate);
+      if (live.target) sub.push('Target ' + live.target);
+      head.appendChild(mk('span', 'lb-sub', sub.join('  ')));
+      board.appendChild(head);
+      if (live.batsmen && live.batsmen.length) {
+        var t = mk('table'), hr = mk('tr');
+        ['Batsman', 'R', 'B', '4s', '6s'].forEach(function (h) { hr.appendChild(mk('th', null, h)); });
+        t.appendChild(hr);
+        live.batsmen.forEach(function (b) {
+          var r = mk('tr', b.strike ? 'strike' : '');
+          [b.name, b.runs, b.balls, b.fours, b.sixes].forEach(function (v) { r.appendChild(mk('td', null, String(v))); });
+          t.appendChild(r);
+        });
+        board.appendChild(t);
+      }
+      if (live.bowler) {
+        var bw = live.bowler;
+        board.appendChild(mk('div', 'lb-sub', 'Bowler: ' + bw.name + '  ' + bw.overs + '-' + bw.maidens + '-' + bw.runs + '-' + bw.wickets));
+      }
+      if (live.balls && live.balls.length) {
+        var balls = mk('div', 'lb-balls');
+        balls.appendChild(mk('span', 'lb-sub', 'This over'));
+        live.balls.forEach(function (b) {
+          balls.appendChild(mk('span', 'lb-ball' + (b === '4' ? ' b4' : b === '6' ? ' b6' : b === 'W' ? ' bW' : ''), b));
+        });
+        board.appendChild(balls);
+      }
+    } else if (live.kind === 'football') {
+      var f = mk('div');
+      if (live.clock) f.appendChild(mk('span', 'lb-pill', live.clock));
+      if (live.period) f.appendChild(mk('span', 'lb-sub', live.period));
+      (live.halves || []).forEach(function (h, i) { f.appendChild(mk('span', 'lb-sub', (i === 0 ? 'HT ' : '2H ') + h[0] + '-' + h[1])); });
+      board.appendChild(f);
+      addMomentum(live.momentum);
+    } else if (live.kind === 'tennis') {
+      if (live.sets && live.sets.length) {
+        var tt = mk('table'), h2 = mk('tr');
+        h2.appendChild(mk('th', null, ''));
+        live.sets.forEach(function (_, i) { h2.appendChild(mk('th', null, 'S' + (i + 1))); });
+        if (live.game) h2.appendChild(mk('th', null, 'Game'));
+        tt.appendChild(h2);
+        [0, 1].forEach(function (p) {
+          var r = mk('tr');
+          r.appendChild(mk('td', null, (live.server === p ? '● ' : '') + (p === 0 ? (cfg.teamA || 'Player 1') : (cfg.teamB || 'Player 2'))));
+          live.sets.forEach(function (s) { r.appendChild(mk('td', null, String(s[p]))); });
+          if (live.game) r.appendChild(mk('td', null, String(live.game[p])));
+          tt.appendChild(r);
+        });
+        board.appendChild(tt);
+      }
+      addMomentum(live.momentum);
+    }
+  }
+  function addMomentum(m) {
+    if (m == null) return;
+    var bar = mk('div', 'lb-mom'), fill = mk('i');
+    fill.style.width = Math.max(0, Math.min(100, m)) + '%'; // CSSOM write: allowed under style-src-attr CSP
+    bar.appendChild(fill);
+    board.appendChild(bar);
+  }
+  renderLive(cfg.live);
+
+  function setVol(marketId, runner, type, size) {
+    var o = findOdds(marketId, runner, type);
+    var v = o && o.nextElementSibling;
+    if (!v || !v.classList.contains('vol')) return;
+    var n = Number(size);
+    v.textContent = size == null || !Number.isFinite(n) ? '' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n));
+  }
 
   // ===== Live odds / suspension (Socket.IO) =====
   // Server events: oddsUpdate, marketStatusChange, runnerStatusChange (services/socket.js).
@@ -277,9 +436,16 @@
           (m.runners || []).forEach(function (r) {
             setPrice(findOdds(m.marketId, r.key, 'back'), r.back);
             setPrice(findOdds(m.marketId, r.key, 'lay'), r.lay);
+            setVol(m.marketId, r.key, 'back', r.backSize);
+            setVol(m.marketId, r.key, 'lay', r.laySize);
           });
         });
       });
+      socket.on('liveUpdate', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) renderLive(msg.live);
+      });
+      // settlement / balance notifications arrive on the user room: refresh My Bets statuses
+      socket.on('notification', function () { loadMyBets(false); });
       socket.on('marketStatusChange', function (msg) {
         if (msg && String(msg.matchId) === String(cfg.matchId)) setMarketSuspended(msg.marketId, msg.status !== 'open');
       });

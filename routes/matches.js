@@ -23,7 +23,7 @@ const { normalizeBetType, calcRisk, calcLiability, calcPotentialPayout } = requi
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
-const { buildMarketView, filterMarketView } = require('../services/marketLayout');
+const { buildMarketView, filterMarketView, labelFor } = require('../services/marketLayout');
 
 function formatMatch(row) {
   return {
@@ -38,7 +38,9 @@ function formatMatch(row) {
     awayScore: row.score_b != null ? row.score_b : null,
     overs: row.overs || null,
     status: row.status || 'upcoming',
-    date: row.start_time || null
+    date: row.start_time || null,
+    logoA: row.logo_a || null,
+    logoB: row.logo_b || null
   };
 }
 
@@ -108,7 +110,7 @@ router.get('/api/live', async (req, res) => {
       // ফুটবলের ভরা দিনে ক্রিকেট ট্যাব খালি দেখাত। row_number() দিয়ে
       // প্রতিটা স্পোর্ট নিজের কোটা পায়, তাই একটা অন্যটাকে চাপা দিতে পারে না।
       `SELECT id, title, team_a, team_b, sport, league, status, start_time,
-              score_a, score_b, overs
+              score_a, score_b, overs, logo_a, logo_b
        FROM (
          SELECT *, row_number() OVER (
            PARTITION BY sport
@@ -148,6 +150,49 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
+// "My Bets": the signed-in user's latest bets with live status. Used by the drawer on the
+// match page; refreshed after placing a bet and whenever a settlement notification arrives.
+router.get('/api/my-bets', isAuth, async (req, res) => {
+  try {
+    const status = ['pending', 'won', 'lost'].includes(req.query.status) ? req.query.status : null;
+    const params = [req.session.user.id];
+    let where = 'b.user_id = $1';
+    if (status) { params.push(status); where += ` AND b.status = $${params.length}`; }
+    const r = await pool.query(
+      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.bet_type, b.liability,
+              b.potential_payout, b.is_demo, b.created_at,
+              m.title, m.team_a, m.team_b, mk.name AS market_name, mk.type AS market_type
+         FROM bets b
+         LEFT JOIN matches m ON m.id = b.match_id
+         LEFT JOIN markets mk ON mk.id = b.market_id
+        WHERE ${where}
+        ORDER BY b.created_at DESC, b.id DESC LIMIT 50`, params);
+    const bets = r.rows.map((b) => {
+      const teamA = b.team_a || 'Team A', teamB = b.team_b || 'Team B';
+      const lay = b.bet_type === 'lay';
+      return {
+        id: b.id,
+        matchId: b.match_id,
+        match: b.title || `${teamA} vs ${teamB}`,
+        market: b.market_name || b.market_type || '',
+        selection: labelFor(String(b.runner), b.market_type, teamA, teamB),
+        betType: lay ? 'lay' : 'back',
+        odds: Number(b.odd),
+        stake: Number(b.stake),
+        liability: lay ? Number(b.liability) : null,
+        potentialReturn: Number(b.potential_payout) || Math.floor(Number(b.stake) * Number(b.odd)),
+        status: b.status, // pending | won | lost
+        isDemo: !!b.is_demo,
+        placedAt: b.created_at
+      };
+    });
+    res.json({ success: true, bets });
+  } catch (err) {
+    console.error('my-bets error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // ত্রুটিপূর্ণ id (abc, 1e309, ইত্যাদি) আগে সরাসরি PostgreSQL-এ পৌঁছে 22P02/22003 এরর
 // ঘটাত, তারপর catch ব্লক ধরে রিডাইরেক্ট করত। ইউজার নিরাপদ উত্তরই পেত, কিন্তু প্রতিটা
 // এমন রিকোয়েস্টে অপ্রয়োজনীয় DB রাউন্ড-ট্রিপ হতো। এখন রুটে ঢোকার আগেই যাচাই হয়;
@@ -167,7 +212,10 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       score_a: row.score_a,
       score_b: row.score_b,
       overs: row.overs,
-      league: row.league
+      league: row.league,
+      live: row.live_data || null,
+      logo_a: row.logo_a || null,
+      logo_b: row.logo_b || null
     };
 
     let markets = [];

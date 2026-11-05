@@ -63,10 +63,13 @@ function categoryFor(market, kind) {
     return 'match';
   }
 
-  if (type === 'bookmaker' || type === 'match_odds' || type === 'double_chance') return 'match';
-  if (/first over/i.test(name)) return 'over';
-  if (type === 'yes_no') return 'batsman';
-  if (/total runs/i.test(name) && !/^match /i.test(name)) return 'innings';
+  // cricket: match | bookmaker | fancy | ou | oe | player
+  if (name === 'Match Winner' || type === 'match_odds' || type === 'double_chance') return 'match';
+  if (type === 'fancy' || /fancy|session|lambi|ball run/i.test(name)) return 'fancy';
+  if (type === 'bookmaker' || /bookmaker/i.test(name)) return 'bookmaker';
+  if (type === 'yes_no' || /batsman|batter|player|fifty|century|\b50\b|\b100\b/i.test(name)) return 'player';
+  if (type === 'over_under') return 'ou';
+  if (type === 'odd_even') return 'oe';
   return 'match';
 }
 
@@ -98,6 +101,8 @@ function runnersFor(market, teamA, teamB) {
       label: labelFor(key, type, teamA, teamB),
       odd: Number(map[key]),
       lay: Number.isFinite(lay) && lay > 1 ? lay : null,
+      backSize: depth[key] && Number.isFinite(Number(depth[key].back_size)) ? Number(depth[key].back_size) : null,
+      laySize: depth[key] && Number.isFinite(Number(depth[key].lay_size)) ? Number(depth[key].lay_size) : null,
       status: String(rstat[key] || 'open').toLowerCase() === 'suspended' ? 'suspended' : 'open'
     };
   }).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
@@ -106,7 +111,7 @@ function runnersFor(market, teamA, teamB) {
 const TABS_BY_SPORT = {
   football: [['match', 'Full Time Result'], ['goals', 'Goals (Over/Under)'], ['btts', 'Both Teams to Score']],
   tennis: [['match', 'Match Winner'], ['set', 'Set Winner'], ['games', 'Game Totals']],
-  cricket: [['match', 'Match'], ['innings', 'Innings'], ['over', 'Over'], ['batsman', 'Batsman']]
+  cricket: [['match', 'Match Winner'], ['bookmaker', 'Bookmaker'], ['fancy', 'Fancy'], ['ou', 'Over/Under'], ['oe', 'Odd/Even'], ['player', 'Player Performance']]
 };
 
 // match: { sport, teams:[a,b] }
@@ -150,4 +155,4 @@ function filterMarketView(view, tab) {
   return view.markets.filter((m) => m.category === tab);
 }
 
-module.exports = { buildMarketView, filterMarketView, runnersFor, categoryFor };
+module.exports = { buildMarketView, filterMarketView, runnersFor, categoryFor, labelFor };
