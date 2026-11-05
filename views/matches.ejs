@@ -96,6 +96,12 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+  .cnt { display: inline-block; min-width: 16px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font-size: 10px; font-weight: 800; }
+  .cnt:empty { display: none; }
+  .flt-row { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
+  .flt { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-muted); font-weight: 700; font-size: 12px; cursor: pointer; }
+  .flt.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .mc-overs { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-align: center; }
 </style>
 
 <div class="container dz82-1">
@@ -108,20 +114,31 @@
     <span class="dz82-5">›</span>
   </a>
 
-  <!-- Sport Tabs -->
+  <!-- Sport Tabs (counts = live matches, filled by matches.js) -->
   <div class="dz82-6">
-    <a href="/matches" class="cat-item <%= sport === 'all' ? 'active' : '' %> dz82-7">
-      <div>🏆</div><%= t.all %>
+    <a href="/matches" class="cat-item <%= sport === 'all' ? 'active' : '' %> dz82-7" data-sport="all">
+      <div>&#127942;</div><%= t.all %> <span class="cnt" data-cnt="all"></span>
+    </a>
+    <a href="/matches/cricket" class="cat-item <%= currentPage === 'cricket' ? 'active' : '' %> dz82-9" data-sport="cricket">
+      <div>&#127951;</div>Cricket <span class="cnt" data-cnt="cricket"></span>
+    </a>
+    <a href="/matches/football" class="cat-item <%= (currentPage === 'football' && sport === 'football') ? 'active' : '' %> dz82-9" data-sport="football">
+      <div>&#9917;</div>Football <span class="cnt" data-cnt="football"></span>
+    </a>
+    <a href="/matches/tennis" class="cat-item <%= currentPage === 'tennis' ? 'active' : '' %> dz82-9" data-sport="tennis">
+      <div>&#127934;</div>Tennis <span class="cnt" data-cnt="tennis"></span>
     </a>
     <a href="/matches/worldcup" class="cat-item <%= currentPage === 'worldcup' ? 'active' : '' %> dz82-8">
-      <div>⚽</div><%= t.world_cup %>
+      <div>&#127775;</div><%= t.world_cup %>
     </a>
-    <a href="/matches/football" class="cat-item <%= (currentPage === 'football' && sport === 'football') ? 'active' : '' %> dz82-9">
-      <div>⚽</div>Football
-    </a>
-    <a href="/matches/cricket" class="cat-item <%= currentPage === 'cricket' ? 'active' : '' %> dz82-9">
-      <div>🏏</div>Cricket
-    </a>
+  </div>
+
+  <!-- Status filters -->
+  <div class="flt-row" id="statusFilters">
+    <button type="button" class="flt active" data-filter="all">All</button>
+    <button type="button" class="flt" data-filter="live">Live</button>
+    <button type="button" class="flt" data-filter="inplay">In-Play</button>
+    <button type="button" class="flt" data-filter="upcoming">Upcoming</button>
   </div>
 
   <!-- Live connection status -->

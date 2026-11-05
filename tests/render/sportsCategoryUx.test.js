@@ -103,15 +103,15 @@ describe('Football ও Cricket পেজ', () => {
     expect(res.status).toBe(200);
     // docs/CSP.md ধাপ ৩: স্পোর্ট মানটা এখন JSON কনফিগে যায়, স্ক্রিপ্টে নয়।
     expect(matchesConfig(res.text).sport).toBe('football');
-    // ক্লায়েন্ট-সাইড ফিল্টার: football হলে শুধু data.football নেওয়া হয়
-    expect(withScripts(res.text)).toMatch(/CURRENT_SPORT === 'football'\) all = all\.concat\(data\.football/);
+    // ক্লায়েন্ট-সাইড ফিল্টার: বর্তমান স্পোর্টের তালিকাই (ALL_DATA[CURRENT_SPORT]) নেওয়া হয়
+    expect(withScripts(res.text)).toMatch(/ALL_DATA\[CURRENT_SPORT\]/);
   });
 
   test('Cricket পেজ শুধু cricket ফিল্টার করে', async () => {
     const res = await request(app).get('/matches/cricket');
     expect(res.status).toBe(200);
     expect(matchesConfig(res.text).sport).toBe('cricket');
-    expect(withScripts(res.text)).toMatch(/CURRENT_SPORT === 'cricket'\) all = all\.concat\(data\.cricket/);
+    expect(withScripts(res.text)).toMatch(/ALL_DATA\[CURRENT_SPORT\]/);
   });
 
   test('/sports/cricket-ও একই ফিল্টার নিয়ে রেন্ডার হয়', async () => {
@@ -137,7 +137,7 @@ describe('Football ও Cricket পেজ', () => {
 
   test('ম্যাচ কার্ড থেকে বিদ্যমান ম্যাচ পেজে যাওয়া যায়', async () => {
     const res = await request(app).get('/matches/cricket');
-    expect(withScripts(res.text)).toContain('/matches/${m.id}');
+    expect(withScripts(res.text)).toContain('/matches/${encodeURIComponent(m.id)}');
   });
 });
 

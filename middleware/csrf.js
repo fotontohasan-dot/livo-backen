@@ -27,7 +27,9 @@ const EXEMPT_PREFIXES = [
   // হেডার-ভিত্তিক শনাক্তি এখানে ভঙ্গুর হতো। বদলে পুরো প্রিফিক্সটা একটা
   // ডেডিকেটেড রাউটারে আবদ্ধ, যেখানে প্রতিটা রুটে providerAuth বাধ্যতামূলক:
   // HMAC স্বাক্ষর + IP allow-list + ৩০ সেকেন্ডের timestamp উইন্ডো।
-  '/provider/'
+  '/provider/',
+  // Machine-to-machine sports feed; authenticated by the x-feed-key header, no cookie session.
+  '/api/admin/feed-update'
 ];
 
 // API-key হেডার বহনকারী রিকোয়েস্ট কখনো ব্রাউজারের ambient কুকি-অথ ব্যবহার করে না,

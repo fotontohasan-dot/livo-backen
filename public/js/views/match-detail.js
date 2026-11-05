@@ -9,6 +9,73 @@
   var cfg = {};
   var el = document.getElementById('match-detailConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
+  var minBet = Number(cfg.minBet) || 10;
+
+  var slip = document.getElementById('md-slip');
+  var stakeInput = document.getElementById('slip-stake');
+  var msg = document.getElementById('slip-msg');
+  var selected = null; // the back cell currently in the slip
+
+  function $(id) { return document.getElementById(id); }
+  function setText(id, v) { var n = $(id); if (n && v !== undefined && v !== null) n.textContent = v; }
+
+  // ---- bet slip ----
+  function updateReturn() {
+    var stake = parseInt(stakeInput.value, 10) || 0;
+    var odd = selected ? parseFloat(selected.dataset.odd) : 0;
+    setText('slip-return', stake && odd ? (stake * odd).toFixed(2) : '0');
+    if (selected) setText('slip-odd', odd);
+  }
+  function openSlip(cell) {
+    if (!cfg.loggedIn) { if (msg) msg.textContent = cfg.loginToBet || ''; if (slip) slip.classList.add('open'); return; }
+    if (selected) selected.classList.remove('selected');
+    selected = cell;
+    cell.classList.add('selected');
+    setText('slip-name', cell.dataset.runnerName || cell.dataset.runner);
+    msg.textContent = '';
+    updateReturn();
+    slip.classList.add('open');
+  }
+  function closeSlip() {
+    slip.classList.remove('open');
+    if (selected) selected.classList.remove('selected');
+    selected = null;
+  }
+
+  document.addEventListener('click', function (e) {
+    var cell = e.target.closest && e.target.closest('.mk-cell.back.odds');
+    if (!cell) return;
+    var box = cell.closest('.market-box');
+    if (box && box.dataset.status !== 'open') return; // suspended
+    openSlip(cell);
+  });
+  stakeInput.addEventListener('input', updateReturn);
+  $('slip-close').addEventListener('click', closeSlip);
+
+  $('slip-place').addEventListener('click', function () {
+    if (!selected) return;
+    var stake = parseInt(stakeInput.value, 10);
+    if (!stake || stake < minBet) { msg.textContent = cfg.minBetMsg; return; }
+    var btn = this; btn.disabled = true;
+    fetch('/matches/' + encodeURIComponent(cfg.matchId) + '/bet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // the server re-reads the price from the database; this value is informational only
+      body: JSON.stringify({
+        market_id: selected.dataset.marketId,
+        runner: selected.dataset.runner,
+        odd: parseFloat(selected.dataset.odd),
+        stake: stake
+      })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        msg.textContent = data.message || data.error || '';
+        if (data.success) setTimeout(closeSlip, 1200);
+      })
+      .catch(function () { msg.textContent = cfg.networkError; })
+      .then(function () { btn.disabled = false; });
+  });
 
   var MIN_BET = Number(cfg.minBet) > 0 ? Number(cfg.minBet) : 10;
   var MAX_BET = Number(cfg.maxBet) > 0 ? Number(cfg.maxBet) : 100000;
