@@ -1,7 +1,7 @@
 // "My Bets" প্যানেল: GET /matches/api/my-bets — শুধু নিজের বাজি, সম্ভাব্য রিটার্ন = স্টেক × অডস।
 const request = require('supertest');
 const { pool } = require('../../db');
-const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
+const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 const { cleanupUsers } = require('../helpers/cleanup');
 
 describe('GET /matches/api/my-bets', () => {
@@ -34,7 +34,7 @@ describe('GET /matches/api/my-bets', () => {
   });
 
   test('লগইন ছাড়া JSON ডেটা পাওয়া যায় না', async () => {
-    const res = await request(require('../../app')).get('/matches/api/my-bets').redirects(0);
+    const res = await request(app).get('/matches/api/my-bets').redirects(0);
     expect(res.status).not.toBe(200);
   });
 
