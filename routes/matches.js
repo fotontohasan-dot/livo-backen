@@ -147,6 +147,42 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
+// "My Bets" প্যানেলের ডেটা: লগইন করা ইউজারের নিজের সাম্প্রতিক বাজি (স্টেক, অডস, সম্ভাব্য রিটার্ন, স্ট্যাটাস)।
+// শুধু নিজের বাজিই ফেরে (user_id সেশন থেকে); ম্যাচ বা মার্কেট মুছে গেলেও LEFT JOIN-এ সারি হারায় না।
+router.get('/api/my-bets', isAuth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
+              COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
+              COALESCE(NULLIF(m.title, ''), m.team_a || ' vs ' || m.team_b) AS match_name
+         FROM bets b
+         LEFT JOIN matches m ON m.id = b.match_id
+         LEFT JOIN markets mk ON mk.id = b.market_id
+        WHERE b.user_id = $1
+        ORDER BY b.id DESC
+        LIMIT 50`,
+      [req.session.user.id]
+    );
+    const bets = r.rows.map(b => ({
+      id: b.id,
+      matchId: b.match_id,
+      matchName: b.match_name || '',
+      market: b.market_name || '',
+      selection: b.runner || '',
+      odd: Number(b.odd),
+      stake: Number(b.stake),
+      potentialReturn: Math.round(Number(b.stake) * Number(b.odd) * 100) / 100,
+      status: b.status || 'pending',
+      demo: !!b.is_demo,
+      createdAt: b.created_at
+    }));
+    res.json({ success: true, bets });
+  } catch (err) {
+    console.error('matches/api/my-bets error:', err.message);
+    res.json({ success: false, bets: [] });
+  }
+});
+
 // ত্রুটিপূর্ণ id (abc, 1e309, ইত্যাদি) আগে সরাসরি PostgreSQL-এ পৌঁছে 22P02/22003 এরর
 // ঘটাত, তারপর catch ব্লক ধরে রিডাইরেক্ট করত। ইউজার নিরাপদ উত্তরই পেত, কিন্তু প্রতিটা
 // এমন রিকোয়েস্টে অপ্রয়োজনীয় DB রাউন্ড-ট্রিপ হতো। এখন রুটে ঢোকার আগেই যাচাই হয়;

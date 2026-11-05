@@ -159,6 +159,15 @@
   .bs-login { display: block; text-align: center; text-decoration: none; }
 
   /* ===== টোস্ট ===== */
+  .mb-fab { position: fixed; right: 14px; bottom: 80px; z-index: 40; border: 0; border-radius: 22px; padding: 10px 16px; background: #0f6cbd; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+  .mb-panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; max-height: 75vh; overflow-y: auto; background: #111827; color: #e5e7eb; border-radius: 16px 16px 0 0; padding: 14px; transform: translateY(105%); transition: transform .25s; box-shadow: 0 -6px 24px rgba(0,0,0,.45); }
+  .mb-panel.open { transform: translateY(0); }
+  .mb-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 8px; }
+  .mb-close { background: none; border: 0; color: #9ca3af; font-size: 22px; cursor: pointer; }
+  .mb-item { border: 1px solid #263244; border-left: 4px solid #6b7280; border-radius: 10px; padding: 10px; margin-bottom: 8px; font-size: 14px; }
+  .mb-item.won { border-left-color: #22c55e; } .mb-item.lost { border-left-color: #ef4444; } .mb-item.pending { border-left-color: #f59e0b; }
+  .mb-row { display: flex; justify-content: space-between; gap: 8px; } .mb-mut { color: #9ca3af; font-size: 12px; }
+  .mb-st { font-weight: 700; font-size: 12px; }
   .md-toast {
     position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%) translateY(20px);
     z-index: 10060; max-width: 90vw; padding: 12px 18px; border-radius: 12px; font-weight: 700; font-size: 14px;
@@ -290,6 +299,13 @@
   </div>
 </div>
 <div class="md-toast" id="mdToast" role="status" aria-live="polite"></div>
+<% if (locals.user) { %>
+<button type="button" class="mb-fab" id="mbOpen"><%= t.my_bets %></button>
+<div class="mb-panel" id="mbPanel" aria-hidden="true">
+  <div class="mb-head"><span><%= t.my_bets %></span><button type="button" class="mb-close" id="mbClose" aria-label="Close">×</button></div>
+  <div id="mbList"></div>
+</div>
+<% } %>
 
 <script type="application/json" id="match-detailConfig"><%- jsonScriptSafe({
   loggedIn: !!locals.user,
@@ -300,7 +316,8 @@
   networkError: t.network_error,
   minBet: minBet,
   maxBet: maxBet,
-  sessionExpired: t.bet_slip_session_expired
+  sessionExpired: t.bet_slip_session_expired,
+  myBets: { empty: t.my_bets_empty, stake: t.my_bets_stake, ret: t.my_bets_return, pending: t.my_bets_pending, won: t.my_bets_won, lost: t.my_bets_lost, error: t.my_bets_load_error },
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 

@@ -112,10 +112,10 @@
 
   if (overlay) {
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeSlip(); });
-    $('bsClose').addEventListener('click', closeSlip);
-    $('bsCancel').addEventListener('click', closeSlip);
+    if ($('bsClose')) $('bsClose').addEventListener('click', closeSlip);
+    if ($('bsCancel')) $('bsCancel').addEventListener('click', closeSlip);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSlip(); });
-    stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
+    if (stakeEl) stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
     document.querySelectorAll('.bs-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var add = parseInt(chip.getAttribute('data-add'), 10) || 0;
@@ -178,4 +178,44 @@
       });
   }
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
+
+  // ===== My Bets প্যানেল =====
+  // textContent ব্যবহার হয় (innerHTML নয়), তাই রানার/ম্যাচের নামে HTML থাকলেও নিরাপদ।
+  (function () {
+    var openBtn = $('mbOpen'), panel = $('mbPanel'), list = $('mbList'), closeBtn = $('mbClose');
+    if (!openBtn || !panel || !list) return;
+    var L = cfg.myBets || {};
+    function line(a, b) {
+      var row = document.createElement('div');
+      row.className = 'mb-row';
+      var x = document.createElement('span'); x.textContent = a;
+      var y = document.createElement('span'); y.textContent = b;
+      row.appendChild(x); row.appendChild(y);
+      return row;
+    }
+    function render(bets) {
+      list.textContent = '';
+      if (!bets.length) {
+        var p = document.createElement('p'); p.className = 'mb-mut'; p.textContent = L.empty || ''; list.appendChild(p); return;
+      }
+      bets.forEach(function (b) {
+        var st = (b.status === 'won' || b.status === 'lost') ? b.status : 'pending';
+        var card = document.createElement('div'); card.className = 'mb-item ' + st;
+        card.appendChild(line(b.matchName, L[st] || st));
+        card.lastChild.lastChild.className = 'mb-st';
+        card.appendChild(line(b.market + (b.selection ? ' · ' + b.selection : ''), '@ ' + b.odd.toFixed(2)));
+        card.appendChild(line((L.stake || 'Stake') + ': ' + b.stake, (L.ret || 'Return') + ': ' + b.potentialReturn.toFixed(2)));
+        list.appendChild(card);
+      });
+    }
+    function load() {
+      fetch('/matches/api/my-bets', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { render(d && d.success ? d.bets : []); if (d && !d.success) toast(L.error, 'err'); })
+        .catch(function () { toast(L.error || 'Error', 'err'); });
+    }
+    function setOpen(v) { panel.classList.toggle('open', v); panel.setAttribute('aria-hidden', v ? 'false' : 'true'); if (v) load(); }
+    openBtn.addEventListener('click', function () { setOpen(true); });
+    if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
+  })();
 })();
