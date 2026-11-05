@@ -17,6 +17,8 @@
 // ---------------------------------------------------------------------------
 const { pool } = require('../db');
 const { templatesFor } = require('./marketTemplates');
+const cache = require('./cache');
+const cacheKeys = require('./cacheKeys');
 
 async function insertTemplates(client, match) {
   let created = 0;
@@ -89,4 +91,4 @@ async function backfillMissingMarkets() {
   return created;
 }
 
-module.exports = { ensureDefaultMarkets, closeFinishedMatchMarkets, backfillMissingMarkets, buildMarkets, cricketFormat };
+module.exports = { ensureDefaultMarkets, closeFinishedMatchMarkets, backfillMissingMarkets };
