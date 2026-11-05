@@ -136,10 +136,10 @@
 
   if (overlay) {
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeSlip(); });
-    $('bsClose').addEventListener('click', closeSlip);
-    $('bsCancel').addEventListener('click', closeSlip);
+    if ($('bsClose')) $('bsClose').addEventListener('click', closeSlip);
+    if ($('bsCancel')) $('bsCancel').addEventListener('click', closeSlip);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSlip(); });
-    stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
+    if (stakeEl) stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
     document.querySelectorAll('.bs-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var add = parseInt(chip.getAttribute('data-add'), 10) || 0;

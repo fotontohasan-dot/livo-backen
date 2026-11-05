@@ -1,4 +1,12 @@
 {
+  "my_bets": "আমার বাজি",
+  "my_bets_empty": "আপনি এখনও কোনো বাজি ধরেননি।",
+  "my_bets_stake": "স্টেক",
+  "my_bets_return": "সম্ভাব্য রিটার্ন",
+  "my_bets_pending": "অপেক্ষমাণ",
+  "my_bets_won": "জিতেছেন",
+  "my_bets_lost": "হেরেছেন",
+  "my_bets_load_error": "আপনার বাজি লোড করা যায়নি।",
   "balance": "ব্যালেন্স",
   "deposit": "ডিপোজিট",
   "withdraw": "উইথড্র",
