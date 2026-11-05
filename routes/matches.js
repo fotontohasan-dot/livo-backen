@@ -67,6 +67,15 @@ router.get('/cricket', (req, res) => {
   });
 });
 
+router.get('/tennis', (req, res) => {
+  res.render('matches', {
+    currentPage: 'tennis',
+    sport: 'tennis',
+    title: 'Tennis',
+    user: req.session ? req.session.user : null
+  });
+});
+
 router.get('/football', (req, res) => {
   res.render('matches', {
     currentPage: 'football',
@@ -117,19 +126,23 @@ router.get('/api/live', async (req, res) => {
 
     const cricket = [];
     const football = [];
+    const tennis = [];
+    const other = [];
 
     for (const row of result.rows) {
       const m = formatMatch(row);
       if (m.sport === 'football') football.push(m);
-      else cricket.push(m);
+      else if (m.sport === 'tennis') tennis.push(m);
+      else if (m.sport === 'cricket') cricket.push(m);
+      else other.push(m);
     }
 
-    const payload = { success: true, cricket, football };
+    const payload = { success: true, cricket, football, tennis, other };
     cache.set(CACHE_KEY, payload, 10).catch(() => {}); // 10s TTL — live data stays fresh
     res.json(payload);
   } catch (err) {
     console.error('matches/api/live error:', err.message);
-    res.json({ success: true, cricket: [], football: [] });
+    res.json({ success: true, cricket: [], football: [], tennis: [], other: [] });
   }
 });
 
@@ -160,7 +173,7 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       // হাতে/পুরনো সিঙ্কে তৈরি ম্যাচে মার্কেট না থাকলে এখানেই তৈরি হয়ে যাবে
       await ensureDefaultMarkets(row.id, row.status);
       const marketRes = await pool.query(
-        `SELECT * FROM markets WHERE match_id = $1 AND status = 'open' ORDER BY id ASC`,
+        `SELECT * FROM markets WHERE match_id = $1 AND status IN ('open','suspended') ORDER BY id ASC`,
         [req.params.id]
       );
       markets = marketRes.rows;

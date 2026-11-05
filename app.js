@@ -1039,6 +1039,7 @@ app.use('/games', require('./routes/games'));
 app.use('/provider', require('./routes/providerWallet'));
 // PHASE 4 — ইভেন্ট টিকেট (ইউজার ও অ্যাডমিন)।
 app.use('/tickets', require('./routes/tickets'));
+app.use('/api/admin/feed-update', require('./routes/feedIngest'));
 app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');

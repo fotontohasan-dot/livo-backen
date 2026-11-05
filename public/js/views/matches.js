@@ -9,14 +9,21 @@
   const CURRENT_SPORT = cfg.sport;
   const IS_LOGGED_IN = !!cfg.loggedIn;
 
+  // Feed data comes from an external JSON source: escape before putting it in innerHTML.
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   // ========== Card builder ==========
   function buildMatchCard(m, isLive) {
     const sportIcon = m.sport === 'football' ? '⚽' : '🏏';
-    const tournament = m.league || m.name || cfg.matchLabel;
-    const teamA = (m.teams && m.teams[0]) || m.homeTeam || cfg.teamA;
-    const teamB = (m.teams && m.teams[1]) || m.awayTeam || cfg.teamB;
-    const scoreA = m.homeScore != null ? m.homeScore : (m.score && m.score[0] ? `${m.score[0].r}/${m.score[0].w}` : null);
-    const scoreB = m.awayScore != null ? m.awayScore : (m.score && m.score[1] ? `${m.score[1].r}/${m.score[1].w}` : null);
+    const tournament = esc(m.league || m.name || cfg.matchLabel);
+    const teamA = esc((m.teams && m.teams[0]) || m.homeTeam || cfg.teamA);
+    const teamB = esc((m.teams && m.teams[1]) || m.awayTeam || cfg.teamB);
+    const scoreA = m.homeScore != null ? esc(m.homeScore) : (m.score && m.score[0] ? `${m.score[0].r}/${m.score[0].w}` : null);
+    const scoreB = m.awayScore != null ? esc(m.awayScore) : (m.score && m.score[1] ? `${m.score[1].r}/${m.score[1].w}` : null);
     const dateStr = m.date ? new Date(m.date).toLocaleString(cfg.locale, {dateStyle:'medium', timeStyle:'short'}) : '';
     
     const badge = isLive 
@@ -32,15 +39,17 @@
       : '';
     
     const statusHTML = isLive && m.status
-      ? `<div style="margin-top:10px;font-size:12px;color: var(--text-accent);font-weight:600;text-align:center;">${m.status}</div>`
+      ? `<div style="margin-top:10px;font-size:12px;color: var(--text-accent);font-weight:600;text-align:center;">${esc(m.status)}</div>`
       : '';
     
+    const oversHTML = isLive && m.overs ? `<div class="mc-overs">${esc(m.overs)}</div>` : '';
+
     const btnHTML = IS_LOGGED_IN
-      ? `<a href="/matches/${m.id}" class="predict-btn-card">🎯 ${cfg.predictNow}</a>`
+      ? `<a href="/matches/${encodeURIComponent(m.id)}" class="predict-btn-card">🎯 ${cfg.predictNow}</a>`
       : `<a href="/login" class="predict-btn-card" style="background:var(--bg-glass);color:var(--text-main);border:1px solid var(--border-glass); text-decoration: none;">${cfg.loginToPredict}</a>`;
     
     return `
-      <div class="match-card ${isLive ? 'live' : ''}" data-match-href="/matches/${m.id}">
+      <div class="match-card ${isLive ? 'live' : ''}" data-match-href="/matches/${encodeURIComponent(m.id)}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">
             ${sportIcon} ${tournament}
@@ -61,12 +70,36 @@
         </div>
         
         ${statusHTML}
+        ${oversHTML}
         ${btnHTML}
       </div>
     `;
   }
 
   // ========== Render ==========
+  let ALL_DATA = { cricket: [], football: [], tennis: [], other: [] };
+  let statusFilter = 'all';
+
+  function isLiveStatus(m) {
+    const st = (m.status || '').toLowerCase();
+    return st === 'live' || st.includes('live') || st.includes('in play') || st.includes('progress');
+  }
+  // In-Play = live AND already has a score or overs on the board
+  function isInPlay(m) { return isLiveStatus(m) && (m.homeScore || m.awayScore || m.overs); }
+
+  function updateCounts() {
+    const per = {
+      cricket: ALL_DATA.cricket.filter(isLiveStatus).length,
+      football: ALL_DATA.football.filter(isLiveStatus).length,
+      tennis: ALL_DATA.tennis.filter(isLiveStatus).length
+    };
+    per.all = per.cricket + per.football + per.tennis + ALL_DATA.other.filter(isLiveStatus).length;
+    Object.keys(per).forEach(function (k) {
+      const n = document.querySelector('[data-cnt="' + k + '"]');
+      if (n) n.textContent = per[k] > 0 ? per[k] : '';
+    });
+  }
+
   function renderMatches(matches) {
     const live = [];
     const upcoming = [];
@@ -77,6 +110,9 @@
     // যাওয়া ম্যাচও "আসন্ন ম্যাচ" তালিকায় দেখাত। নতুন কোনো স্ট্যাটাস কনভেনশন তৈরি করা
     // হয়নি; বিদ্যমান তিনটা মানকেই সঠিকভাবে আলাদা করা হলো।
     matches.forEach(m => {
+      if (statusFilter === 'inplay' && !isInPlay(m)) return;
+      if (statusFilter === 'live' && !isLiveStatus(m)) return;
+      if (statusFilter === 'upcoming' && isLiveStatus(m)) return;
       const status = (m.status || '').toLowerCase();
       if (status === 'live' || status.includes('live') || status.includes('in play') || status.includes('progress')) {
         live.push(m);
@@ -119,17 +155,25 @@
   }
 
   // ========== Fetch from API ==========
+  function rerender() {
+    let all = [];
+    if (CURRENT_SPORT === 'all') all = all.concat(ALL_DATA.cricket, ALL_DATA.football, ALL_DATA.tennis, ALL_DATA.other);
+    else all = (ALL_DATA[CURRENT_SPORT] || []).slice();
+    renderMatches(all);
+  }
+
   async function fetchMatches() {
     try {
       const res = await fetch('/matches/api/live');
       const data = await res.json();
       if (!data.success) throw new Error('API error');
       
-      let all = [];
-      if (CURRENT_SPORT === 'all' || CURRENT_SPORT === 'cricket') all = all.concat(data.cricket || []);
-      if (CURRENT_SPORT === 'all' || CURRENT_SPORT === 'football') all = all.concat(data.football || []);
-      
-      renderMatches(all);
+      ALL_DATA = {
+        cricket: data.cricket || [], football: data.football || [],
+        tennis: data.tennis || [], other: data.other || []
+      };
+      updateCounts();
+      rerender();
       updateStatus(cfg.lastUpdate + ': ' + new Date().toLocaleTimeString(cfg.locale));
     } catch (err) {
       console.error('Fetch error:', err);
@@ -155,6 +199,24 @@
   socket.on('disconnect', () => {
     updateStatus(cfg.statusError, '#94a3b8');
   });
+
+  // Feed pushes: debounce, then refetch (the feed endpoint already cleared the Redis cache)
+  let refetchTimer = null;
+  socket.on('matchListUpdate', () => {
+    clearTimeout(refetchTimer);
+    refetchTimer = setTimeout(fetchMatches, 400);
+  });
+
+  const filters = document.getElementById('statusFilters');
+  if (filters) {
+    filters.addEventListener('click', function (e) {
+      const b = e.target.closest('.flt');
+      if (!b) return;
+      statusFilter = b.dataset.filter;
+      filters.querySelectorAll('.flt').forEach(function (x) { x.classList.toggle('active', x === b); });
+      rerender();
+    });
+  }
 
   socket.on('matches_update', (data) => {
     // Server sent DB-shaped data; refetch our API endpoint instead for consistency

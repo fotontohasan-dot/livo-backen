@@ -715,6 +715,15 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP;
     `);
 
+    // Back/Lay depth per runner, fed by /api/admin/feed-update:
+    // { "<runnerKey>": { name, back, lay, back_size, lay_size } }
+    // markets.odds keeps the back price per runner (oddsResolver reads only that).
+    await pool.query(`
+      ALTER TABLE markets
+      ADD COLUMN IF NOT EXISTS depth JSONB,
+      ADD COLUMN IF NOT EXISTS market_key TEXT;
+    `);
+
     // PARTIAL unique index — শুধু সেই রোগুলোর উপর যেগুলোর provider ও external_id দুটোই আছে।
     // এটা ইচ্ছাকৃত ও প্রোডাকশন-সেফ: পুরনো (legacy) রোগুলোতে এই দুটো কলাম NULL, তাই
     // ইনডেক্স তৈরির সময় বিদ্যমান ডুপ্লিকেটে মাইগ্রেশন ব্যর্থ হয় না এবং কোনো ঐতিহাসিক

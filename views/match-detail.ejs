@@ -84,6 +84,30 @@
 
   .md-empty { background: #1f2937; border: 1px solid #334155; border-radius: 14px; color: #f8fafc; }
   .md-empty .dz83-7 { color: #94a3b8; }
+
+  /* Back/Lay grid, tabs, suspend overlay, bet slip */
+  .md-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 12px; padding-bottom: 4px; }
+  .md-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 999px; border: 1px solid #334155; background: #111827; color: #cbd5e1; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .md-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .market-box { position: relative; }
+  .mk-head-cols { display: flex; padding: 6px 16px; background: #111827; border-top: 1px solid #334155; font-size: 11px; font-weight: 800; color: #94a3b8; justify-content: flex-end; gap: 6px; }
+  .mk-head-cols span { min-width: 74px; text-align: center; }
+  .mk-cell { min-width: 74px; padding: 8px 6px; border-radius: 8px; text-align: center; font-weight: 800; font-size: 16px; user-select: none; }
+  .mk-cell small { display: block; font-size: 10px; font-weight: 600; opacity: .85; }
+  .mk-cell.back { background: #38bdf8; color: #04263a; cursor: pointer; }
+  .mk-cell.lay { background: #f9a8d4; color: #4a0d2a; cursor: not-allowed; opacity: .75; }
+  .mk-cell.selected { outline: 3px solid #fbbf24; }
+  .mk-cell.empty { background: #374151; color: #9ca3af; cursor: default; }
+  .mk-suspend { position: absolute; left: 0; right: 0; bottom: 0; top: 44px; background: rgba(15,23,42,.78); display: flex; align-items: center; justify-content: center; color: #fca5a5; font-weight: 900; letter-spacing: 2px; font-size: 18px; z-index: 2; }
+  .market-box[data-status="open"] .mk-suspend { display: none; }
+  .md-slip { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #0f172a; border-top: 2px solid #2563eb; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); transition: transform .2s ease; color: #f8fafc; }
+  .md-slip.open { transform: translateY(0); }
+  .md-slip-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-weight: 700; }
+  .md-slip input { width: 110px; padding: 8px 10px; border-radius: 8px; border: 1px solid #475569; background: #1e293b; color: #fff; font-size: 16px; }
+  .md-slip button { padding: 10px 16px; border-radius: 10px; border: 0; font-weight: 800; cursor: pointer; }
+  .md-slip-place { background: #22c55e; color: #052e13; flex: 1; }
+  .md-slip-close { background: #334155; color: #e2e8f0; }
+  .md-slip-msg { font-size: 13px; color: #fbbf24; min-height: 18px; margin-bottom: 6px; }
 </style>
 
 <div class="container dz83-1">
@@ -100,65 +124,73 @@
     <div class="md-score-top">
       <span class="md-league"><%= match.league || match.sport || '' %></span>
       <% if (isLive) { %>
-        <span class="md-badge md-badge-live"><span class="md-dot pulse-live"></span>LIVE</span>
+        <span class="md-badge md-badge-live" id="md-badge"><span class="md-dot pulse-live"></span>LIVE</span>
       <% } else { %>
-        <span class="md-badge md-badge-up"><%= match.status || t.upcoming_matches %></span>
+        <span class="md-badge md-badge-up" id="md-badge"><%= match.status || t.upcoming_matches %></span>
       <% } %>
     </div>
     <div class="md-teams">
       <div class="md-team-row">
         <div class="md-shirt md-shirt-a"><%= String(teamA).charAt(0).toUpperCase() %></div>
         <div class="md-team-name"><%= teamA %></div>
-        <% if (match.score_a) { %><div class="md-team-score"><%= match.score_a %></div><% } %>
+        <div class="md-team-score" id="score-a"><%= match.score_a || '' %></div>
       </div>
       <div class="md-team-row">
         <div class="md-shirt md-shirt-b"><%= String(teamB).charAt(0).toUpperCase() %></div>
         <div class="md-team-name"><%= teamB %></div>
-        <% if (match.score_b) { %><div class="md-team-score"><%= match.score_b %></div><% } %>
+        <div class="md-team-score" id="score-b"><%= match.score_b || '' %></div>
       </div>
     </div>
-    <% if (match.overs) { %><div class="md-overs"><%= match.overs %></div><% } %>
+    <div class="md-overs" id="md-overs"><%= match.overs || '' %></div>
     <% if (isLive && match.status) { %><div class="md-status"><%= match.status %></div><% } %>
   </div>
 
   <!-- Dynamic Markets -->
   <% if (markets && markets.length > 0) { %>
-    <% markets.forEach(market => { %>
-      <div class="market-box">
-        <div class="market-header">
-          <%= market.type === 'bookmaker' ? '🏆' : '⚡' %> <%= market.name %>
-        </div>
+    <%
+      var tabs = [];
+      markets.forEach(function (mk) { if (tabs.indexOf(mk.type) === -1) tabs.push(mk.type); });
+    %>
+    <% if (tabs.length > 1) { %>
+      <div class="md-tabs" id="md-tabs">
+        <button type="button" class="md-tab active" data-tab="all">All</button>
+        <% tabs.forEach(function (tp) { %><button type="button" class="md-tab" data-tab="<%= tp %>"><%= String(tp).replace(/_/g, ' ') %></button><% }) %>
+      </div>
+    <% } %>
 
-        <% if (market.type === 'bookmaker') { %>
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[0] : t.team_a %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="0" 
-                 data-odd="<%= market.odds && market.odds['0'] ? market.odds['0'] : 1.85 %>">
-              <%= market.odds && market.odds['0'] ? market.odds['0'] : 1.85 %>
-            </div>
+    <% markets.forEach(function (market) {
+      var odds = (market.odds && typeof market.odds === 'object') ? market.odds : {};
+      var depth = (market.depth && typeof market.depth === 'object') ? market.depth : null;
+      var runners = [];
+      if (depth && Object.keys(depth).length) {
+        Object.keys(depth).forEach(function (k) {
+          var d = depth[k] || {};
+          runners.push({ key: k, name: d.name || k, back: d.back || odds[k], lay: d.lay, bs: d.back_size, ls: d.lay_size });
+        });
+      } else if (market.type === 'bookmaker') {
+        runners.push({ key: '0', name: teamA, back: odds['0'] || 1.85 });
+        runners.push({ key: '1', name: teamB, back: odds['1'] || 2.10 });
+      } else {
+        runners.push({ key: 'yes', name: t.yes, back: odds['yes'] || 1.75 });
+      }
+      var hasLay = runners.some(function (r) { return r.lay; });
+    %>
+      <div class="market-box" data-market-id="<%= market.id %>" data-type="<%= market.type %>" data-status="<%= market.status %>">
+        <div class="market-header"><%= market.name %></div>
+        <% if (hasLay) { %><div class="mk-head-cols"><span>BACK</span><span>LAY</span></div><% } %>
+        <% runners.forEach(function (r) { %>
+          <div class="market-row" data-runner-row="<%= r.key %>">
+            <div class="market-team"><%= r.name %></div>
+            <% if (r.back) { %>
+              <div class="mk-cell back odds" data-role="back" data-market-id="<%= market.id %>" data-runner="<%= r.key %>" data-runner-name="<%= r.name %>" data-odd="<%= r.back %>"><%= r.back %><% if (r.bs) { %><small><%= r.bs %></small><% } %></div>
+            <% } else { %><div class="mk-cell empty" data-role="back">-</div><% } %>
+            <% if (hasLay) { %>
+              <% if (r.lay) { %><div class="mk-cell lay" data-role="lay"><%= r.lay %><% if (r.ls) { %><small><%= r.ls %></small><% } %></div>
+              <% } else { %><div class="mk-cell empty" data-role="lay">-</div><% } %>
+            <% } %>
           </div>
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[1] : t.team_b %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="1" 
-                 data-odd="<%= market.odds && market.odds['1'] ? market.odds['1'] : 2.10 %>">
-              <%= market.odds && market.odds['1'] ? market.odds['1'] : 2.10 %>
-            </div>
-          </div>
-        <% } else { %>
-          <div class="market-row">
-            <div class="market-team"><%= t.yes %></div>
-            <div class="odds back" 
-                 data-market-id="<%= market.id %>" 
-                 data-runner="yes" 
-                 data-odd="<%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>">
-              <%= t.yes %> <%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>
-            </div>
-          </div>
-        <% } %>
+        <% }) %>
+        <div class="mk-suspend">SUSPENDED</div>
       </div>
     <% }) %>
   <% } else { %>
@@ -179,13 +211,29 @@
 
 </div>
 
+
+<div class="md-slip" id="md-slip">
+  <div class="md-slip-row"><span id="slip-name"></span><span>@ <b id="slip-odd"></b></span></div>
+  <div class="md-slip-row">
+    <label for="slip-stake">Stake</label>
+    <input type="number" id="slip-stake" min="10" step="1" inputmode="numeric" value="50">
+    <span>Returns: <b id="slip-return">0</b></span>
+  </div>
+  <div class="md-slip-msg" id="slip-msg"></div>
+  <div class="md-slip-row">
+    <button type="button" class="md-slip-close" id="slip-close">Close</button>
+    <button type="button" class="md-slip-place" id="slip-place">Place bet</button>
+  </div>
+</div>
+
 <script type="application/json" id="match-detailConfig"><%- jsonScriptSafe({
   loggedIn: !!locals.user,
   matchId: match.id,
   loginToBet: t.login_to_bet,
   minBetMsg: t.min_bet_msg,
   betConfirmMsg: t.bet_confirm_msg,
-  networkError: t.network_error
+  networkError: t.network_error,
+  minBet: 10
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 
