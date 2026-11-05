@@ -27,7 +27,7 @@
     if (selected) setText('slip-odd', odd);
   }
   function openSlip(cell) {
-    if (!cfg.loggedIn) { alert(cfg.loginToBet); return; }
+    if (!cfg.loggedIn) { if (msg) msg.textContent = cfg.loginToBet || ''; if (slip) slip.classList.add('open'); return; }
     if (selected) selected.classList.remove('selected');
     selected = cell;
     cell.classList.add('selected');
