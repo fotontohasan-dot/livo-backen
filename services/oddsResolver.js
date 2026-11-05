@@ -93,4 +93,23 @@ function resolveOdd(market, runner) {
   return null;
 }
 
-module.exports = { resolveOdd, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };
+// Lay দাম শুধু ফিড-পুশ করা depth থেকে আসে ({ "<runner>": { back, lay, back_size, lay_size, suspended } })।
+// depth না থাকলে (যেমন অ্যাডমিনের হাতে তৈরি মার্কেট) Lay বাজি নেওয়া হয় না — null ফেরত।
+function resolveLayOdd(market, runner) {
+  if (!market || runner === null || runner === undefined) return null;
+  const depth = market.depth;
+  if (!depth || typeof depth !== 'object' || Array.isArray(depth)) return null;
+  const r = depth[String(runner)];
+  if (!r) return null;
+  return toValidOdd(r.lay);
+}
+
+// নির্দিষ্ট রানার সাসপেন্ড হলে মার্কেট খোলা থাকলেও সেই রানারে বাজি চলবে না।
+function isRunnerSuspended(market, runner) {
+  const depth = market && market.depth;
+  if (!depth || typeof depth !== 'object') return false;
+  const r = depth[String(runner)];
+  return !!(r && r.suspended === true);
+}
+
+module.exports = { resolveOdd, resolveLayOdd, isRunnerSuspended, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };

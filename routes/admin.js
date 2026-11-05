@@ -8,6 +8,7 @@ const { regenerateSession, saveSession } = require('../utils/sessionRegenerate')
 const { buildRows: buildCricketTemplateRows, parseOdd: parseCricketOdd, oddsShape } = require('../services/cricketMarketTemplate');
 const { upsertMarket } = require('../services/marketUpsert');
 const rbac = require('../services/rbac');
+const { payoutFor, betWins } = require('../services/layMath');
 const scheduler = require('../services/scheduler');
 // publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
@@ -1355,12 +1356,12 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
        FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
        FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
     );
 
@@ -1503,7 +1504,7 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       FROM bets WHERE created_at BETWEEN $1 AND $2
     `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
     const betPayoutRes = await pool.query(`
-      SELECT COALESCE(SUM(stake * odd),0) AS payout FROM bets WHERE status='won' AND created_at BETWEEN $1 AND $2
+      SELECT COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END),0) AS payout FROM bets WHERE status='won' AND created_at BETWEEN $1 AND $2
     `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
     const totalBetsN = betStatsRes ? parseInt(betStatsRes.rows[0].total) : 0;
     const wonN = betStatsRes ? parseInt(betStatsRes.rows[0].won) : 0;
@@ -1680,12 +1681,12 @@ router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), asy
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
        FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
        FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
     );
     const totalDepositAll = await pool.query(
@@ -2959,8 +2960,8 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
     let winnersCount = 0;
     const notifsToEmit = [];
     for (const bet of bets.rows) {
-      if (String(bet.runner) === String(winning_runner)) {
-        const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
+      if (betWins(bet, winning_runner)) {
+        const payout = payoutFor(bet);
         // ডেমো বেট স্টেক নেওয়া হয়েছিল demo_balance থেকে (routes/matches.js) — জেতার
         // পেঅাউটও একই কলামে যেতে হবে, নাহলে ডেমো বাজি থেকে সত্যিকারের তোলাযোগ্য coins তৈরি হয়ে যায়।
         if (bet.is_demo) {
@@ -3033,7 +3034,7 @@ router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => 
     const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
     const todayGgrRes = await pool.query(`
       SELECT COALESCE(SUM(stake),0) AS staked,
-             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+             COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
     `);
 
@@ -3080,7 +3081,7 @@ router.get('/api/bets-live', rbac.requirePermission('games_manage'), async (req,
     const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
     const todayGgrRes = await pool.query(`
       SELECT COALESCE(SUM(stake),0) AS staked,
-             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+             COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
     `);
 
@@ -3118,7 +3119,7 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
     let settleNotif;
     if (result === 'won') {
-      const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
+      const payout = payoutFor(bet);
       if (bet.is_demo) {
         await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [payout, bet.user_id]);
         await client.query(`INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports','bet_win',$2,'বেট জয় (ডেমো)')`, [bet.user_id, payout]);
@@ -4248,7 +4249,7 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     );
     const betsRes = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS total_stake, COUNT(*) AS cnt,
-              COALESCE(SUM(stake * odd) FILTER (WHERE status = 'won'),0) AS total_payout
+              COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) FILTER (WHERE status = 'won'),0) AS total_payout
        FROM bets WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
       [from, to]
     );

@@ -3361,5 +3361,10 @@
   "bet_slip_return": "Potential return",
   "bet_slip_cancel": "Cancel",
   "bet_slip_place": "Place Bet",
-  "bet_slip_session_expired": "Your session has expired. Please log in again."
+  "bet_slip_session_expired": "Your session has expired. Please log in again.",
+  "bet_slip_back": "Back",
+  "bet_slip_lay": "Lay",
+  "bet_slip_liability": "Your liability (risk)",
+  "bet_slip_lay_profit": "Profit if it wins",
+  "market_suspended": "SUSPENDED"
 }
