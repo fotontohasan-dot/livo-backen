@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Livo Exchange</title>
+<style>
+:root{--bg:#f2f4f8;--card:#fff;--tx:#14181f;--mut:#6b7482;--bd:#e1e5ec;--pri:#0f6cbd;--back:#8fcbff;--lay:#ffb8c6;--up:#3ecf6e;--dn:#ff6b6b;--live:#e5383b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10141a;--card:#1a2029;--tx:#eef1f6;--mut:#97a1b0;--bd:#2a323e;--back:#2f6fa3;--lay:#a8465c;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#10141a;--card:#1a2029;--tx:#eef1f6;--mut:#97a1b0;--bd:#2a323e;--back:#2f6fa3;--lay:#a8465c;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Noto Sans Bengali",sans-serif;padding-bottom:90px}
+header{padding:12px 14px;font-weight:700;font-size:18px;background:var(--pri);color:#fff}
+.bar{display:flex;gap:8px;overflow-x:auto;padding:10px 12px}
+.tab{flex:none;padding:8px 14px;border-radius:20px;background:var(--card);border:1px solid var(--bd);color:var(--tx);font:inherit;cursor:pointer}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.wrap{padding:0 12px;max-width:720px;margin:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.team{display:flex;align-items:center;gap:8px;font-weight:600}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+.sc{font-weight:800;font-size:17px}.mut{color:var(--mut);font-size:12px}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;color:#fff;background:var(--mut)}
+.badge.live{background:var(--live)}.badge.inplay{background:#d98200}
+.grid{display:grid;grid-template-columns:1fr 64px 64px;gap:4px;align-items:center;margin-top:6px}
+.gh{font-size:11px;color:var(--mut);text-align:center}
+.ob{border:0;border-radius:6px;padding:8px 0;font:700 14px inherit;color:var(--tx);cursor:pointer;text-align:center;transition:background .3s}
+.ob.b{background:var(--back)}.ob.l{background:var(--lay)}
+.ob.up{background:var(--up)!important}.ob.dn{background:var(--dn)!important}
+.ob.off{background:var(--bd)!important;color:var(--mut);opacity:.6;pointer-events:none}
+.mk{position:relative;border-radius:10px;overflow:hidden}
+.mk.sus .grid{filter:blur(3px);pointer-events:none}
+.mk.sus::after{content:"SUSPENDED";position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35);color:#fff;font-weight:800;letter-spacing:2px}
+.back{background:none;border:0;color:var(--pri);font:600 15px inherit;padding:10px 12px;cursor:pointer}
+#slip{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--pri);border-radius:14px 14px 0 0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));max-height:70vh;overflow:auto;z-index:5}
+#slip h4{margin:0;cursor:pointer;display:flex;justify-content:space-between}
+.si{border:1px solid var(--bd);border-radius:8px;padding:8px;margin-top:8px;border-left:5px solid var(--back)}.si.l{border-left-color:var(--lay)}
+.si input{width:90px;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+.err{color:var(--dn);font-size:12px}.ok{color:#198754}
+.go{width:100%;margin-top:10px;padding:12px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:700 15px inherit;cursor:pointer}
+.go:disabled{opacity:.4}.x{background:none;border:0;color:var(--mut);cursor:pointer;font-size:18px}
+#toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#198754;color:#fff;padding:8px 16px;border-radius:20px;display:none;z-index:9}
+</style></head><body>
+<header>Livo Exchange</header><div id="toast"></div>
+<div class="bar" id="sports"></div><div class="bar" id="filters"></div>
+<div class="wrap" id="main"></div>
+<div id="slip"></div>
+<script>
+const SP={cricket:"ক্রিকেট",football:"ফুটবল",tennis:"টেনিস"};
+const COL=["#0f6cbd","#c2185b","#2e7d32","#ef6c00","#6a1b9a","#00838f"];
+const R=(n,b,s,x)=>({n,back:b,lay:+(b+0.02).toFixed(2),susp:!!s});
+const M=[
+{id:1,sp:"cricket",st:"live",t:["ভারত","অস্ট্রেলিয়া"],score:["346/10","212/4"],time:"92.3 ov",mk:{"Match Winner":{r:[R("ভারত",1.85),R("অস্ট্রেলিয়া",2.1),R("ড্র",8.4,1)]},"Fancy Bet":{r:[R("৬ ওভার রান ৪৫+",1.9),R("প্রথম উইকেট ৩০+",1.95)]},"Bookmaker Market":{r:[R("ভারত",0.85),R("অস্ট্রেলিয়া",1.1)]},"Over/Under":{r:[R("Over ২৫০.৫",1.9),R("Under ২৫০.৫",1.9)]}}},
+{id:2,sp:"cricket",st:"inplay",t:["ইংল্যান্ড","পাকিস্তান"],score:["128/3","—"],time:"21.4 ov",mk:{"Match Winner":{r:[R("ইংল্যান্ড",1.6),R("পাকিস্তান",2.5)]},"Fancy Bet":{r:[R("২০ ওভার রান ১০০+",1.8)]},"Bookmaker Market":{r:[R("ইংল্যান্ড",0.6),R("পাকিস্তান",1.5)]},"Over/Under":{s:1,r:[R("Over ২৮০.৫",1.9),R("Under ২৮০.৫",1.9)]}}},
+{id:3,sp:"football",st:"live",t:["বার্সেলোনা","রিয়াল মাদ্রিদ"],score:["2","1"],time:"67'",mk:{"Match Winner":{r:[R("বার্সেলোনা",1.55),R("রিয়াল মাদ্রিদ",4.2),R("ড্র",3.9)]},"Over/Under":{r:[R("Over ৩.৫",2.2),R("Under ৩.৫",1.7)]}}},
+{id:4,sp:"football",st:"inplay",t:["ম্যান সিটি","লিভারপুল"],score:["0","0"],time:"12'",mk:{"Match Winner":{r:[R("ম্যান সিটি",2.0),R("লিভারপুল",3.6),R("ড্র",3.4)]},"Over/Under":{r:[R("Over ২.৫",1.9),R("Under ২.৫",1.9)]}}},
+{id:5,sp:"football",st:"upcoming",t:["বায়ার্ন","পিএসজি"],score:["",""],time:"আজ ৯:০০ PM",mk:{"Match Winner":{r:[R("বায়ার্ন",2.3),R("পিএসজি",2.9),R("ড্র",3.3)]}}},
+{id:6,sp:"tennis",st:"live",t:["জোকোভিচ","আলকারাস"],score:["6-4 3-2","—"],time:"সেট ২",mk:{"Match Winner":{r:[R("জোকোভিচ",1.7),R("আলকারাস",2.2)]}}},
+{id:7,sp:"cricket",st:"upcoming",t:["বাংলাদেশ","শ্রীলঙ্কা"],score:["",""],time:"আগামীকাল ২:০০ PM",mk:{"Match Winner":{r:[R("বাংলাদেশ",1.9),R("শ্রীলঙ্কা",2.0)]}}}];
+let sport="cricket",flt="all",cur=null,tab="Match Winner",slip=[],open=true,fl={};
+const $=s=>document.querySelector(s),live=m=>m.st!=="upcoming";
+const f2=x=>x.toFixed(2),av=(n,i)=>`<span class="av" style="background:${COL[i%6]}">${n[0]}</span>`;
+const lbl={all:"All",live:"Live",inplay:"In-Play",upcoming:"Upcoming"};
+function head(){
+ $("#sports").innerHTML=Object.keys(SP).map(k=>`<button class="tab ${k==sport?"on":""}" data-sp="${k}">${SP[k]} (${M.filter(m=>m.sp==k&&live(m)).length})</button>`).join("");
+ $("#filters").innerHTML=Object.keys(lbl).map(k=>`<button class="tab ${k==flt?"on":""}" data-f="${k}">${lbl[k]}</button>`).join("");
+}
+function cell(m,mkn,i,ri,side){const r=m.mk[mkn].r[ri],k=`${m.id}|${mkn}|${ri}|${side}`;
+ return `<button class="ob ${side} ${r.susp?"off":""} ${fl[k]||""}" data-b="${k}">${f2(side=="b"?r.back:r.lay)}</button>`}
+function render(){
+ head();$("#sports").style.display=$("#filters").style.display=cur?"none":"flex";
+ if(!cur){const l=M.filter(m=>m.sp==sport&&(flt=="all"||m.st==flt));
+  $("#main").innerHTML=l.length?l.map(m=>`<div class="card" data-m="${m.id}"><div class="row"><span class="badge ${m.st}">${m.st=="upcoming"?"UPCOMING":m.st=="live"?"● LIVE":"IN-PLAY"}</span><span class="mut">${m.time}</span></div>${[0,1].map(i=>`<div class="row" style="margin-top:8px"><span class="team">${av(m.t[i],m.id+i)}${m.t[i]}</span><span class="sc">${m.score[i]}</span></div>`).join("")}</div>`).join(""):'<p class="mut">কোনো ম্যাচ নেই</p>';
+ }else{const m=M.find(x=>x.id==cur),mk=m.mk[tab]||(tab=Object.keys(m.mk)[0],m.mk[tab]);
+  $("#main").innerHTML=`<button class="back" data-back>← ফিরে যান</button><div class="card" style="cursor:default"><div class="row"><b>${m.t[0]} vs ${m.t[1]}</b><span class="mut">${m.time}</span></div><div class="sc" style="margin-top:6px">${m.score[0]} ${m.score[1]?" | "+m.score[1]:""}</div></div><div class="bar" style="padding:0 0 10px">${Object.keys(m.mk).map(k=>`<button class="tab ${k==tab?"on":""}" data-tab="${k}">${k}</button>`).join("")}</div><div class="card mk ${mk.s?"sus":""}" style="cursor:default"><div class="grid"><span></span><span class="gh">Back</span><span class="gh">Lay</span>${mk.r.map((r,i)=>`<span style="font-weight:600">${r.n}</span>${cell(m,tab,0,i,"b")}${cell(m,tab,0,i,"l")}`).join("")}</div></div>`}
+ renderSlip()}
+function renderSlip(){
+ const bad=s=>!(s.stake>=10);
+ $("#slip").innerHTML=`<h4 data-t>বেট স্লিপ (${slip.length}) <span>${open?"▼":"▲"}</span></h4>`+(open?(slip.length?slip.map((s,i)=>{const v=s.stake>0?s.stake*(s.odds-1):0;return `<div class="si ${s.side=="l"?"l":""}"><div class="row"><b>${s.side=="b"?"BACK":"LAY"} · ${s.name}</b><button class="x" data-rm="${i}">×</button></div><div class="mut">${s.match} · ${s.mk}</div><div class="row" style="margin-top:6px"><span>Odds ${f2(s.odds)}</span><input type="number" inputmode="decimal" min="10" placeholder="Stake" value="${s.stake||""}" data-st="${i}"></div><div>${s.side=="b"?`সম্ভাব্য লাভ: <b class="ok">৳${v.toFixed(2)}</b>`:`Liability (Stake × (Odds − 1)): <b style="color:var(--dn)">৳${v.toFixed(2)}</b>`}</div>${s.stake&&bad(s)?'<div class="err">মিনিমাম স্টেক ৳১০</div>':""}</div>`}).join("")+`<button class="go" data-go ${slip.some(bad)?"disabled":""}>বেট প্লেস করুন</button>`:'<p class="mut">কোনো সিলেকশন নেই। ওডসে ক্লিক করুন।</p>'):"")}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-sp],[data-f],[data-m],[data-back],[data-tab],[data-b],[data-t],[data-rm],[data-go]");if(!t)return;const d=t.dataset;
+ if(d.sp){sport=d.sp;render()}else if(d.f){flt=d.f;render()}else if(d.m){cur=+d.m;tab="Match Winner";render()}
+ else if("back" in d){cur=null;render()}else if(d.tab){tab=d.tab;render()}
+ else if(d.b){const[id,mk,,ri,side]=d.b.split("|"),m=M.find(x=>x.id==id),r=m.mk[mk].r[ri];if(r.susp||m.mk[mk].s)return;
+  slip.push({side,name:r.n,odds:side=="b"?r.back:r.lay,match:m.t.join(" vs "),mk,stake:0});open=true;render()}
+ else if("t" in d){open=!open;renderSlip()}else if(d.rm){slip.splice(+d.rm,1);renderSlip()}
+ else if("go" in d){const n=slip.length;slip=[];renderSlip();const x=$("#toast");x.textContent=n+"টি বেট প্লেস হয়েছে (ডেমো)";x.style.display="block";setTimeout(()=>x.style.display="none",2200)}});
+document.addEventListener("input",e=>{const i=e.target.dataset.st;if(i==null)return;slip[i].stake=parseFloat(e.target.value)||0;
+ const p=e.target.selectionStart;renderSlip();const n=document.querySelector(`[data-st="${i}"]`);n.focus()});
+setInterval(()=>{fl={};M.forEach(m=>Object.entries(m.mk).forEach(([k,x])=>x.r.forEach((r,i)=>{if(!live(m)||r.susp||Math.random()>.35)return;
+ const d=(Math.random()<.5?-1:1)*(.02+Math.random()*.04),nb=Math.max(1.05,+(r.back+d).toFixed(2));
+ const c=nb>r.back?"up":"dn";r.back=nb;r.lay=+(nb+.02).toFixed(2);fl[`${m.id}|${k}|0|${i}|b`]=c;fl[`${m.id}|${k}|0|${i}|l`]=c}))});
+ if(!document.activeElement||document.activeElement.tagName!=="INPUT"){const y=scrollY;render();scrollTo(0,y)}},2500);
+render();
+</script></body></html>
