@@ -192,12 +192,14 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     const html = (await player.agent.get('/matches/' + id)).text;
     // প্রতিটা market-box আলাদা করে: হেডারের নাম + তার ভেতরের data-odd
     const byName = {};
-    for (const box of html.split('<div class="market-box">').slice(1)) {
-      const name = (box.match(/market-header">\s*\S+\s+([^<]+?)\s*</) || [])[1];
+    // market-box এখন data-cat/data-pop অ্যাট্রিবিউটসহ আসে, আর নাম থাকে .mh-title স্প্যানে
+    for (const box of html.split(/<div class="market-box"[^>]*>/).slice(1)) {
+      const name = (box.match(/mh-title">\s*\S+\s+([^<]+?)\s*</) || [])[1];
       const odd = (box.match(/data-odd="([0-9.]+)"/) || [])[1];
       if (name && odd) byName[name] = Number(odd);
     }
-    expect(byName).toEqual({ 'Afghanistan Win': 1.6, 'Bangladesh Win': 2.3, 'Total Runs Over 280.5': 1.9, 'Total Runs Under 280.5': 1.5 });
+    // পেজে এখন স্বয়ংক্রিয় (auto) মার্কেটও থাকে; তাই অ্যাডমিনের দেওয়া মার্কেটগুলোর অডস মিলছে কি না তা-ই যাচাই
+    expect(byName).toMatchObject({ 'Afghanistan Win': 1.6, 'Bangladesh Win': 2.3, 'Total Runs Over 280.5': 1.9, 'Total Runs Under 280.5': 1.5 });
 
     const under = (await pool.query("SELECT id FROM markets WHERE match_id=$1 AND name='Total Runs Under 280.5'", [id])).rows[0].id;
     const r = await player.agent.post(`/matches/${id}/bet`).set('X-CSRF-Token', player.token).send({ market_id: under, runner: 'yes', stake: 100 });
