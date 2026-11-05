@@ -351,12 +351,85 @@ const emitFeedUpdate = (match, markets = []) => {
       matchId: match.id, score_a: match.score_a, score_b: match.score_b,
       overs: match.overs, status: match.status, timestamp: new Date()
     });
-    if (markets.length) io.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
+    if (markets.length) {
+      io.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
+      emitOddsAndStatus(match.id, markets);
+    }
     io.to('matches').emit('matchListUpdate', {
       matchId: match.id, status: match.status, score_a: match.score_a, score_b: match.score_b, overs: match.overs
     });
   } catch (err) { console.error('emitFeedUpdate error:', err.message); }
 };
+
+// ===== Odds + suspension broadcasting =====
+// oddsUpdate          { matchId, markets: [{ marketId, status, runners: [{ key, back, lay, backSize, laySize, status }] }] }
+// marketStatusChange  { matchId, marketId, status }          (only when the status actually changed)
+// runnerStatusChange  { matchId, marketId, runner, status }  (only when it actually changed)
+// The client compares `back`/`lay` with what is on screen to pick the green/red flash,
+// so the server does not need to remember previous prices — only previous statuses.
+const lastStatus = new Map(); // marketId -> { status, runners: { key: status } }
+
+function runnersOf(m) {
+  const odds = (m.odds && typeof m.odds === 'object' && !Array.isArray(m.odds)) ? m.odds : {};
+  const depth = (m.depth && typeof m.depth === 'object') ? m.depth : {};
+  const rs = (m.runner_status && typeof m.runner_status === 'object') ? m.runner_status : {};
+  const keys = new Set([...Object.keys(odds), ...Object.keys(depth), ...Object.keys(rs)]);
+  return [...keys].map((key) => {
+    const d = depth[key] || {};
+    const back = odds[key] !== undefined ? Number(odds[key]) : (d.back != null ? Number(d.back) : null);
+    return {
+      key,
+      back: Number.isFinite(back) ? back : null,
+      lay: d.lay != null && Number.isFinite(Number(d.lay)) ? Number(d.lay) : null,
+      backSize: d.back_size != null ? Number(d.back_size) : null,
+      laySize: d.lay_size != null ? Number(d.lay_size) : null,
+      status: String(rs[key] || 'open').toLowerCase() === 'suspended' ? 'suspended' : 'open'
+    };
+  });
+}
+
+function emitOddsAndStatus(matchId, markets) {
+  if (!io || !matchId || !Array.isArray(markets) || !markets.length) return;
+  try {
+    const room = `match:${matchId}`;
+    const payload = markets.map((m) => ({ marketId: m.id, status: m.status, runners: runnersOf(m) }));
+    io.to(room).emit('oddsUpdate', { matchId, markets: payload, timestamp: Date.now() });
+
+    for (const m of payload) {
+      const prev = lastStatus.get(m.marketId);
+      if (!prev || prev.status !== m.status) {
+        io.to(room).emit('marketStatusChange', { matchId, marketId: m.marketId, status: m.status });
+      }
+      const cur = {};
+      for (const r of m.runners) {
+        cur[r.key] = r.status;
+        if (!prev || (prev.runners[r.key] || 'open') !== r.status) {
+          io.to(room).emit('runnerStatusChange', { matchId, marketId: m.marketId, runner: r.key, status: r.status });
+        }
+      }
+      lastStatus.set(m.marketId, { status: m.status, runners: cur });
+    }
+    if (lastStatus.size > 20000) lastStatus.clear(); // crude bound; worst case = one redundant emit
+  } catch (err) { console.error('emitOddsAndStatus error:', err.message); }
+}
+
+// For admin actions (suspend/open a whole market, suspend a single runner).
+function emitMarketStatusChange(matchId, marketId, status) {
+  if (!io) return;
+  try {
+    io.to(`match:${matchId}`).emit('marketStatusChange', { matchId, marketId, status });
+    const prev = lastStatus.get(marketId) || { runners: {} };
+    lastStatus.set(marketId, { status, runners: prev.runners });
+  } catch (err) { console.error('emitMarketStatusChange error:', err.message); }
+}
+function emitRunnerStatusChange(matchId, marketId, runner, status) {
+  if (!io) return;
+  try {
+    io.to(`match:${matchId}`).emit('runnerStatusChange', { matchId, marketId, runner, status });
+    const prev = lastStatus.get(marketId) || { status: 'open', runners: {} };
+    lastStatus.set(marketId, { status: prev.status, runners: { ...prev.runners, [runner]: status } });
+  } catch (err) { console.error('emitRunnerStatusChange error:', err.message); }
+}
 
 // ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
 const updateLiveScore = async (matchId, scoreData) => {
@@ -443,4 +516,4 @@ const emitTickerUpdate = (payload = {}) => {
   }
 };
 
-module.exports = { initSocket, getIo, emitFeedUpdate, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, getIo, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

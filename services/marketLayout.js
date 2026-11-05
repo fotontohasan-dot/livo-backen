@@ -37,11 +37,33 @@ function labelFor(key, type, teamA, teamB) {
   return STATIC_LABELS[key] || String(key);
 }
 
-function categoryFor(market, isFootball) {
+const sportKind = (sport) => {
+  const s = String(sport || '').toLowerCase();
+  if (s === 'football' || s === 'soccer') return 'football';
+  if (s === 'tennis') return 'tennis';
+  return 'cricket'; // legacy default layout
+};
+
+// Tab ids: football  -> match (Full Time Result) | goals (Over/Under) | btts
+//          tennis    -> match (Match Winner)     | set (Set Winner)   | games (Game Totals)
+//          cricket   -> match | innings | over | batsman  (unchanged)
+function categoryFor(market, kind) {
+  if (typeof kind === 'boolean') kind = kind ? 'football' : 'cricket'; // backwards compatible
   const type = market.type;
   const name = String(market.name || '');
+
+  if (kind === 'football') {
+    if (/both teams/i.test(name) || /\bbtts\b/i.test(name)) return 'btts';
+    if (type === 'bookmaker' || type === 'match_odds' || type === 'double_chance') return 'match';
+    return 'goals';
+  }
+  if (kind === 'tennis') {
+    if (/games?/i.test(name)) return 'games';            // "Total Games…", "Set 1 Total Games…"
+    if (/\bset\b/i.test(name)) return 'set';             // "Set 1 Winner", "Set Betting"
+    return 'match';
+  }
+
   if (type === 'bookmaker' || type === 'match_odds' || type === 'double_chance') return 'match';
-  if (isFootball) return 'goals';
   if (/first over/i.test(name)) return 'over';
   if (type === 'yes_no') return 'batsman';
   if (/total runs/i.test(name) && !/^match /i.test(name)) return 'innings';
@@ -49,6 +71,7 @@ function categoryFor(market, isFootball) {
 }
 
 // raw: market.odds — অবজেক্ট বা (পুরনো অ্যাডমিন-মার্কেটে) একক সংখ্যা
+// Each runner: { key, label, odd (back), lay (or null), status: 'open'|'suspended' }
 function runnersFor(market, teamA, teamB) {
   const type = market.type;
   const raw = market.odds;
@@ -65,18 +88,32 @@ function runnersFor(market, teamA, teamB) {
     map = DEFAULT_ODDS.default;
   }
 
-  return orderKeys(Object.keys(map)).map((key) => ({
-    key,
-    label: labelFor(key, type, teamA, teamB),
-    odd: Number(map[key])
-  })).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
+  const depth = (market.depth && typeof market.depth === 'object') ? market.depth : {};
+  const rstat = (market.runner_status && typeof market.runner_status === 'object') ? market.runner_status : {};
+
+  return orderKeys(Object.keys(map)).map((key) => {
+    const lay = depth[key] && Number(depth[key].lay);
+    return {
+      key,
+      label: labelFor(key, type, teamA, teamB),
+      odd: Number(map[key]),
+      lay: Number.isFinite(lay) && lay > 1 ? lay : null,
+      status: String(rstat[key] || 'open').toLowerCase() === 'suspended' ? 'suspended' : 'open'
+    };
+  }).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
 }
+
+const TABS_BY_SPORT = {
+  football: [['match', 'Full Time Result'], ['goals', 'Goals (Over/Under)'], ['btts', 'Both Teams to Score']],
+  tennis: [['match', 'Match Winner'], ['set', 'Set Winner'], ['games', 'Game Totals']],
+  cricket: [['match', 'Match'], ['innings', 'Innings'], ['over', 'Over'], ['batsman', 'Batsman']]
+};
 
 // match: { sport, teams:[a,b] }
 function buildMarketView(markets, match) {
   const teamA = (match.teams && match.teams[0]) || 'Team A';
   const teamB = (match.teams && match.teams[1]) || 'Team B';
-  const isFootball = String(match.sport || '').toLowerCase() === 'football';
+  const kind = sportKind(match.sport);
 
   let ouSeen = 0;
   const out = [];
@@ -89,7 +126,8 @@ function buildMarketView(markets, match) {
       id: m.id,
       type: m.type,
       name: m.name,
-      category: categoryFor(m, isFootball),
+      status: m.status || 'open',
+      category: categoryFor(m, kind),
       popular,
       runners
     });
@@ -97,13 +135,19 @@ function buildMarketView(markets, match) {
 
   const tabs = [{ id: 'all', label: 'All' }];
   if (out.some((m) => m.popular)) tabs.push({ id: 'popular', label: 'Popular' });
-  const cats = isFootball
-    ? [['match', 'Match'], ['goals', 'Goals']]
-    : [['match', 'Match'], ['innings', 'Innings'], ['over', 'Over'], ['batsman', 'Batsman']];
-  for (const [id, label] of cats) {
-    if (out.some((m) => m.category === id)) tabs.push({ id, label });
+  for (const [id, label] of TABS_BY_SPORT[kind]) {
+    // Football/Tennis always show their sport tabs (an empty one shows the
+    // "coming soon" message); cricket keeps showing only non-empty tabs.
+    if (kind !== 'cricket' || out.some((m) => m.category === id)) tabs.push({ id, label });
   }
   return { markets: out, tabs };
 }
 
-module.exports = { buildMarketView, runnersFor, categoryFor };
+// Server-side filter used by GET /matches/:id/markets?tab=…
+function filterMarketView(view, tab) {
+  if (!tab || tab === 'all') return view.markets;
+  if (tab === 'popular') return view.markets.filter((m) => m.popular);
+  return view.markets.filter((m) => m.category === tab);
+}
+
+module.exports = { buildMarketView, filterMarketView, runnersFor, categoryFor };
