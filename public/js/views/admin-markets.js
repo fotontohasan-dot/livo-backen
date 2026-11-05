@@ -2,11 +2,29 @@
 // মার্কেট আইডি বাটনের data-settle-id অ্যাট্রিবিউট থেকে আসে (সার্ভার-কনফিগ ব্লক লাগে না)।
 
 (function(){
-  function showSettleModal(marketId, marketName) {
+  // runners: কমা-ভাগ করা রানার কী (over,under / 0,1,draw ...) — ফর্মের ফিল্ডটা `winning_runner`,
+  // কারণ সার্ভার (routes/admin.js) ঠিক ওই নামেই খোঁজে। আগে ফিল্ডের নাম ছিল `result`, ফলে
+  // কোনো মার্কেটই সেটেল করা যেত না ("বিজয়ী নির্বাচন করুন" এরর আসত)।
+  function showSettleModal(marketId, marketName, runners) {
     document.getElementById('settle-modal').classList.remove('hidden');
     document.getElementById('settle-market-name').innerText = marketName;
     const form = document.getElementById('settle-form');
     form.action = `/admin/markets/${encodeURIComponent(marketId)}/settle`;
+
+    const list = document.getElementById('settle-runner-list');
+    const hint = document.getElementById('settle-runner-hint');
+    const input = document.getElementById('settle-runner');
+    const keys = (runners || '').split(',').map(function (k) { return k.trim(); }).filter(Boolean);
+    if (list) {
+      list.innerHTML = '';
+      keys.forEach(function (k) {
+        const opt = document.createElement('option');
+        opt.value = k;
+        list.appendChild(opt);
+      });
+    }
+    if (hint) hint.textContent = keys.length ? ('Valid: ' + keys.join(', ')) : '';
+    if (input) input.value = '';
   }
 
   function hideSettleModal() {
@@ -41,7 +59,7 @@
     });
     document.querySelectorAll('[data-settle-id]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        showSettleModal(btn.getAttribute('data-settle-id'), btn.getAttribute('data-settle-name'));
+        showSettleModal(btn.getAttribute('data-settle-id'), btn.getAttribute('data-settle-name'), btn.getAttribute('data-settle-runners'));
       });
     });
     document.querySelectorAll('[data-settle-cancel]').forEach(function (btn) {
