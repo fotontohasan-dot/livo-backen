@@ -5,7 +5,7 @@ const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
-const { buildRows: buildCricketTemplateRows, parseOdd: parseCricketOdd } = require('../services/cricketMarketTemplate');
+const { buildRows: buildCricketTemplateRows, parseOdd: parseCricketOdd, oddsShape } = require('../services/cricketMarketTemplate');
 const { upsertMarket } = require('../services/marketUpsert');
 const rbac = require('../services/rbac');
 const scheduler = require('../services/scheduler');
@@ -2830,7 +2830,7 @@ router.post('/markets/update', rbac.requirePermission('matches_manage'), async (
       return res.redirect(Number.isInteger(mid) && mid > 0 ? `/admin/markets/${mid}` : '/admin/matches');
     }
     const safeStatus = MARKET_TOGGLE_STATUSES.includes(status) ? status : null;
-    const result = await upsertMarket(pool, { matchId: mid, type: safeType, name: safeName, odds: oddNum, status: safeStatus, insertStatus: 'open' });
+    const result = await upsertMarket(pool, { matchId: mid, type: safeType, name: safeName, odds: oddsShape(safeType, oddNum), status: safeStatus, insertStatus: 'open' });
     await cache.del(cacheKeys.matchDetail(mid)).catch(() => {});
     if (result === 'skipped_settled') req.flash('error', req.t('admin_market_already_settled'));
     else req.flash('success', req.t('admin_market_updated'));
@@ -2860,7 +2860,7 @@ router.post('/markets/:matchId/cricket-template', rbac.requirePermission('matche
     await client.query('BEGIN');
     for (const r of rows) {
       // status=null → বিদ্যমান সারির status অপরিবর্তিত; open_now হলে 'open'। নতুন সারি ডিফল্টে 'suspended'।
-      await upsertMarket(client, { matchId, type: r.type, name: r.name, odds: r.odds, status: openNow ? 'open' : null, insertStatus: 'suspended' });
+      await upsertMarket(client, { matchId, type: r.type, name: r.name, odds: oddsShape(r.type, r.odds), status: openNow ? 'open' : null, insertStatus: 'suspended' });
     }
     await client.query('COMMIT');
     await cache.del(cacheKeys.matchDetail(matchId)).catch(() => {});

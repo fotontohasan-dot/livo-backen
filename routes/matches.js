@@ -22,6 +22,7 @@ const { resolveOdd } = require('../services/oddsResolver');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
+const { buildMarketView } = require('../services/marketLayout');
 
 function formatMatch(row) {
   return {
@@ -181,9 +182,19 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       console.error('markets fetch error:', mErr.message);
     }
 
+    const marketView = buildMarketView(markets, match);
+    let minBet = 10, maxBet = 100000;
+    try {
+      minBet = Number(await getSetting('min_bet')) || minBet;
+      maxBet = Number(await getSetting('max_bet')) || maxBet;
+    } catch (_) { /* ডিফল্ট ব্যবহার */ }
+
     res.render('match-detail', {
       match,
       markets,
+      marketView,
+      minBet,
+      maxBet,
       user: req.session ? req.session.user : null
     });
   } catch (err) {

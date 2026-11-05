@@ -85,29 +85,89 @@
   .md-empty { background: #1f2937; border: 1px solid #334155; border-radius: 14px; color: #f8fafc; }
   .md-empty .dz83-7 { color: #94a3b8; }
 
-  /* Back/Lay grid, tabs, suspend overlay, bet slip */
-  .md-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 12px; padding-bottom: 4px; }
-  .md-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 999px; border: 1px solid #334155; background: #111827; color: #cbd5e1; font-weight: 700; font-size: 13px; cursor: pointer; }
-  .md-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; }
-  .market-box { position: relative; }
-  .mk-head-cols { display: flex; padding: 6px 16px; background: #111827; border-top: 1px solid #334155; font-size: 11px; font-weight: 800; color: #94a3b8; justify-content: flex-end; gap: 6px; }
-  .mk-head-cols span { min-width: 74px; text-align: center; }
-  .mk-cell { min-width: 74px; padding: 8px 6px; border-radius: 8px; text-align: center; font-weight: 800; font-size: 16px; user-select: none; }
-  .mk-cell small { display: block; font-size: 10px; font-weight: 600; opacity: .85; }
-  .mk-cell.back { background: #38bdf8; color: #04263a; cursor: pointer; }
-  .mk-cell.lay { background: #f9a8d4; color: #4a0d2a; cursor: not-allowed; opacity: .75; }
-  .mk-cell.selected { outline: 3px solid #fbbf24; }
-  .mk-cell.empty { background: #374151; color: #9ca3af; cursor: default; }
-  .mk-suspend { position: absolute; left: 0; right: 0; bottom: 0; top: 44px; background: rgba(15,23,42,.78); display: flex; align-items: center; justify-content: center; color: #fca5a5; font-weight: 900; letter-spacing: 2px; font-size: 18px; z-index: 2; }
-  .market-box[data-status="open"] .mk-suspend { display: none; }
-  .md-slip { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #0f172a; border-top: 2px solid #2563eb; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); transition: transform .2s ease; color: #f8fafc; }
-  .md-slip.open { transform: translateY(0); }
-  .md-slip-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-weight: 700; }
-  .md-slip input { width: 110px; padding: 8px 10px; border-radius: 8px; border: 1px solid #475569; background: #1e293b; color: #fff; font-size: 16px; }
-  .md-slip button { padding: 10px 16px; border-radius: 10px; border: 0; font-weight: 800; cursor: pointer; }
-  .md-slip-place { background: #22c55e; color: #052e13; flex: 1; }
-  .md-slip-close { background: #334155; color: #e2e8f0; }
-  .md-slip-msg { font-size: 13px; color: #fbbf24; min-height: 18px; margin-bottom: 6px; }
+  /* ===== ট্যাব ===== */
+  .md-tabs {
+    display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 10px; margin-bottom: 4px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .md-tabs::-webkit-scrollbar { display: none; }
+  .md-tab {
+    flex-shrink: 0; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.25);
+    color: #fff; font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  }
+  .md-tab.active { background: #f59e0b; border-color: #f59e0b; color: #111; }
+
+  /* ===== মার্কেট কার্ড: ভাঁজযোগ্য, রানার গ্রিড ===== */
+  .market-box.hidden-by-tab { display: none; }
+  .market-header { cursor: pointer; justify-content: space-between; user-select: none; }
+  .market-header .mh-title { display: flex; align-items: center; gap: 8px; min-width: 0; line-height: 1.3; }
+  .market-header .mh-toggle { flex-shrink: 0; font-size: 18px; color: #94a3b8; transition: transform .2s; }
+  .market-box.collapsed .mh-toggle { transform: rotate(-90deg); }
+  .market-box.collapsed .market-body { display: none; }
+  .market-grid { display: grid; gap: 1px; background: #334155; }
+  .market-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .market-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .market-grid.cols-1 { grid-template-columns: 1fr; }
+  .market-cell {
+    background: #1f2937; color: #f8fafc; padding: 12px 10px; text-align: center; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0;
+    transition: background .15s;
+  }
+  .market-cell:active { background: #273449; }
+  .market-cell .mc-label { font-size: 13px; font-weight: 700; color: #e2e8f0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .market-cell .odds { min-width: 0; width: 100%; padding: 10px 0; font-size: 16px; }
+  .market-cell.selected { background: #14532d; }
+  .md-tab-empty { display: none; text-align: center; color: #fff; padding: 30px 10px; font-weight: 600; }
+
+  /* ===== বেট স্লিপ (alert/prompt/confirm-এর বদলে) ===== */
+  .bs-overlay {
+    position: fixed; inset: 0; z-index: 10050; background: rgba(0,0,0,.6);
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .bs-overlay.open { display: flex; }
+  .bs-sheet {
+    width: 100%; max-width: 480px; background: #111827; color: #f8fafc;
+    border-radius: 20px 20px 0 0; border: 1px solid #334155; border-bottom: 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    animation: bsUp .22s ease both;
+  }
+  @keyframes bsUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .bs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .bs-title { font-size: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .bs-market { font-size: 14px; color: #fbbf24; font-weight: 700; margin-top: 2px; }
+  .bs-close { background: #334155; color: #fff; border: 0; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0; }
+  .bs-pick { display: flex; align-items: center; justify-content: space-between; background: #1f2937; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+  .bs-pick-name { font-weight: 800; font-size: 16px; }
+  .bs-pick-odd { background: #22c55e; color: #06240f; font-weight: 800; padding: 6px 14px; border-radius: 8px; font-size: 16px; }
+  .bs-label { font-size: 12px; color: #94a3b8; font-weight: 600; margin-bottom: 6px; display: block; }
+  .bs-input {
+    width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #475569; border-radius: 12px;
+    color: #fff; font-size: 20px; font-weight: 800; padding: 12px 14px; outline: none;
+  }
+  .bs-input:focus { border-color: #22c55e; }
+  .bs-chips { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+  .bs-chip { flex: 1; min-width: 56px; background: #1f2937; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px; padding: 9px 0; font-weight: 700; cursor: pointer; }
+  .bs-chip:active { background: #334155; }
+  .bs-return { display: flex; justify-content: space-between; font-size: 14px; color: #cbd5e1; margin-bottom: 14px; }
+  .bs-return b { color: #4ade80; font-size: 16px; }
+  .bs-error { color: #fca5a5; font-size: 13px; font-weight: 600; min-height: 18px; margin-bottom: 8px; }
+  .bs-actions { display: flex; gap: 10px; }
+  .bs-btn { flex: 1; border: 0; border-radius: 12px; padding: 14px; font-weight: 800; font-size: 15px; cursor: pointer; }
+  .bs-btn-cancel { background: #334155; color: #fff; }
+  .bs-btn-place { background: #22c55e; color: #06240f; flex: 2; }
+  .bs-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .bs-login { display: block; text-align: center; text-decoration: none; }
+
+  /* ===== টোস্ট ===== */
+  .md-toast {
+    position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%) translateY(20px);
+    z-index: 10060; max-width: 90vw; padding: 12px 18px; border-radius: 12px; font-weight: 700; font-size: 14px;
+    color: #fff; background: #111827; border: 1px solid #334155; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  .md-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .md-toast.ok { border-color: #22c55e; }
+  .md-toast.err { border-color: #ef4444; }
 </style>
 
 <div class="container dz83-1">
@@ -146,53 +206,40 @@
   </div>
 
   <!-- Dynamic Markets -->
-  <% if (markets && markets.length > 0) { %>
-    <%
-      var tabs = [];
-      markets.forEach(function (mk) { if (tabs.indexOf(mk.type) === -1) tabs.push(mk.type); });
-    %>
-    <% if (tabs.length > 1) { %>
-      <div class="md-tabs" id="md-tabs">
-        <button type="button" class="md-tab active" data-tab="all">All</button>
-        <% tabs.forEach(function (tp) { %><button type="button" class="md-tab" data-tab="<%= tp %>"><%= String(tp).replace(/_/g, ' ') %></button><% }) %>
-      </div>
-    <% } %>
+  <% if (marketView && marketView.markets.length > 0) { %>
+    <div class="md-tabs" id="mdTabs">
+      <% marketView.tabs.forEach(function(tab, i) { %>
+        <button type="button" class="md-tab<%= i === 0 ? ' active' : '' %>" data-tab="<%= tab.id %>"><%= tab.label %></button>
+      <% }) %>
+    </div>
 
-    <% markets.forEach(function (market) {
-      var odds = (market.odds && typeof market.odds === 'object') ? market.odds : {};
-      var depth = (market.depth && typeof market.depth === 'object') ? market.depth : null;
-      var runners = [];
-      if (depth && Object.keys(depth).length) {
-        Object.keys(depth).forEach(function (k) {
-          var d = depth[k] || {};
-          runners.push({ key: k, name: d.name || k, back: d.back || odds[k], lay: d.lay, bs: d.back_size, ls: d.lay_size });
-        });
-      } else if (market.type === 'bookmaker') {
-        runners.push({ key: '0', name: teamA, back: odds['0'] || 1.85 });
-        runners.push({ key: '1', name: teamB, back: odds['1'] || 2.10 });
-      } else {
-        runners.push({ key: 'yes', name: t.yes, back: odds['yes'] || 1.75 });
-      }
-      var hasLay = runners.some(function (r) { return r.lay; });
+    <% marketView.markets.forEach(function(market) {
+         var cols = market.runners.length >= 3 ? 3 : (market.runners.length === 2 ? 2 : 1);
+         if (market.runners.length > 3) cols = 3;
     %>
-      <div class="market-box" data-market-id="<%= market.id %>" data-type="<%= market.type %>" data-status="<%= market.status %>">
-        <div class="market-header"><%= market.name %></div>
-        <% if (hasLay) { %><div class="mk-head-cols"><span>BACK</span><span>LAY</span></div><% } %>
-        <% runners.forEach(function (r) { %>
-          <div class="market-row" data-runner-row="<%= r.key %>">
-            <div class="market-team"><%= r.name %></div>
-            <% if (r.back) { %>
-              <div class="mk-cell back odds" data-role="back" data-market-id="<%= market.id %>" data-runner="<%= r.key %>" data-runner-name="<%= r.name %>" data-odd="<%= r.back %>"><%= r.back %><% if (r.bs) { %><small><%= r.bs %></small><% } %></div>
-            <% } else { %><div class="mk-cell empty" data-role="back">-</div><% } %>
-            <% if (hasLay) { %>
-              <% if (r.lay) { %><div class="mk-cell lay" data-role="lay"><%= r.lay %><% if (r.ls) { %><small><%= r.ls %></small><% } %></div>
-              <% } else { %><div class="mk-cell empty" data-role="lay">-</div><% } %>
-            <% } %>
+      <div class="market-box" data-cat="<%= market.category %>" data-pop="<%= market.popular ? 1 : 0 %>">
+        <div class="market-header" data-toggle>
+          <span class="mh-title"><%= (market.type === 'bookmaker' || market.type === 'match_odds') ? '🏆' : '⚡' %> <%= market.name %></span>
+          <span class="mh-toggle">▾</span>
+        </div>
+        <div class="market-body">
+          <div class="market-grid cols-<%= cols %>">
+            <% market.runners.forEach(function(r) { %>
+              <div class="market-cell">
+                <span class="mc-label"><%= r.label %></span>
+                <div class="odds back"
+                     data-market-id="<%= market.id %>"
+                     data-market-name="<%= market.name %>"
+                     data-runner="<%= r.key %>"
+                     data-label="<%= r.label %>"
+                     data-odd="<%= r.odd %>"><%= r.odd %></div>
+              </div>
+            <% }) %>
           </div>
-        <% }) %>
-        <div class="mk-suspend">SUSPENDED</div>
+        </div>
       </div>
     <% }) %>
+    <div class="md-tab-empty" id="mdTabEmpty"><%= t.betting_options_soon %></div>
   <% } else { %>
     <div class="md-empty text-center dz83-4">
       <div class="dz83-5">⏳</div>
@@ -211,20 +258,38 @@
 
 </div>
 
-
-<div class="md-slip" id="md-slip">
-  <div class="md-slip-row"><span id="slip-name"></span><span>@ <b id="slip-odd"></b></span></div>
-  <div class="md-slip-row">
-    <label for="slip-stake">Stake</label>
-    <input type="number" id="slip-stake" min="10" step="1" inputmode="numeric" value="50">
-    <span>Returns: <b id="slip-return">0</b></span>
-  </div>
-  <div class="md-slip-msg" id="slip-msg"></div>
-  <div class="md-slip-row">
-    <button type="button" class="md-slip-close" id="slip-close">Close</button>
-    <button type="button" class="md-slip-place" id="slip-place">Place bet</button>
+<!-- বেট স্লিপ -->
+<div class="bs-overlay" id="bsOverlay" aria-hidden="true">
+  <div class="bs-sheet" role="dialog" aria-modal="true" aria-labelledby="bsTitle">
+    <div class="bs-head">
+      <div>
+        <div class="bs-title" id="bsTitle"><%= t.bet_slip_title %></div>
+        <div class="bs-market" id="bsMarket"></div>
+      </div>
+      <button type="button" class="bs-close" id="bsClose" aria-label="Close">×</button>
+    </div>
+    <div class="bs-pick"><span class="bs-pick-name" id="bsPick"></span><span class="bs-pick-odd" id="bsOdd"></span></div>
+    <label class="bs-label" for="bsStake"><%= t.bet_slip_stake %></label>
+    <input type="number" inputmode="numeric" min="1" step="1" class="bs-input" id="bsStake" value="50">
+    <div class="bs-chips" id="bsChips">
+      <button type="button" class="bs-chip" data-add="50">+50</button>
+      <button type="button" class="bs-chip" data-add="100">+100</button>
+      <button type="button" class="bs-chip" data-add="500">+500</button>
+      <button type="button" class="bs-chip" data-add="1000">+1000</button>
+    </div>
+    <div class="bs-return"><span><%= t.bet_slip_return %></span><b id="bsReturn">0</b></div>
+    <div class="bs-error" id="bsError" role="alert"></div>
+    <div class="bs-actions">
+      <button type="button" class="bs-btn bs-btn-cancel" id="bsCancel"><%= t.bet_slip_cancel %></button>
+      <% if (locals.user) { %>
+        <button type="button" class="bs-btn bs-btn-place" id="bsPlace"><%= t.bet_slip_place %></button>
+      <% } else { %>
+        <a href="/login" class="bs-btn bs-btn-place bs-login"><%= t.login_to_bet %></a>
+      <% } %>
+    </div>
   </div>
 </div>
+<div class="md-toast" id="mdToast" role="status" aria-live="polite"></div>
 
 <script type="application/json" id="match-detailConfig"><%- jsonScriptSafe({
   loggedIn: !!locals.user,
@@ -233,7 +298,9 @@
   minBetMsg: t.min_bet_msg,
   betConfirmMsg: t.bet_confirm_msg,
   networkError: t.network_error,
-  minBet: 10
+  minBet: minBet,
+  maxBet: maxBet,
+  sessionExpired: t.bet_slip_session_expired
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 
