@@ -116,11 +116,13 @@ router.post('/', async (req, res) => {
 
           const odds = {};
           const depth = {};
+          const runnerStatus = {};
           for (const r of (Array.isArray(mk.runners) ? mk.runners.slice(0, MAX_RUNNERS) : [])) {
             const rk = str(r.key, 40);
             if (!rk) continue;
             const back = odd(r.back);
             if (back !== null) odds[rk] = back; // oddsResolver reads only this back price
+            runnerStatus[rk] = /^(suspended|closed|removed|inactive)$/i.test(String(r.status || '')) ? 'suspended' : 'open';
             depth[rk] = { name: str(r.name, 80), back, lay: odd(r.lay), back_size: size(r.back_size), lay_size: size(r.lay_size) };
           }
 
@@ -131,14 +133,14 @@ router.post('/', async (req, res) => {
             // never reopen a market an admin closed or settled
             if (!MARKET_STATUSES.has(existing.rows[0].status)) continue;
             row = (await client.query(
-              `UPDATE markets SET type=$1, name=$2, odds=$3, depth=$4, status=$5, updated_at=NOW()
-               WHERE id=$6 RETURNING id, type, name, status, odds, depth`,
-              [str(mk.type, 50) || 'bookmaker', str(mk.name), odds, depth, mkStatus, existing.rows[0].id])).rows[0];
+              `UPDATE markets SET type=$1, name=$2, odds=$3, depth=$4, status=$5, runner_status=$7, updated_at=NOW()
+               WHERE id=$6 RETURNING id, type, name, status, odds, depth, runner_status`,
+              [str(mk.type, 50) || 'bookmaker', str(mk.name), odds, depth, mkStatus, existing.rows[0].id, runnerStatus])).rows[0];
           } else {
             row = (await client.query(
-              `INSERT INTO markets (match_id, market_key, type, name, odds, depth, status)
-               VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, type, name, status, odds, depth`,
-              [matchId, mkKey, str(mk.type, 50) || 'bookmaker', str(mk.name), odds, depth, mkStatus])).rows[0];
+              `INSERT INTO markets (match_id, market_key, type, name, odds, depth, status, runner_status)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, type, name, status, odds, depth, runner_status`,
+              [matchId, mkKey, str(mk.type, 50) || 'bookmaker', str(mk.name), odds, depth, mkStatus, runnerStatus])).rows[0];
           }
           marketPush.push(row);
         }

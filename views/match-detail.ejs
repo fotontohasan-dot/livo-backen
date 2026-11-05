@@ -117,6 +117,16 @@
   .market-cell .mc-label { font-size: 13px; font-weight: 700; color: #e2e8f0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .market-cell .odds { min-width: 0; width: 100%; padding: 10px 0; font-size: 16px; }
   .market-cell.selected { background: #14532d; }
+  /* Lay cell, odds flash, suspension */
+  .market-cell .odds.lay { background: #f4a6b8; color: #111; margin-top: 4px; }
+  .market-cell .odds { transition: background-color .35s ease, color .35s ease; }
+  .odds.flash-up { background: #16a34a !important; color: #fff !important; }
+  .odds.flash-down { background: #dc2626 !important; color: #fff !important; }
+  .market-cell.runner-suspended, .market-box.market-suspended .market-cell, .odds.price-unavailable {
+    opacity: .4; filter: grayscale(1); pointer-events: none; cursor: not-allowed;
+  }
+  .market-box.market-suspended .market-header::after { content: 'SUSPENDED'; font-size: 10px; font-weight: 800; color: #f87171; margin-left: 8px; }
+  .bs-return[hidden] { display: none; }
   .md-tab-empty { display: none; text-align: center; color: #fff; padding: 30px 10px; font-weight: 600; }
 
   /* ===== বেট স্লিপ (alert/prompt/confirm-এর বদলে) ===== */
@@ -226,7 +236,7 @@
          var cols = market.runners.length >= 3 ? 3 : (market.runners.length === 2 ? 2 : 1);
          if (market.runners.length > 3) cols = 3;
     %>
-      <div class="market-box" data-cat="<%= market.category %>" data-pop="<%= market.popular ? 1 : 0 %>">
+      <div class="market-box<%= market.status === 'suspended' ? ' market-suspended' : '' %>" data-market-id="<%= market.id %>" data-cat="<%= market.category %>" data-pop="<%= market.popular ? 1 : 0 %>">
         <div class="market-header" data-toggle>
           <span class="mh-title"><%= (market.type === 'bookmaker' || market.type === 'match_odds') ? '🏆' : '⚡' %> <%= market.name %></span>
           <span class="mh-toggle">▾</span>
@@ -234,14 +244,24 @@
         <div class="market-body">
           <div class="market-grid cols-<%= cols %>">
             <% market.runners.forEach(function(r) { %>
-              <div class="market-cell">
+              <div class="market-cell<%= r.status === 'suspended' ? ' runner-suspended' : '' %>" data-runner="<%= r.key %>">
                 <span class="mc-label"><%= r.label %></span>
                 <div class="odds back"
+                     data-bet-type="back"
                      data-market-id="<%= market.id %>"
                      data-market-name="<%= market.name %>"
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
                      data-odd="<%= r.odd %>"><%= r.odd %></div>
+                <% if (r.lay) { %>
+                <div class="odds lay"
+                     data-bet-type="lay"
+                     data-market-id="<%= market.id %>"
+                     data-market-name="<%= market.name %>"
+                     data-runner="<%= r.key %>"
+                     data-label="<%= r.label %>"
+                     data-odd="<%= r.lay %>"><%= r.lay %></div>
+                <% } %>
               </div>
             <% }) %>
           </div>
@@ -286,7 +306,8 @@
       <button type="button" class="bs-chip" data-add="500">+500</button>
       <button type="button" class="bs-chip" data-add="1000">+1000</button>
     </div>
-    <div class="bs-return"><span><%= t.bet_slip_return %></span><b id="bsReturn">0</b></div>
+    <div class="bs-return"><span id="bsReturnLabel"><%= t.bet_slip_return %></span><b id="bsReturn">0</b></div>
+    <div class="bs-return" id="bsLiabRow" hidden><span id="bsLiabLabel">Liability</span><b id="bsLiab">0</b></div>
     <div class="bs-error" id="bsError" role="alert"></div>
     <div class="bs-actions">
       <button type="button" class="bs-btn bs-btn-cancel" id="bsCancel"><%= t.bet_slip_cancel %></button>
@@ -317,7 +338,11 @@
   minBet: minBet,
   maxBet: maxBet,
   sessionExpired: t.bet_slip_session_expired,
-  myBets: { empty: t.my_bets_empty, stake: t.my_bets_stake, ret: t.my_bets_return, pending: t.my_bets_pending, won: t.my_bets_won, lost: t.my_bets_lost, error: t.my_bets_load_error },
+  returnLabel: t.bet_slip_return,
+  profitLabel: t.bet_slip_profit_if_wins || 'Profit if wins',
+  liabilityLabel: t.bet_slip_liability || 'Liability',
+  suspendedMsg: t.runner_suspended || 'This selection is suspended',
+  sport: match.sport
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 

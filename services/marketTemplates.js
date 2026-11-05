@@ -80,11 +80,24 @@ function footballTemplates() {
   ];
 }
 
+function tennisTemplates() {
+  // Match Winner is always created by autoMarkets; these add the Set / Game tabs.
+  return [
+    { type: 'bookmaker', name: 'Set 1 Winner', odds: { '0': 1.9, '1': 1.9 } },
+    { type: 'bookmaker', name: 'Set 2 Winner', odds: { '0': 1.9, '1': 1.9 } },
+    { type: 'over_under', name: 'Total Games Over/Under 21.5', odds: OU(1.9, 1.9) },
+    { type: 'over_under', name: 'Total Games Over/Under 22.5', odds: OU(2.05, 1.75) },
+    { type: 'over_under', name: 'Set 1 Total Games Over/Under 9.5', odds: OU(1.85, 1.95) },
+    { type: 'odd_even',   name: 'Total Games (Odd/Even)', odds: OE(1.9, 1.9) }
+  ];
+}
+
 // match: matches টেবিলের রো (sport, team_a, team_b, league, title)
 function templatesFor(match) {
   if (!match) return [];
   const sport = String(match.sport || '').toLowerCase();
   if (sport === 'football' || sport === 'soccer') return footballTemplates();
+  if (sport === 'tennis') return tennisTemplates();
   return cricketTemplates(match);
 }
 

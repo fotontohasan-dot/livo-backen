@@ -58,7 +58,7 @@
   var stakeEl = $('bsStake');
   var errEl = $('bsError');
   var placeBtn = $('bsPlace');
-  var current = null; // { marketId, runner, odd, cell }
+  var current = null; // { marketId, runner, odd, cell, betType }
 
   function money(n) {
     return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -67,9 +67,26 @@
     var v = parseInt(stakeEl.value, 10);
     return Number.isFinite(v) ? v : 0;
   }
+  // Lay liability: stake * (odd - 1), rounded up to whole coins (mirrors services/layBet.js)
+  function liabilityFor(stake, odd) {
+    return Math.ceil(Math.round(stake * (odd - 1) * 100) / 100);
+  }
   function refreshReturn() {
     if (!current) return;
-    $('bsReturn').textContent = money(stakeValue() * current.odd);
+    var isLay = current.betType === 'lay';
+    var liabRow = $('bsLiabRow');
+    if (liabRow) liabRow.hidden = !isLay;
+    var lbl = $('bsReturnLabel');
+    if (isLay) {
+      // Lay wins the backer's stake; liability is what is reserved from the wallet
+      if (lbl) lbl.textContent = cfg.profitLabel || 'Profit if wins';
+      $('bsReturn').textContent = money(stakeValue());
+      if ($('bsLiabLabel')) $('bsLiabLabel').textContent = cfg.liabilityLabel || 'Liability';
+      if ($('bsLiab')) $('bsLiab').textContent = money(liabilityFor(stakeValue(), current.odd));
+    } else {
+      if (lbl && cfg.returnLabel) lbl.textContent = cfg.returnLabel;
+      $('bsReturn').textContent = money(stakeValue() * current.odd);
+    }
   }
   function setError(msg) { if (errEl) errEl.textContent = msg || ''; }
 
@@ -80,10 +97,11 @@
       marketId: btn.getAttribute('data-market-id'),
       runner: btn.getAttribute('data-runner'),
       odd: odd,
+      betType: btn.getAttribute('data-bet-type') === 'lay' ? 'lay' : 'back',
       cell: btn.closest('.market-cell')
     };
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
-    $('bsPick').textContent = btn.getAttribute('data-label') || '';
+    $('bsPick').textContent = (btn.getAttribute('data-label') || '') + (current.betType === 'lay' ? ' (Lay)' : '');
     $('bsOdd').textContent = String(odd);
     if (!stakeEl.value || stakeValue() < MIN_BET) stakeEl.value = String(Math.max(MIN_BET, 50));
     setError('');
@@ -103,11 +121,17 @@
     setError('');
   }
 
-  document.querySelectorAll('.market-cell').forEach(function (cell) {
-    cell.addEventListener('click', function () {
-      var btn = cell.querySelector('.odds');
-      if (btn) openSlip(btn);
-    });
+  function isLocked(el) {
+    return !!(el.closest('.runner-suspended') || el.closest('.market-suspended') || el.classList.contains('price-unavailable'));
+  }
+  // Delegated: works for server-rendered cells and survives live DOM updates.
+  document.addEventListener('click', function (e) {
+    var cell = e.target.closest ? e.target.closest('.market-cell') : null;
+    if (!cell) return;
+    var btn = e.target.closest('.odds') || cell.querySelector('.odds.back');
+    if (!btn) return;
+    if (isLocked(btn)) { toast(cfg.suspendedMsg || 'Suspended', 'err'); return; }
+    openSlip(btn);
   });
 
   if (overlay) {
@@ -143,6 +167,7 @@
         market_id: current.marketId,
         runner: current.runner,
         odd: current.odd, // সার্ভার উপেক্ষা করে; শুধু সামঞ্জস্যের জন্য
+        bet_type: current.betType,
         stake: stake
       })
     })
@@ -179,43 +204,88 @@
   }
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
 
-  // ===== My Bets প্যানেল =====
-  // textContent ব্যবহার হয় (innerHTML নয়), তাই রানার/ম্যাচের নামে HTML থাকলেও নিরাপদ।
-  (function () {
-    var openBtn = $('mbOpen'), panel = $('mbPanel'), list = $('mbList'), closeBtn = $('mbClose');
-    if (!openBtn || !panel || !list) return;
-    var L = cfg.myBets || {};
-    function line(a, b) {
-      var row = document.createElement('div');
-      row.className = 'mb-row';
-      var x = document.createElement('span'); x.textContent = a;
-      var y = document.createElement('span'); y.textContent = b;
-      row.appendChild(x); row.appendChild(y);
-      return row;
+  // ===== Live odds / suspension (Socket.IO) =====
+  // Server events: oddsUpdate, marketStatusChange, runnerStatusChange (services/socket.js).
+  function findOdds(marketId, runner, type) {
+    var list = document.querySelectorAll('.odds[data-market-id="' + String(marketId) + '"]');
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].getAttribute('data-runner') === String(runner) && list[i].getAttribute('data-bet-type') === type) return list[i];
     }
-    function render(bets) {
-      list.textContent = '';
-      if (!bets.length) {
-        var p = document.createElement('p'); p.className = 'mb-mut'; p.textContent = L.empty || ''; list.appendChild(p); return;
-      }
-      bets.forEach(function (b) {
-        var st = (b.status === 'won' || b.status === 'lost') ? b.status : 'pending';
-        var card = document.createElement('div'); card.className = 'mb-item ' + st;
-        card.appendChild(line(b.matchName, L[st] || st));
-        card.lastChild.lastChild.className = 'mb-st';
-        card.appendChild(line(b.market + (b.selection ? ' · ' + b.selection : ''), '@ ' + b.odd.toFixed(2)));
-        card.appendChild(line((L.stake || 'Stake') + ': ' + b.stake, (L.ret || 'Return') + ': ' + b.potentialReturn.toFixed(2)));
-        list.appendChild(card);
+    return null;
+  }
+  function flash(el, dir) {
+    el.classList.remove('flash-up', 'flash-down');
+    void el.offsetWidth; // restart the transition if two ticks arrive back to back
+    el.classList.add(dir > 0 ? 'flash-up' : 'flash-down');
+    clearTimeout(el._flashT);
+    el._flashT = setTimeout(function () { el.classList.remove('flash-up', 'flash-down'); }, 900);
+  }
+  // price: number | null. null = no price offered right now -> grey out this button only.
+  function setPrice(el, price) {
+    if (!el) return;
+    if (price === null || !Number.isFinite(price)) { el.classList.add('price-unavailable'); return; }
+    el.classList.remove('price-unavailable');
+    var old = parseFloat(el.getAttribute('data-odd'));
+    if (price === old) return;
+    el.setAttribute('data-odd', String(price));
+    el.textContent = String(price);
+    if (Number.isFinite(old)) flash(el, price > old ? 1 : -1); // green up / red down
+    if (current && el.getAttribute('data-market-id') === String(current.marketId) &&
+        el.getAttribute('data-runner') === current.runner &&
+        el.getAttribute('data-bet-type') === current.betType) {
+      current.odd = price;
+      $('bsOdd').textContent = String(price);
+      refreshReturn();
+    }
+  }
+  function setRunnerSuspended(marketId, runner, suspended) {
+    var cells = document.querySelectorAll('.market-cell[data-runner="' + String(runner) + '"]');
+    for (var i = 0; i < cells.length; i++) {
+      var box = cells[i].closest('.market-box');
+      if (!box || box.getAttribute('data-market-id') !== String(marketId)) continue;
+      cells[i].classList.toggle('runner-suspended', !!suspended);
+      cells[i].classList.remove('selected');
+    }
+    if (suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner)) {
+      setError(cfg.suspendedMsg || 'Suspended');
+      if (placeBtn) placeBtn.disabled = true;
+    } else if (!suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner) && placeBtn) {
+      placeBtn.disabled = false; setError('');
+    }
+  }
+  function setMarketSuspended(marketId, suspended) {
+    var box = document.querySelector('.market-box[data-market-id="' + String(marketId) + '"]');
+    if (!box) return;
+    box.classList.toggle('market-suspended', !!suspended);
+    if (suspended && current && String(current.marketId) === String(marketId)) {
+      setError(cfg.suspendedMsg || 'Suspended');
+      if (placeBtn) placeBtn.disabled = true;
+    } else if (!suspended && current && String(current.marketId) === String(marketId) && placeBtn) {
+      placeBtn.disabled = false; setError('');
+    }
+  }
+
+  if (typeof io === 'function' && cfg.matchId) {
+    try {
+      var socket = io();
+      // (re)join on every connect so a reconnect after a network drop resumes updates
+      socket.on('connect', function () { socket.emit('joinMatch', cfg.matchId); });
+
+      socket.on('oddsUpdate', function (msg) {
+        if (!msg || String(msg.matchId) !== String(cfg.matchId) || !Array.isArray(msg.markets)) return;
+        msg.markets.forEach(function (m) {
+          (m.runners || []).forEach(function (r) {
+            setPrice(findOdds(m.marketId, r.key, 'back'), r.back);
+            setPrice(findOdds(m.marketId, r.key, 'lay'), r.lay);
+          });
+        });
       });
-    }
-    function load() {
-      fetch('/matches/api/my-bets', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { render(d && d.success ? d.bets : []); if (d && !d.success) toast(L.error, 'err'); })
-        .catch(function () { toast(L.error || 'Error', 'err'); });
-    }
-    function setOpen(v) { panel.classList.toggle('open', v); panel.setAttribute('aria-hidden', v ? 'false' : 'true'); if (v) load(); }
-    openBtn.addEventListener('click', function () { setOpen(true); });
-    if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
-  })();
+      socket.on('marketStatusChange', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) setMarketSuspended(msg.marketId, msg.status !== 'open');
+      });
+      socket.on('runnerStatusChange', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) setRunnerSuspended(msg.marketId, msg.runner, msg.status === 'suspended');
+      });
+    } catch (e) { /* page still works without live updates */ }
+  }
 })();

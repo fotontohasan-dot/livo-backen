@@ -93,4 +93,21 @@ function resolveOdd(market, runner) {
   return null;
 }
 
-module.exports = { resolveOdd, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };
+// Lay price comes ONLY from the feed's depth (markets.depth[runner].lay). There is
+// no default: if the exchange shows no lay price the runner cannot be laid.
+function resolveLayOdd(market, runner) {
+  if (!market || runner === null || runner === undefined) return null;
+  const depth = market.depth;
+  if (!depth || typeof depth !== 'object') return null;
+  const entry = depth[String(runner)];
+  if (!entry) return null;
+  return toValidOdd(entry.lay);
+}
+
+// true when the runner is individually suspended (market-level status is checked separately)
+function isRunnerSuspended(market, runner) {
+  const rs = market && market.runner_status;
+  return !!(rs && typeof rs === 'object' && String(rs[String(runner)]).toLowerCase() === 'suspended');
+}
+
+module.exports = { resolveOdd, resolveLayOdd, isRunnerSuspended, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };

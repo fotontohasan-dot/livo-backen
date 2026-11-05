@@ -77,6 +77,7 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { settleSelectionsForMarket } = require('../services/accumulator');
+const { settleBet, settleMarketBets } = require('../services/settlement');
 const { grantFreeBet } = require('../services/freebet');
 const { settleTournament, cancelTournament } = require('../services/tournamentSettlement');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
@@ -104,7 +105,7 @@ const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { runAllChecks } = require('../services/healthCheck');
 // HIGH-3: ban/demote হলে socket layer-এর auth cache সঙ্গে সঙ্গে invalidate করতে হয়,
 // নাহলে খোলা socket connection সর্বোচ্চ TTL সময় পর্যন্ত পুরনো privilege ধরে রাখত।
-const { invalidateSocketAuth, emitTickerUpdate } = require('../services/socket');
+const { invalidateSocketAuth, emitTickerUpdate, emitMarketStatusChange, emitRunnerStatusChange } = require('../services/socket');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
@@ -2920,6 +2921,7 @@ router.post('/markets/:marketId/toggle', rbac.requirePermission('matches_manage'
       return redirectBack(req, res, '/admin');
     }
     await cache.del(cacheKeys.matchDetail(upd.rows[0].match_id)).catch(() => {});
+    emitMarketStatusChange(upd.rows[0].match_id, marketId, upd.rows[0].status);
     await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_STATUS',
       `Market #${marketId} status=${upd.rows[0].status}`, req.ip);
     req.flash('success', req.t('admin_market_updated'));
@@ -2955,31 +2957,11 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
       req.flash('error', req.t('admin_market_already_settled'));
       return redirectBack(req, res, '/admin');
     }
-    const bets = await client.query(`SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' FOR UPDATE`, [marketId]);
-    let winnersCount = 0;
-    const notifsToEmit = [];
-    for (const bet of bets.rows) {
-      if (String(bet.runner) === String(winning_runner)) {
-        const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
-        // ডেমো বেট স্টেক নেওয়া হয়েছিল demo_balance থেকে (routes/matches.js) — জেতার
-        // পেঅাউটও একই কলামে যেতে হবে, নাহলে ডেমো বাজি থেকে সত্যিকারের তোলাযোগ্য coins তৈরি হয়ে যায়।
-        if (bet.is_demo) {
-          await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id = $2', [payout, bet.user_id]);
-          await client.query(`INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports','bet_win',$2,'বেট জয় (ডেমো)')`, [bet.user_id, payout]);
-        } else {
-          await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
-          await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
-        }
-        await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
-        const wn = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
-        notifsToEmit.push({ userId: bet.user_id, row: wn.rows[0] });
-        winnersCount++;
-      } else {
-        await client.query(`UPDATE bets SET status = 'lost' WHERE id = $1`, [bet.id]);
-        const ln = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার বেটটি হেরে গেছে।`]);
-        notifsToEmit.push({ userId: bet.user_id, row: ln.rows[0] });
-      }
-    }
+    // Back + Lay settlement lives in services/settlement.js
+    const settled = await settleMarketBets(client, marketId, winning_runner);
+    const winnersCount = settled.winners;
+    const notifsToEmit = [...settled.notifs];
+    const bets = { rows: { length: settled.total } };
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
     const accaNotifs = await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
@@ -3098,6 +3080,35 @@ router.get('/api/bets-live', rbac.requirePermission('games_manage'), async (req,
   }
 });
 
+// Suspend / re-open ONE runner of a market (JSON). Body: { runner, status: 'open'|'suspended' }
+router.post('/markets/:marketId/runner-status', rbac.requirePermission('matches_manage'), async (req, res) => {
+  const marketId = parseInt(req.params.marketId, 10);
+  const runner = String(req.body.runner || '').trim().slice(0, 40);
+  const status = req.body.status;
+  if (!Number.isInteger(marketId) || marketId <= 0 || !runner || !['open', 'suspended'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'marketId, runner and status (open|suspended) required' });
+  }
+  try {
+    const upd = await pool.query(
+      `UPDATE markets
+          SET runner_status = jsonb_set(COALESCE(runner_status, '{}'::jsonb), ARRAY[$2]::text[], to_jsonb($3::text)),
+              updated_at = NOW()
+        WHERE id = $1 AND status IS DISTINCT FROM 'settled'
+        RETURNING match_id`,
+      [marketId, runner, status]
+    );
+    if (!upd.rowCount) return res.status(404).json({ success: false, message: 'Market not found or already settled' });
+    await cache.del(cacheKeys.matchDetail(upd.rows[0].match_id)).catch(() => {});
+    emitRunnerStatusChange(upd.rows[0].match_id, marketId, runner, status);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'RUNNER_STATUS',
+      `Market #${marketId} runner=${runner} status=${status}`, req.ip);
+    res.json({ success: true, marketId, runner, status });
+  } catch (err) {
+    console.error('runner status error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (req, res) => {
   const { id } = req.params;
   const { result } = req.body;
@@ -3115,21 +3126,9 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
       req.flash('error', req.t('admin_bet_not_found_or_settled'));
       return res.redirect('/admin/bets');
     }
-    await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
-    let settleNotif;
-    if (result === 'won') {
-      const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
-      if (bet.is_demo) {
-        await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [payout, bet.user_id]);
-        await client.query(`INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports','bet_win',$2,'বেট জয় (ডেমো)')`, [bet.user_id, payout]);
-      } else {
-        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
-        await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
-      }
-      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
-    } else {
-      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
-    }
+    // `result` is the outcome of the BET itself (for a Lay bet, 'won' = the runner lost)
+    const res = await settleBet(client, bet, result === 'won');
+    const settleNotif = { rows: [res && res.notif] };
     await client.query('COMMIT');
     if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'BET_SETTLED', `Bet #${id} settled as ${result} (user #${bet.user_id}, stake ${bet.stake})`, req.ip);
