@@ -83,7 +83,12 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
   }
 
   afterAll(async () => {
-    if (matchIds.length) await pool.query('DELETE FROM matches WHERE id = ANY($1)', [matchIds]);
+    if (matchIds.length) {
+      // বাজি-টেস্ট bets সারি রেখে যায়; ম্যাচ মোছার আগে সেগুলো (ও সংশ্লিষ্ট সারি) সরাতে হয়
+      await pool.query('DELETE FROM bets WHERE match_id = ANY($1)', [matchIds]);
+      await pool.query('DELETE FROM markets WHERE match_id = ANY($1)', [matchIds]);
+      await pool.query('DELETE FROM matches WHERE id = ANY($1)', [matchIds]);
+    }
     await cleanupUsers(userIds);
   });
 
@@ -99,7 +104,7 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     const rows = (await pool.query('SELECT type,name,odds,status FROM markets WHERE match_id=$1 ORDER BY id', [id])).rows;
     expect(rows).toHaveLength(4);
     expect(rows.every((r) => r.status === 'suspended')).toBe(true);
-    expect(rows.find((r) => r.name === 'Total Runs Over 280.5').odds).toBe(1.9);
+    expect(rows.find((r) => r.name === 'Total Runs Over 280.5').odds).toEqual({ yes: 1.9 });
   });
 
   test('open_now=1 দিলে সারিগুলো open হয়', async () => {
@@ -122,9 +127,9 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     expect(rows).toHaveLength(4);
     const settled = rows.find((r) => r.name === 'Total Runs Over 280.5');
     expect(settled.status).toBe('settled');
-    expect(settled.odds).toBe(1.9); // সেটেল সারির অডস বদলায়নি
+    expect(settled.odds).toEqual({ yes: 1.9 }); // সেটেল সারির অডস বদলায়নি
     const under = rows.find((r) => r.name === 'Total Runs Under 280.5');
-    expect(under.odds).toBe(1.5);
+    expect(under.odds).toEqual({ yes: 1.5 });
     expect(under.status).toBe('open');
   });
 
@@ -139,13 +144,13 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     await post({ odds: '1.85' });
     let rows = (await pool.query('SELECT odds,status FROM markets WHERE match_id=$1', [id])).rows;
     expect(rows).toHaveLength(1);
-    expect(rows[0].odds).toBe(1.85);
+    expect(rows[0].odds).toEqual({ yes: 1.85 });
     expect(rows[0].status).toBe('open');
 
     await post({ odds: '2.10', status: 'suspended' });
     rows = (await pool.query('SELECT odds,status FROM markets WHERE match_id=$1', [id])).rows;
     expect(rows).toHaveLength(1); // ডুপ্লিকেট নয়
-    expect(rows[0].odds).toBe(2.1);
+    expect(rows[0].odds).toEqual({ yes: 2.1 });
     expect(rows[0].status).toBe('suspended');
 
     await pool.query(`UPDATE markets SET status='settled' WHERE match_id=$1`, [id]);
@@ -153,7 +158,7 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     rows = (await pool.query('SELECT odds,status FROM markets WHERE match_id=$1', [id])).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('settled'); // জানা ফলাফলে আবার খোলা যায় না
-    expect(rows[0].odds).toBe(2.1);
+    expect(rows[0].odds).toEqual({ yes: 2.1 });
   });
 
   test('"মার্কেট সেভ" ফর্মে অবৈধ অডস প্রত্যাখ্যাত, আর status=settled দিয়ে সেটেল গার্ড এড়ানো যায় না', async () => {
@@ -169,6 +174,36 @@ describe('POST /admin/markets/:matchId/cricket-template', () => {
     const r = (await pool.query('SELECT status FROM markets WHERE match_id=$1', [id])).rows;
     expect(r).toHaveLength(1);
     expect(r[0].status).toBe('open'); // 'settled' উপেক্ষিত, ডিফল্ট open
+  });
+
+  // রিগ্রেশন: ইউজার-পেজে দেখানো অডস = ডাটাবেসে সংরক্ষিত = বাজিতে ধরা অডস (আগে পেজে সবসময় ১.৭৫ দেখাত)
+  test('ম্যাচ-পেজে দেখানো অডস অ্যাডমিনের দেওয়া অডসের সমান, বাজিতেও তাই ধরা হয়', async () => {
+    const { agent, token } = await adminAgent();
+    const id = await makeMatch();
+    await agent.post(`/admin/markets/${id}/cricket-template`).set('X-CSRF-Token', token).type('form')
+      .send(form({ home_odds: '1.60', away_odds: '2.30', over_odds: '1.90', under_odds: '1.50', open_now: '1' }));
+    const player = await getCsrfAgent('/register');
+    const pn = uniqueUsername();
+    await player.agent.post('/register').set('User-Agent', REALISTIC_UA).type('form')
+      .send({ username: pn, phone: uniquePhone(), password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: player.token });
+    const pu = await pool.query('UPDATE users SET coins = 1000 WHERE username = $1 RETURNING id', [pn]);
+    userIds.push(pu.rows[0].id);
+
+    const html = (await player.agent.get('/matches/' + id)).text;
+    // প্রতিটা market-box আলাদা করে: হেডারের নাম + তার ভেতরের data-odd
+    const byName = {};
+    for (const box of html.split('<div class="market-box">').slice(1)) {
+      const name = (box.match(/market-header">\s*\S+\s+([^<]+?)\s*</) || [])[1];
+      const odd = (box.match(/data-odd="([0-9.]+)"/) || [])[1];
+      if (name && odd) byName[name] = Number(odd);
+    }
+    expect(byName).toEqual({ 'Afghanistan Win': 1.6, 'Bangladesh Win': 2.3, 'Total Runs Over 280.5': 1.9, 'Total Runs Under 280.5': 1.5 });
+
+    const under = (await pool.query("SELECT id FROM markets WHERE match_id=$1 AND name='Total Runs Under 280.5'", [id])).rows[0].id;
+    const r = await player.agent.post(`/matches/${id}/bet`).set('X-CSRF-Token', player.token).send({ market_id: under, runner: 'yes', stake: 100 });
+    expect(r.body.success).toBe(true);
+    const bet = await pool.query('SELECT odd FROM bets WHERE user_id=$1', [pu.rows[0].id]);
+    expect(Number(bet.rows[0].odd)).toBe(1.5);
   });
 
   test('অবৈধ ইনপুটে কিছুই তৈরি হয় না', async () => {
