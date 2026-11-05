@@ -184,24 +184,24 @@
     <div class="md-score-top">
       <span class="md-league"><%= match.league || match.sport || '' %></span>
       <% if (isLive) { %>
-        <span class="md-badge md-badge-live"><span class="md-dot pulse-live"></span>LIVE</span>
+        <span class="md-badge md-badge-live" id="md-badge"><span class="md-dot pulse-live"></span>LIVE</span>
       <% } else { %>
-        <span class="md-badge md-badge-up"><%= match.status || t.upcoming_matches %></span>
+        <span class="md-badge md-badge-up" id="md-badge"><%= match.status || t.upcoming_matches %></span>
       <% } %>
     </div>
     <div class="md-teams">
       <div class="md-team-row">
         <div class="md-shirt md-shirt-a"><%= String(teamA).charAt(0).toUpperCase() %></div>
         <div class="md-team-name"><%= teamA %></div>
-        <% if (match.score_a) { %><div class="md-team-score"><%= match.score_a %></div><% } %>
+        <div class="md-team-score" id="score-a"><%= match.score_a || '' %></div>
       </div>
       <div class="md-team-row">
         <div class="md-shirt md-shirt-b"><%= String(teamB).charAt(0).toUpperCase() %></div>
         <div class="md-team-name"><%= teamB %></div>
-        <% if (match.score_b) { %><div class="md-team-score"><%= match.score_b %></div><% } %>
+        <div class="md-team-score" id="score-b"><%= match.score_b || '' %></div>
       </div>
     </div>
-    <% if (match.overs) { %><div class="md-overs"><%= match.overs %></div><% } %>
+    <div class="md-overs" id="md-overs"><%= match.overs || '' %></div>
     <% if (isLive && match.status) { %><div class="md-status"><%= match.status %></div><% } %>
   </div>
 

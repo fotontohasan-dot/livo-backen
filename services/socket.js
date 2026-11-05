@@ -342,6 +342,22 @@ const initSocket = (server, sessionMiddleware) => {
 // অন্য মডিউল (যেমন services/notify.js) থেকে ইতিমধ্যে ইনিশিয়ালাইজড io ইনস্ট্যান্স পেতে
 const getIo = () => io;
 
+// Push a feed update to everyone watching the match / the match list.
+// match: { id, status, score_a, score_b, overs }  markets: [{ id, type, name, status, odds, depth }]
+const emitFeedUpdate = (match, markets = []) => {
+  if (!io || !match || !match.id) return;
+  try {
+    io.to(`match:${match.id}`).emit('scoreUpdate', {
+      matchId: match.id, score_a: match.score_a, score_b: match.score_b,
+      overs: match.overs, status: match.status, timestamp: new Date()
+    });
+    if (markets.length) io.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
+    io.to('matches').emit('matchListUpdate', {
+      matchId: match.id, status: match.status, score_a: match.score_a, score_b: match.score_b, overs: match.overs
+    });
+  } catch (err) { console.error('emitFeedUpdate error:', err.message); }
+};
+
 // ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
 const updateLiveScore = async (matchId, scoreData) => {
   if (!io) return;
@@ -427,4 +443,4 @@ const emitTickerUpdate = (payload = {}) => {
   }
 };
 
-module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, getIo, emitFeedUpdate, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

@@ -9,7 +9,6 @@
   var cfg = {};
   var el = document.getElementById('match-detailConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
-
   var MIN_BET = Number(cfg.minBet) > 0 ? Number(cfg.minBet) : 10;
   var MAX_BET = Number(cfg.maxBet) > 0 ? Number(cfg.maxBet) : 100000;
 
