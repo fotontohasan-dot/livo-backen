@@ -18,11 +18,12 @@ const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
-const { resolveOdd } = require('../services/oddsResolver');
+const { resolveOdd, resolveLayOdd, isRunnerSuspended } = require('../services/oddsResolver');
+const { normalizeBetType, calcRisk, calcLiability, calcPotentialPayout } = require('../services/layBet');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
-const { buildMarketView } = require('../services/marketLayout');
+const { buildMarketView, filterMarketView } = require('../services/marketLayout');
 
 function formatMatch(row) {
   return {
@@ -203,10 +204,34 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
   }
 });
 
+// Market JSON for a tab: GET /matches/:id/markets?tab=all|popular|match|goals|btts|set|games|…
+// Cached ~2s in Redis (falls back to DB when Redis is down) so tab switches and
+// reconnect re-syncs never hammer Postgres during live matches.
+router.get('/:id/markets', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid match id' });
+  const tab = String(req.query.tab || 'all').slice(0, 20);
+  try {
+    const view = await cache.getOrSet(`match:marketview:${id}`, 2, async () => {
+      const mr = await pool.query('SELECT id, sport, team_a, team_b, status FROM matches WHERE id = $1', [id]);
+      if (!mr.rows[0]) return null;
+      const mk = await pool.query(
+        `SELECT * FROM markets WHERE match_id = $1 AND status IN ('open','suspended') ORDER BY id ASC`, [id]);
+      return buildMarketView(mk.rows, { sport: mr.rows[0].sport, teams: [mr.rows[0].team_a || 'Team A', mr.rows[0].team_b || 'Team B'] });
+    });
+    if (!view) return res.status(404).json({ success: false, message: 'Match not found' });
+    res.json({ success: true, tab, tabs: view.tabs, markets: filterMarketView(view, tab) });
+  } catch (err) {
+    console.error('market tab error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
   const { market_id, runner, demo } = req.body;
+  const betType = normalizeBetType(req.body.bet_type);
   const stake = parseInt(req.body.stake);
   const isDemo = !!demo;
 
@@ -220,6 +245,9 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
   }
   if (!market_id) {
     return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
+  }
+  if (!betType) {
+    return res.status(400).json({ success: false, message: 'Invalid bet type' });
   }
 
   const client = await pool.connect();
@@ -250,67 +278,85 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
     // অডস সার্ভার থেকেই নির্ধারিত। আগে req.body.odd সরাসরি bets.odd-এ যেত, আর
     // সেটেলমেন্ট পেআউট হিসাব করে stake * bets.odd দিয়ে — ফলে বড় odd পাঠিয়ে
     // যেকোনো পরিমাণ কয়েন তোলা যেত। ক্লায়েন্টের পাঠানো odd এখন উপেক্ষিত।
-    const oddNum = resolveOdd(m.rows[0], runner);
+    if (isRunnerSuspended(m.rows[0], runner)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, code: 'RUNNER_SUSPENDED', message: 'This selection is suspended' });
+    }
+    // Back uses the stored back price; Lay uses the feed's lay price (no default).
+    const oddNum = betType === 'lay' ? resolveLayOdd(m.rows[0], runner) : resolveOdd(m.rows[0], runner);
     if (oddNum === null) {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
     }
 
+    // Back risks the stake; Lay risks the liability = stake * (odd - 1).
+    const liability = betType === 'lay' ? calcLiability(stake, oddNum) : 0;
+    const risk = calcRisk(betType, stake, oddNum);
+    const potentialPayout = calcPotentialPayout(betType, stake, oddNum);
+    if (risk > maxBet) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
+    }
+
     const balanceCol = isDemo ? 'demo_balance' : 'coins';
     const upd = await client.query(
       `UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2 AND ${balanceCol} >= $1 RETURNING ${balanceCol}`,
-      [stake, userId]
+      [risk, userId]
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: isDemo ? req.t('balance_insufficient_demo') : req.t('payment_insufficient_coins') });
     }
 
-    await client.query(
-      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)`,
-      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo]
+    const ins = await client.query(
+      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo,
+                         bet_type, liability, potential_payout)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11) RETURNING id`,
+      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo,
+       betType, liability, potentialPayout]
     );
+    const betId = ins.rows[0].id;
 
     if (isDemo) {
       await client.query(
         `INSERT INTO demo_transactions (user_id, category, type, amount, description)
-         VALUES ($1, 'sports', 'bet', $2, $3)`,
-        [userId, stake, `বেট: ${m.rows[0].name} (ডেমো)`]
+         VALUES ($1, 'sports', $2, $3, $4)`,
+        [userId, betType === 'lay' ? 'lay_bet' : 'bet', risk, `${betType === 'lay' ? 'লে' : 'বেট'}: ${m.rows[0].name} (ডেমো)`]
       );
       await client.query('COMMIT');
 
       req.session.user.demo_balance = upd.rows[0].demo_balance;
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-      return res.json({ success: true, message: req.t('matches_demo_bet_placed'), demo: true, newBalance: upd.rows[0].demo_balance });
+      return res.json({ success: true, message: req.t('matches_demo_bet_placed'), demo: true, betType, liability, potentialPayout, newBalance: upd.rows[0].demo_balance });
     }
 
     await client.query(
-      `INSERT INTO coin_transactions (user_id, amount, type, description)
-       VALUES ($1, $2, 'bet', $3)`,
-      [userId, -stake, `বেট: ${m.rows[0].name}`]
+      `INSERT INTO coin_transactions (user_id, amount, type, description, ref_bet_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, -risk, betType === 'lay' ? 'lay_bet' : 'bet',
+       `${betType === 'lay' ? 'লে (লায়াবিলিটি)' : 'বেট'}: ${m.rows[0].name}`, betId]
     );
 
     // টার্নওভার আগে COMMIT-এর পরে fire-and-forget করা হতো — ব্যর্থ হলে স্টেক কাটা
     // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
     // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
     // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
-    await addTurnover(client, userId, 'sports', stake);
+    await addTurnover(client, userId, 'sports', risk);
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-    updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
-    distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
-    addBet(userId, stake, 'sports').catch(e => console.error('cashback:', e.message));
-    addVipTurnover(userId, stake).catch(e => console.error('vip:', e.message));
-    updateMissionProgress(userId, stake).catch(e => console.error('mission:', e.message));
-    addPoints(userId, stake).catch(e => console.error('loyalty:', e.message));
+    updateDailyTurnover(userId, risk).catch(e => console.error('dailyReward:', e.message));
+    distributeCommission(userId, risk).catch(e => console.error('commission:', e.message));
+    addBet(userId, risk, 'sports').catch(e => console.error('cashback:', e.message));
+    addVipTurnover(userId, risk).catch(e => console.error('vip:', e.message));
+    updateMissionProgress(userId, risk).catch(e => console.error('mission:', e.message));
+    addPoints(userId, risk).catch(e => console.error('loyalty:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
 
-    res.json({ success: true, message: req.t('matches_bet_placed'), newBalance: upd.rows[0].coins });
+    res.json({ success: true, message: req.t('matches_bet_placed'), betType, liability, potentialPayout, newBalance: upd.rows[0].coins });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('bet error:', err.message);
