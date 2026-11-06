@@ -151,47 +151,39 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
-// "My Bets": the signed-in user's latest bets with live status. Used by the drawer on the
-// match page; refreshed after placing a bet and whenever a settlement notification arrives.
+// "My Bets" প্যানেলের ডেটা: লগইন করা ইউজারের নিজের সাম্প্রতিক বাজি (স্টেক, অডস, সম্ভাব্য রিটার্ন, স্ট্যাটাস)।
+// শুধু নিজের বাজিই ফেরে (user_id সেশন থেকে); ম্যাচ বা মার্কেট মুছে গেলেও LEFT JOIN-এ সারি হারায় না।
 router.get('/api/my-bets', isAuth, async (req, res) => {
   try {
-    const status = ['pending', 'won', 'lost'].includes(req.query.status) ? req.query.status : null;
-    const params = [req.session.user.id];
-    let where = 'b.user_id = $1';
-    if (status) { params.push(status); where += ` AND b.status = $${params.length}`; }
     const r = await pool.query(
-      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.bet_type, b.liability,
-              b.potential_payout, b.is_demo, b.created_at,
-              m.title, m.team_a, m.team_b, mk.name AS market_name, mk.type AS market_type, mk.depth AS market_depth
+      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
+              COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
+              COALESCE(NULLIF(m.title, ''), m.team_a || ' vs ' || m.team_b) AS match_name
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
          LEFT JOIN markets mk ON mk.id = b.market_id
-        WHERE ${where}
-        ORDER BY b.created_at DESC, b.id DESC LIMIT 50`, params);
-    const bets = r.rows.map((b) => {
-      const teamA = b.team_a || 'Team A', teamB = b.team_b || 'Team B';
-      const lay = b.bet_type === 'lay';
-      return {
-        id: b.id,
-        matchId: b.match_id,
-        match: b.title || `${teamA} vs ${teamB}`,
-        market: b.market_name || b.market_type || '',
-        selection: (b.market_depth && b.market_depth[String(b.runner)] && b.market_depth[String(b.runner)].name) ||
-                   labelFor(String(b.runner), b.market_type, teamA, teamB),
-        betType: lay ? 'lay' : 'back',
-        odds: Number(b.odd),
-        stake: Number(b.stake),
-        liability: lay ? Number(b.liability) : null,
-        potentialReturn: Number(b.potential_payout) || Math.floor(Number(b.stake) * Number(b.odd)),
-        status: b.status, // pending | won | lost
-        isDemo: !!b.is_demo,
-        placedAt: b.created_at
-      };
-    });
+        WHERE b.user_id = $1
+        ORDER BY b.id DESC
+        LIMIT 50`,
+      [req.session.user.id]
+    );
+    const bets = r.rows.map(b => ({
+      id: b.id,
+      matchId: b.match_id,
+      matchName: b.match_name || '',
+      market: b.market_name || '',
+      selection: b.runner || '',
+      odd: Number(b.odd),
+      stake: Number(b.stake),
+      potentialReturn: Math.round(Number(b.stake) * Number(b.odd) * 100) / 100,
+      status: b.status || 'pending',
+      demo: !!b.is_demo,
+      createdAt: b.created_at
+    }));
     res.json({ success: true, bets });
   } catch (err) {
-    console.error('my-bets error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('matches/api/my-bets error:', err.message);
+    res.json({ success: false, bets: [] });
   }
 });
 
