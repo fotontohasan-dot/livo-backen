@@ -23,7 +23,7 @@ const { normalizeBetType, calcRisk, calcLiability, calcPotentialPayout } = requi
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
-const { buildMarketView, filterMarketView, labelFor } = require('../services/marketLayout');
+const { buildMarketView, filterMarketView, runnersFor } = require('../services/marketLayout');
 const { liveForClient } = require('../services/liveData');
 
 function formatMatch(row) {
@@ -157,7 +157,10 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
+              b.bet_type, b.liability, b.potential_payout,
               COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
+              mk.type AS market_type, mk.odds AS market_odds, mk.depth AS market_depth,
+              mk.runner_status AS market_runner_status, m.team_a, m.team_b,
               COALESCE(NULLIF(m.title, ''), m.team_a || ' vs ' || m.team_b) AS match_name
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
@@ -167,19 +170,37 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         LIMIT 50`,
       [req.session.user.id]
     );
-    const bets = r.rows.map(b => ({
-      id: b.id,
-      matchId: b.match_id,
-      matchName: b.match_name || '',
-      market: b.market_name || '',
-      selection: b.runner || '',
-      odd: Number(b.odd),
-      stake: Number(b.stake),
-      potentialReturn: Math.round(Number(b.stake) * Number(b.odd) * 100) / 100,
-      status: b.status || 'pending',
-      demo: !!b.is_demo,
-      createdAt: b.created_at
-    }));
+    const bets = r.rows.map(b => {
+      // runner কলামে কাঁচা key ('0', '1x', ...) থাকে; ইউজারকে দেখাতে মার্কেট-লেআউটের লেবেল (ফিড-নামসহ) লাগে।
+      let selection = b.runner || '';
+      try {
+        const hit = runnersFor(
+          { type: b.market_type, odds: b.market_odds, depth: b.market_depth, runner_status: b.market_runner_status },
+          b.team_a, b.team_b
+        ).find(x => String(x.key) === String(b.runner));
+        if (hit && hit.label) selection = hit.label;
+      } catch (_) { /* মার্কেট মুছে গেলে কাঁচা key-ই দেখাও */ }
+      const betType = normalizeBetType(b.bet_type);
+      const stake = Number(b.stake);
+      const odd = Number(b.odd);
+      const stored = b.potential_payout != null ? Number(b.potential_payout) : NaN;
+      return {
+        id: b.id,
+        matchId: b.match_id,
+        matchName: b.match_name || '',
+        market: b.market_name || '',
+        selection,
+        betType,
+        odd,
+        stake,
+        liability: betType === 'lay' ? Number(b.liability) || 0 : 0,
+        // বসানোর সময় সার্ভার যে potential_payout হিসাব করেছিল সেটাই; পুরনো সারিতে (০/NULL) Back-এর সূত্র।
+        potentialReturn: Number.isFinite(stored) && stored > 0 ? stored : Math.round(stake * odd * 100) / 100,
+        status: b.status || 'pending',
+        demo: !!b.is_demo,
+        createdAt: b.created_at
+      };
+    });
     res.json({ success: true, bets });
   } catch (err) {
     console.error('matches/api/my-bets error:', err.message);
