@@ -34,6 +34,7 @@ function labelFor(key, type, teamA, teamB) {
     if (key === '12') return `${teamA} or ${teamB}`;
     if (key === 'x2') return `Draw or ${teamB}`;
   }
+  if (type === 'player_h2h' && /^\d+$/.test(String(key))) return `Player ${Number(key) + 1}`;
   return STATIC_LABELS[key] || String(key);
 }
 
@@ -67,7 +68,7 @@ function categoryFor(market, kind) {
   if (name === 'Match Winner' || type === 'match_odds' || type === 'double_chance') return 'match';
   if (type === 'fancy' || /fancy|session|lambi|ball run/i.test(name)) return 'fancy';
   if (type === 'bookmaker' || /bookmaker/i.test(name)) return 'bookmaker';
-  if (type === 'yes_no' || /batsman|batter|player|fifty|century|\b50\b|\b100\b/i.test(name)) return 'player';
+  if (/^player_/.test(type) || type === 'yes_no' || /batsman|batter|player|fifty|century|\b50\b|\b100\b|head[- ]to[- ]head|\bh2h\b/i.test(name)) return 'player';
   if (type === 'over_under') return 'ou';
   if (type === 'odd_even') return 'oe';
   return 'match';
@@ -96,9 +97,11 @@ function runnersFor(market, teamA, teamB) {
 
   return orderKeys(Object.keys(map)).map((key) => {
     const lay = depth[key] && Number(depth[key].lay);
+    // Feed-supplied runner names (e.g. batsmen in a head-to-head market) win over generic labels
+    const feedName = depth[key] && typeof depth[key].name === 'string' ? depth[key].name.trim().slice(0, 60) : '';
     return {
       key,
-      label: labelFor(key, type, teamA, teamB),
+      label: feedName || labelFor(key, type, teamA, teamB),
       odd: Number(map[key]),
       lay: Number.isFinite(lay) && lay > 1 ? lay : null,
       backSize: depth[key] && Number.isFinite(Number(depth[key].back_size)) ? Number(depth[key].back_size) : null,
@@ -115,6 +118,9 @@ const TABS_BY_SPORT = {
 };
 
 // match: { sport, teams:[a,b] }
+// Player markets (cricket): type 'player_runs' (keys over/under, e.g. "V Kohli Runs Over/Under 32.5")
+// and 'player_h2h' (one runner per player, names from depth[key].name) — both flow through the same
+// Back/Lay + liability path as every other market.
 function buildMarketView(markets, match) {
   const teamA = (match.teams && match.teams[0]) || 'Team A';
   const teamB = (match.teams && match.teams[1]) || 'Team B';
@@ -141,9 +147,9 @@ function buildMarketView(markets, match) {
   const tabs = [{ id: 'all', label: 'All' }];
   if (out.some((m) => m.popular)) tabs.push({ id: 'popular', label: 'Popular' });
   for (const [id, label] of TABS_BY_SPORT[kind]) {
-    // Football/Tennis always show their sport tabs (an empty one shows the
-    // "coming soon" message); cricket keeps showing only non-empty tabs.
-    if (kind !== 'cricket' || out.some((m) => m.category === id)) tabs.push({ id, label });
+    // Every sport shows its full tab set; an empty tab shows "Waiting for live feed…"
+    // and fills in by itself when the feed starts sending that market.
+    tabs.push({ id, label });
   }
   return { markets: out, tabs };
 }

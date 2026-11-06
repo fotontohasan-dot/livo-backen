@@ -24,6 +24,7 @@ const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
 const { buildMarketView, filterMarketView, labelFor } = require('../services/marketLayout');
+const { liveForClient } = require('../services/liveData');
 
 function formatMatch(row) {
   return {
@@ -161,7 +162,7 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
     const r = await pool.query(
       `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.bet_type, b.liability,
               b.potential_payout, b.is_demo, b.created_at,
-              m.title, m.team_a, m.team_b, mk.name AS market_name, mk.type AS market_type
+              m.title, m.team_a, m.team_b, mk.name AS market_name, mk.type AS market_type, mk.depth AS market_depth
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
          LEFT JOIN markets mk ON mk.id = b.market_id
@@ -175,7 +176,8 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         matchId: b.match_id,
         match: b.title || `${teamA} vs ${teamB}`,
         market: b.market_name || b.market_type || '',
-        selection: labelFor(String(b.runner), b.market_type, teamA, teamB),
+        selection: (b.market_depth && b.market_depth[String(b.runner)] && b.market_depth[String(b.runner)].name) ||
+                   labelFor(String(b.runner), b.market_type, teamA, teamB),
         betType: lay ? 'lay' : 'back',
         odds: Number(b.odd),
         stake: Number(b.stake),
@@ -213,7 +215,7 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       score_b: row.score_b,
       overs: row.overs,
       league: row.league,
-      live: row.live_data || null,
+      live: liveForClient(row.sport, row.live_data),
       logo_a: row.logo_a || null,
       logo_b: row.logo_b || null
     };

@@ -26,11 +26,13 @@
   }
 
   // ===== ট্যাব ফিল্টার =====
-  var boxes = Array.prototype.slice.call(document.querySelectorAll('.market-box'));
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.md-tab'));
+  var activeTab = tabs.length ? tabs[0].getAttribute('data-tab') : 'all';
 
   function applyTab(id) {
     var visible = 0;
+    activeTab = id;
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.market-box'));
     boxes.forEach(function (box) {
       var show = id === 'all'
         || (id === 'popular' ? box.getAttribute('data-pop') === '1' : box.getAttribute('data-cat') === id);
@@ -287,7 +289,12 @@
   function renderLive(live) {
     if (!board) return;
     board.textContent = '';
-    if (!live || !live.kind) return;
+    // No stats from the feed (yet): show a placeholder for a live match, nothing for a future one.
+    // The first real `liveUpdate` replaces this automatically.
+    if (!live || !live.kind || live.waiting) {
+      if (cfg.isLive) board.appendChild(mk('div', 'lb-sub', cfg.waitingMsg || 'Waiting for live feed…'));
+      return;
+    }
     if (live.kind === 'cricket') {
       var head = mk('div');
       head.appendChild(mk('span', 'lb-main', (live.runs != null ? live.runs : '-') + '/' + (live.wickets != null ? live.wickets : '-')));
@@ -360,8 +367,92 @@
     var v = o && o.nextElementSibling;
     if (!v || !v.classList.contains('vol')) return;
     var n = Number(size);
-    v.textContent = size == null || !Number.isFinite(n) ? '' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n));
+    v.textContent = size == null || !Number.isFinite(n) ? '\u2013' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n));
   }
+
+
+  // ===== Market hydration: build/refresh market boxes from JSON without a page reload =====
+  // Used when the feed starts sending a market (or a lay price) that the page was rendered without,
+  // e.g. Fancy / Player Performance markets that appear mid-match.
+  function sigOfModel(m) {
+    return m.runners.map(function (r) { return r.key + (r.lay ? '+' : '-'); }).join('|');
+  }
+  function sigOfDom(box) {
+    var out = [];
+    box.querySelectorAll('.market-cell').forEach(function (c) {
+      out.push(c.getAttribute('data-runner') + (c.querySelector('.odds.lay') ? '+' : '-'));
+    });
+    return out.join('|');
+  }
+  function oddsBtn(m, r, type, price) {
+    var b = mk('div', 'odds ' + type, String(price));
+    b.setAttribute('data-bet-type', type);
+    b.setAttribute('data-market-id', m.id);
+    b.setAttribute('data-market-name', m.name);
+    b.setAttribute('data-runner', r.key);
+    b.setAttribute('data-label', r.label);
+    b.setAttribute('data-odd', String(price));
+    return b;
+  }
+  function volEl(type, size) {
+    var v = mk('small', 'vol', '\u2013');
+    v.setAttribute('data-vol', type);
+    if (size != null) { var n = Number(size); v.textContent = n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }
+    return v;
+  }
+  function buildMarketBox(m) {
+    var box = mk('div', 'market-box' + (m.status === 'suspended' ? ' market-suspended' : ''));
+    box.setAttribute('data-market-id', m.id);
+    box.setAttribute('data-cat', m.category);
+    box.setAttribute('data-pop', m.popular ? '1' : '0');
+    var head = mk('div', 'market-header');
+    head.setAttribute('data-toggle', '');
+    head.appendChild(mk('span', 'mh-title', ((m.type === 'bookmaker' || m.type === 'match_odds') ? '\uD83C\uDFC6 ' : '\u26A1 ') + m.name));
+    head.appendChild(mk('span', 'mh-toggle', '\u25BE'));
+    head.addEventListener('click', function () { box.classList.toggle('collapsed'); });
+    var body = mk('div', 'market-body');
+    var cols = m.runners.length >= 3 ? 3 : (m.runners.length === 2 ? 2 : 1);
+    var grid = mk('div', 'market-grid cols-' + cols);
+    m.runners.forEach(function (r) {
+      var cell = mk('div', 'market-cell' + (r.status === 'suspended' ? ' runner-suspended' : ''));
+      cell.setAttribute('data-runner', r.key);
+      cell.appendChild(mk('span', 'mc-label', r.label));
+      cell.appendChild(oddsBtn(m, r, 'back', r.odd));
+      cell.appendChild(volEl('back', r.backSize));
+      if (r.lay) { cell.appendChild(oddsBtn(m, r, 'lay', r.lay)); cell.appendChild(volEl('lay', r.laySize)); }
+      grid.appendChild(cell);
+    });
+    body.appendChild(grid);
+    box.appendChild(head);
+    box.appendChild(body);
+    return box;
+  }
+  var hydrating = false, lastHydrate = 0;
+  function hydrateMarkets() {
+    if (hydrating || Date.now() - lastHydrate < 4000 || !cfg.matchId) return;
+    hydrating = true; lastHydrate = Date.now();
+    fetch('/matches/' + encodeURIComponent(cfg.matchId) + '/markets?tab=all', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.success) return;
+        var anchor = $('mdTabEmpty');
+        (d.markets || []).forEach(function (m) {
+          var existing = document.querySelector('.market-box[data-market-id="' + String(m.id) + '"]');
+          if (existing && sigOfDom(existing) === sigOfModel(m)) return;
+          var fresh = buildMarketBox(m);
+          if (existing) {
+            if (existing.classList.contains('collapsed')) fresh.classList.add('collapsed');
+            existing.parentNode.replaceChild(fresh, existing);
+          } else if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(fresh, anchor);
+          }
+        });
+        applyTab(activeTab); // keep the user's current tab, show/hide the waiting message
+      })
+      .catch(function () { /* next oddsUpdate retries */ })
+      .then(function () { hydrating = false; });
+  }
+  applyTab(activeTab); // initial empty-tab state ("Waiting for live feed…")
 
   // ===== Live odds / suspension (Socket.IO) =====
   // Server events: oddsUpdate, marketStatusChange, runnerStatusChange (services/socket.js).
@@ -432,14 +523,19 @@
 
       socket.on('oddsUpdate', function (msg) {
         if (!msg || String(msg.matchId) !== String(cfg.matchId) || !Array.isArray(msg.markets)) return;
+        var needHydrate = false;
         msg.markets.forEach(function (m) {
+          if (!document.querySelector('.market-box[data-market-id="' + String(m.marketId) + '"]')) needHydrate = true;
           (m.runners || []).forEach(function (r) {
+            if ((r.back != null && !findOdds(m.marketId, r.key, 'back') && document.querySelector('.market-box[data-market-id="' + String(m.marketId) + '"]')) ||
+                (r.lay != null && !findOdds(m.marketId, r.key, 'lay'))) needHydrate = true;
             setPrice(findOdds(m.marketId, r.key, 'back'), r.back);
             setPrice(findOdds(m.marketId, r.key, 'lay'), r.lay);
             setVol(m.marketId, r.key, 'back', r.backSize);
             setVol(m.marketId, r.key, 'lay', r.laySize);
           });
         });
+        if (needHydrate) hydrateMarkets();
       });
       socket.on('liveUpdate', function (msg) {
         if (msg && String(msg.matchId) === String(cfg.matchId)) renderLive(msg.live);

@@ -23,6 +23,7 @@ const { pool } = require('../db');
 const cache = require('../services/cache');
 const { emitFeedUpdate } = require('../services/socket');
 const { sanitizeLive } = require('../services/liveData');
+const teamLogos = require('../services/teamLogos');
 
 const router = express.Router();
 
@@ -73,6 +74,7 @@ router.post('/', async (req, res) => {
 
   const results = [];
   const pushes = [];
+  const logoQueue = new Set(); // remote logo URLs to cache after COMMIT
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -101,7 +103,15 @@ router.post('/', async (req, res) => {
         ];
         const liveObj = sanitizeLive(fields[0], m.live);
         const liveJson = liveObj ? JSON.stringify(liveObj) : null;
-        const logoA = logo(m.logo_a), logoB = logo(m.logo_b);
+        // local path / data: URI -> used as is. https URL -> remembered as *_src and shown from the
+        // local cache (public/images/teams) once downloaded; downloading happens after COMMIT.
+        const rawLogoA = str(m.logo_a, 500), rawLogoB = str(m.logo_b, 500);
+        const srcA = teamLogos.isRemote(rawLogoA) ? rawLogoA : null;
+        const srcB = teamLogos.isRemote(rawLogoB) ? rawLogoB : null;
+        const logoA = srcA ? teamLogos.cachedPath(srcA) : logo(m.logo_a);
+        const logoB = srcB ? teamLogos.cachedPath(srcB) : logo(m.logo_b);
+        if (srcA) logoQueue.add(srcA);
+        if (srcB) logoQueue.add(srcB);
         const found = await client.query(
           'SELECT id FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
         let matchId;
@@ -110,14 +120,15 @@ router.post('/', async (req, res) => {
           await client.query(
             `UPDATE matches SET sport=$1, league=$2, team_a=$3, team_b=$4, title=$5, status=$6,
                     score_a=$7, score_b=$8, overs=$9, start_time=COALESCE($10, start_time), synced_at=NOW(),
-                    logo_a=COALESCE($12, logo_a), logo_b=COALESCE($13, logo_b), live_data=COALESCE($14::jsonb, live_data)
-             WHERE id=$11`, [...fields, matchId, logoA, logoB, liveJson]);
+                    logo_a=COALESCE($12, logo_a), logo_b=COALESCE($13, logo_b), live_data=COALESCE($14::jsonb, live_data),
+                    logo_a_src=COALESCE($15, logo_a_src), logo_b_src=COALESCE($16, logo_b_src)
+             WHERE id=$11`, [...fields, matchId, logoA, logoB, liveJson, srcA, srcB]);
         } else {
           const ins = await client.query(
             `INSERT INTO matches (sport, league, team_a, team_b, title, status, score_a, score_b, overs, start_time,
-                                  provider, external_id, synced_at, logo_a, logo_b, live_data)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),$13,$14,$15::jsonb) RETURNING id`,
-            [...fields, provider, externalId, logoA, logoB, liveJson]);
+                                  provider, external_id, synced_at, logo_a, logo_b, live_data, logo_a_src, logo_b_src)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),$13,$14,$15::jsonb,$16,$17) RETURNING id`,
+            [...fields, provider, externalId, logoA, logoB, liveJson, srcA, srcB]);
           matchId = ins.rows[0].id;
         }
 
@@ -179,6 +190,16 @@ router.post('/', async (req, res) => {
   // After commit: clear cached lists, then push to connected clients.
   cache.del('matches:live').catch(() => {});
   for (const p of pushes) emitFeedUpdate(p.match, p.markets);
+  // Download any not-yet-cached remote logos in the background (never blocks the feed response)
+  // and point every match that uses that source URL at the local copy.
+  for (const src of logoQueue) {
+    teamLogos.cacheLogo(src).then(async (local) => {
+      if (!local) return;
+      await pool.query('UPDATE matches SET logo_a = $1 WHERE logo_a_src = $2 AND logo_a IS DISTINCT FROM $1', [local, src]);
+      await pool.query('UPDATE matches SET logo_b = $1 WHERE logo_b_src = $2 AND logo_b IS DISTINCT FROM $1', [local, src]);
+      cache.del('matches:live').catch(() => {});
+    }).catch(() => {});
+  }
 
   res.json({ success: true, processed: results.filter(r => r.ok).length, results });
 });

@@ -728,7 +728,9 @@ async function runMigrations() {
       ALTER TABLE matches
         ADD COLUMN IF NOT EXISTS live_data JSONB,
         ADD COLUMN IF NOT EXISTS logo_a TEXT,
-        ADD COLUMN IF NOT EXISTS logo_b TEXT
+        ADD COLUMN IF NOT EXISTS logo_b TEXT,
+        ADD COLUMN IF NOT EXISTS logo_a_src TEXT,
+        ADD COLUMN IF NOT EXISTS logo_b_src TEXT
     `);
     // per-runner status: { "<runnerKey>": "open" | "suspended" }
     await pool.query(`ALTER TABLE markets ADD COLUMN IF NOT EXISTS runner_status JSONB DEFAULT '{}'::jsonb`);

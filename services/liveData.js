@@ -76,4 +76,17 @@ function sanitizeLive(sport, raw) {
   return JSON.stringify(out).length <= MAX_JSON ? out : null;
 }
 
-module.exports = { sanitizeLive, kindOf };
+// Placeholder shown when the feed has not (yet) sent live stats. The page renders
+// "Waiting for live feed…" for a live match and hydrates as soon as a real
+// `liveUpdate` arrives. Never null for a known sport, so renderers need no special cases.
+function emptyLive(sport) {
+  const kind = kindOf(sport);
+  return kind ? { kind, waiting: true } : null;
+}
+
+// stored JSONB (or null) -> something safe to hand to the client
+function liveForClient(sport, stored) {
+  return (stored && typeof stored === 'object' && stored.kind) ? stored : emptyLive(sport);
+}
+
+module.exports = { sanitizeLive, kindOf, emptyLive, liveForClient };

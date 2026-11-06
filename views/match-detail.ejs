@@ -263,14 +263,14 @@
   <div class="lb" id="liveBoard"></div>
 
   <!-- Dynamic Markets -->
-  <% if (marketView && marketView.markets.length > 0) { %>
+  <% if (marketView && (marketView.markets.length > 0 || marketView.tabs.length > 1)) { %>
     <div class="md-tabs" id="mdTabs">
       <% marketView.tabs.forEach(function(tab, i) { %>
         <button type="button" class="md-tab<%= i === 0 ? ' active' : '' %>" data-tab="<%= tab.id %>"><%= tab.label %></button>
       <% }) %>
     </div>
 
-    <% var fmtVol = function (n) { if (n == null) return ''; n = Number(n); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }; %>
+    <% var fmtVol = function (n) { if (n == null) return '–'; n = Number(n); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }; %>
     <% marketView.markets.forEach(function(market) {
          var cols = market.runners.length >= 3 ? 3 : (market.runners.length === 2 ? 2 : 1);
          if (market.runners.length > 3) cols = 3;
@@ -309,7 +309,7 @@
         </div>
       </div>
     <% }) %>
-    <div class="md-tab-empty" id="mdTabEmpty"><%= t.betting_options_soon %></div>
+    <div class="md-tab-empty" id="mdTabEmpty"><%= t.waiting_live_feed || 'Waiting for live feed…' %></div>
   <% } else { %>
     <div class="md-empty text-center dz83-4">
       <div class="dz83-5">⏳</div>
@@ -390,7 +390,11 @@
   liabilityLabel: t.bet_slip_liability || 'Liability',
   suspendedMsg: t.runner_suspended || 'This selection is suspended',
   sport: match.sport,
-  live: match.live || null
+  live: match.live || null,
+  isLive: /^(live|inplay|in_play|in-play)$/i.test(String(match.status || '')),
+  waitingMsg: t.waiting_live_feed || 'Waiting for live feed…',
+  teamA: match.teams[0],
+  teamB: match.teams[1]
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 

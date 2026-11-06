@@ -85,7 +85,7 @@ describe('ম্যাচ পেজ', () => {
     const res = await freshRequest().get(`/matches/${id}`);
     expect(res.status).toBe(200);
     expect(res.text).toContain('md-tabs');
-    expect(res.text).toContain('data-tab="innings"');
+    expect(res.text).toContain('data-tab="ou"');
     expect(res.text).toContain('Alpha Total Runs Over/Under');
     expect(res.text).toContain('id="bsOverlay"');
     const js = fs.readFileSync(path.join(__dirname, '../../public/js/views/match-detail.js'), 'utf8');
