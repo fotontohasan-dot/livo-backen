@@ -121,7 +121,8 @@ router.post('/', async (req, res) => {
             if (!rk) continue;
             const back = odd(r.back);
             if (back !== null) odds[rk] = back; // oddsResolver reads only this back price
-            depth[rk] = { name: str(r.name, 80), back, lay: odd(r.lay), back_size: size(r.back_size), lay_size: size(r.lay_size) };
+            const runnerSuspended = r.suspended === true || String(r.status || '').toLowerCase() === 'suspended';
+            depth[rk] = { name: str(r.name, 80), back, lay: odd(r.lay), back_size: size(r.back_size), lay_size: size(r.lay_size), suspended: runnerSuspended };
           }
 
           const existing = await client.query(

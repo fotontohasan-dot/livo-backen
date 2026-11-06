@@ -58,7 +58,9 @@
   var stakeEl = $('bsStake');
   var errEl = $('bsError');
   var placeBtn = $('bsPlace');
-  var current = null; // { marketId, runner, odd, cell }
+  var current = null; // { marketId, runner, odd, side, btn, cell }
+  var labels = cfg.labels || {};
+  var sheet = overlay ? overlay.querySelector('.bs-sheet') : null;
 
   function money(n) {
     return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -67,9 +69,25 @@
     var v = parseInt(stakeEl.value, 10);
     return Number.isFinite(v) ? v : 0;
   }
+  // লায়াবিলিটি = স্টেক × (অডস − ১)। সেন্ট পূর্ণসংখ্যায় হিসাব — সার্ভারের services/layMath.js-এর সূত্রই।
+  function liabilityOf(stake, odd) {
+    return (stake * (Math.round(odd * 100) - 100)) / 100;
+  }
   function refreshReturn() {
     if (!current) return;
-    $('bsReturn').textContent = money(stakeValue() * current.odd);
+    var stake = stakeValue();
+    if (current.side === 'lay') {
+      $('bsLiab').textContent = money(liabilityOf(stake, current.odd));
+      $('bsReturn').textContent = money(stake); // লে জিতলে লাভ = ব্যাকারের স্টেক
+    } else {
+      $('bsReturn').textContent = money(stake * current.odd);
+    }
+  }
+  function applySide() {
+    var lay = current && current.side === 'lay';
+    if (sheet) sheet.classList.toggle('is-lay', !!lay);
+    $('bsSideTag').textContent = lay ? (labels.lay || 'Lay') : (labels.back || 'Back');
+    $('bsReturnLabel').textContent = lay ? (labels.layProfit || 'Profit if it wins') : (labels.ret || 'Potential return');
   }
   function setError(msg) { if (errEl) errEl.textContent = msg || ''; }
 
@@ -80,8 +98,11 @@
       marketId: btn.getAttribute('data-market-id'),
       runner: btn.getAttribute('data-runner'),
       odd: odd,
+      side: btn.getAttribute('data-side') === 'lay' ? 'lay' : 'back',
+      btn: btn,
       cell: btn.closest('.market-cell')
     };
+    applySide();
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
     $('bsPick').textContent = btn.getAttribute('data-label') || '';
     $('bsOdd').textContent = String(odd);
@@ -103,10 +124,11 @@
     setError('');
   }
 
-  document.querySelectorAll('.market-cell').forEach(function (cell) {
-    cell.addEventListener('click', function () {
-      var btn = cell.querySelector('.odds');
-      if (btn) openSlip(btn);
+  // প্রতিটা Back/Lay বক্স আলাদা বাটন; সাসপেন্ড/Lay-দাম-নেই বাটন disabled, তাই ক্লিকই হয় না
+  document.querySelectorAll('.market-cell .odds').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+      openSlip(btn);
     });
   });
 
@@ -131,6 +153,7 @@
     var stake = stakeValue();
     if (!stake || stake < MIN_BET) { setError(cfg.minBetMsg || ('Min ' + MIN_BET)); return; }
     if (stake > MAX_BET) { setError('Max ' + MAX_BET); return; }
+    if (current.side === 'lay' && liabilityOf(stake, current.odd) > MAX_BET) { setError('Max ' + MAX_BET); return; }
 
     placeBtn.disabled = true;
     setError('');
@@ -143,6 +166,7 @@
         market_id: current.marketId,
         runner: current.runner,
         odd: current.odd, // সার্ভার উপেক্ষা করে; শুধু সামঞ্জস্যের জন্য
+        side: current.side,
         stake: stake
       })
     })
@@ -178,4 +202,91 @@
       });
   }
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
+
+  // ===== রিয়েল-টাইম ওডস, সাসপেনশন ও স্কোর (socket: marketUpdate / scoreUpdate) =====
+  function setPrice(btn, value, size) {
+    if (!btn) return;
+    var priceEl = btn.querySelector('.bl-price');
+    var sizeEl = btn.querySelector('.bl-size');
+    var next = Number(value);
+    var valid = Number.isFinite(next) && next > 1;
+    var prev = parseFloat(btn.getAttribute('data-odd'));
+    if (valid) {
+      btn.setAttribute('data-odd', String(next));
+      if (priceEl) priceEl.textContent = String(next);
+      if (Number.isFinite(prev) && prev !== next) {
+        var cls = next > prev ? 'flash-up' : 'flash-down';
+        btn.classList.remove('flash-up', 'flash-down');
+        void btn.offsetWidth; // অ্যানিমেশন আবার চালু করতে
+        btn.classList.add(cls);
+        setTimeout(function () { btn.classList.remove(cls); }, 1000);
+      }
+    } else {
+      btn.setAttribute('data-odd', '');
+      if (priceEl) priceEl.textContent = '—';
+    }
+    if (sizeEl && size !== undefined) sizeEl.textContent = (size === null || size === '') ? '' : String(size);
+    return valid;
+  }
+
+  function applyMarketUpdate(m) {
+    var box = document.querySelector('.market-box[data-market-id="' + String(m.id) + '"]');
+    if (!box) return;
+    var open = m.status === 'open';
+    box.setAttribute('data-status', m.status || 'open');
+    box.classList.toggle('suspended', !open);
+
+    var odds = (m.odds && typeof m.odds === 'object') ? m.odds : {};
+    var depth = (m.depth && typeof m.depth === 'object') ? m.depth : {};
+    box.querySelectorAll('.market-cell').forEach(function (cell) {
+      var key = cell.getAttribute('data-runner');
+      var d = depth[key] || {};
+      var back = d.back !== undefined && d.back !== null ? d.back : odds[key];
+      var runnerSusp = d.suspended === true;
+      cell.classList.toggle('suspended', runnerSusp);
+
+      var backBtn = cell.querySelector('.odds.back');
+      var layBtn = cell.querySelector('.odds.lay');
+      var backOk = setPrice(backBtn, back, d.back_size === undefined ? undefined : d.back_size);
+      var layOk = setPrice(layBtn, d.lay, d.lay_size === undefined ? undefined : d.lay_size);
+      if (backBtn) backBtn.disabled = !open || runnerSusp || !backOk;
+      if (layBtn) layBtn.disabled = !open || runnerSusp || !layOk;
+    });
+
+    // খোলা স্লিপের দাম/সাসপেনশন সিঙ্ক রাখা
+    if (current && String(current.marketId) === String(m.id) && current.btn) {
+      if (current.btn.disabled) {
+        setError(cfg.labels && cfg.labels.suspended ? cfg.labels.suspended : 'SUSPENDED');
+        if (placeBtn) placeBtn.disabled = true;
+      } else {
+        var o = parseFloat(current.btn.getAttribute('data-odd'));
+        if (Number.isFinite(o)) { current.odd = o; $('bsOdd').textContent = String(o); refreshReturn(); }
+        if (placeBtn) placeBtn.disabled = false;
+        setError('');
+      }
+    }
+  }
+
+  function applyScoreUpdate(s) {
+    function set(id, v) { var n = $(id); if (n && v !== undefined && v !== null) n.textContent = v; }
+    set('score-a', s.score_a);
+    set('score-b', s.score_b);
+    set('md-overs', s.overs);
+  }
+
+  if (typeof window.io === 'function' && cfg.matchId) {
+    try {
+      var sock = window.io();
+      var join = function () { sock.emit('joinMatch', cfg.matchId); };
+      sock.on('connect', join); // রিকানেক্টেও আবার রুমে ঢোকে
+      if (sock.connected) join();
+      sock.on('marketUpdate', function (p) {
+        if (!p || String(p.matchId) !== String(cfg.matchId) || !Array.isArray(p.markets)) return;
+        p.markets.forEach(applyMarketUpdate);
+      });
+      sock.on('scoreUpdate', function (p) {
+        if (p && String(p.matchId) === String(cfg.matchId)) applyScoreUpdate(p);
+      });
+    } catch (e) { /* লাইভ আপডেট ছাড়াও পেজ কাজ করে */ }
+  }
 })();

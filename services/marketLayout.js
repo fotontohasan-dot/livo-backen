@@ -65,11 +65,22 @@ function runnersFor(market, teamA, teamB) {
     map = DEFAULT_ODDS.default;
   }
 
-  return orderKeys(Object.keys(map)).map((key) => ({
-    key,
-    label: labelFor(key, type, teamA, teamB),
-    odd: Number(map[key])
-  })).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
+  const depth = (market.depth && typeof market.depth === 'object' && !Array.isArray(market.depth)) ? market.depth : {};
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+
+  return orderKeys(Object.keys(map)).map((key) => {
+    const d = depth[key] || {};
+    const lay = num(d.lay);
+    return {
+      key,
+      label: labelFor(key, type, teamA, teamB),
+      odd: Number(map[key]),
+      lay: lay !== null && lay > 1 ? lay : null,   // null → Lay বক্স নিষ্ক্রিয়
+      backSize: num(d.back_size),
+      laySize: num(d.lay_size),
+      suspended: d.suspended === true
+    };
+  }).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
 }
 
 // match: { sport, teams:[a,b] }
@@ -89,6 +100,7 @@ function buildMarketView(markets, match) {
       id: m.id,
       type: m.type,
       name: m.name,
+      status: m.status || 'open',
       category: categoryFor(m, isFootball),
       popular,
       runners
