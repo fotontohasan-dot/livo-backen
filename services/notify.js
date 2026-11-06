@@ -34,6 +34,15 @@ function emitToUser(userId, notificationRow) {
   }
 }
 
+// Tells ONE user's open pages that their bet list changed (placed / settled / voided).
+// Sent only to the private `user:<id>` room and carries no bet data — the page re-fetches
+// GET /matches/api/my-bets, so nothing about a bet can leak to another socket.
+function emitMyBetsChanged(userId, reason) {
+  if (!io || !userId) return;
+  try { io.to(`user:${userId}`).emit('myBetsChanged', { reason: reason || 'update', at: Date.now() }); }
+  catch (err) { console.error('notify emitMyBetsChanged error:', err.message); }
+}
+
 // নতুন নোটিফিকেশন — DB-তে সেভ + (ইউজার অনলাইন থাকলে) রিয়েল-টাইম push, দুটোই একসাথে
 // category: 'reward' | 'mission' | 'message' | 'general' — মেম্বার সেন্টারের কোন আইকনের
 // ব্যাজে এই নোটিফিকেশনটা গণনা হবে তা নির্ধারণ করে (দেখুন getBadgeCounts)।
@@ -156,4 +165,5 @@ function notifyAdmins(type, { title, message } = {}) {
   }
 }
 
-module.exports = { initNotifyIo, notifyUser, emitToUser, broadcastToAllUsers, notifyAdmins, getBadgeCounts, emitBadgeUpdate };
+module.exports = {
+  emitMyBetsChanged, initNotifyIo, notifyUser, emitToUser, broadcastToAllUsers, notifyAdmins, getBadgeCounts, emitBadgeUpdate };

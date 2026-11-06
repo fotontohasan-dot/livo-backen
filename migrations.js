@@ -899,6 +899,29 @@ async function runMigrations() {
         RETURN NEW;
       END; $$ LANGUAGE plpgsql
     `);
+    // Team logos fetched from the feed (services/teamLogo.js): local web path on the match + a URL cache.
+    await pool.query(`ALTER TABLE matches ADD COLUMN IF NOT EXISTS team_a_logo TEXT, ADD COLUMN IF NOT EXISTS team_b_logo TEXT`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS team_logos (
+        url_hash CHAR(64) PRIMARY KEY,
+        file VARCHAR(64),
+        status VARCHAR(10) NOT NULL,
+        error VARCHAR(60),
+        fetched_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`);
+    // Idempotent bet placement: one (user, client_ref) can only ever create one bet.
+    await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS client_ref VARCHAR(64)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_bets_user_client_ref ON bets(user_id, client_ref) WHERE client_ref IS NOT NULL`);
+    // `bets.side` (older contract) and `bets.bet_type` (canonical) must agree. Report, then repair
+    // only the dangerous direction: a Lay row stuck as 'back' would be settled as a Back bet.
+    {
+      const mismatch = await pool.query(`SELECT COUNT(*)::int AS n FROM bets WHERE side IS DISTINCT FROM bet_type`);
+      if (mismatch.rows[0].n > 0) {
+        console.warn(`⚠️  bets.side/bet_type mismatch on ${mismatch.rows[0].n} row(s) — aligning to the stricter value`);
+        await pool.query(`UPDATE bets SET bet_type = 'lay' WHERE side = 'lay' AND bet_type = 'back'`);
+        await pool.query(`UPDATE bets SET side = bet_type WHERE side IS DISTINCT FROM bet_type`);
+      }
+    }
     await pool.query(`DROP TRIGGER IF EXISTS trg_coin_tx_block_update ON coin_transactions`);
     await pool.query(`CREATE TRIGGER trg_coin_tx_block_update BEFORE UPDATE ON coin_transactions FOR EACH ROW EXECUTE FUNCTION coin_tx_block_update()`);
     await pool.query(`

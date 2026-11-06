@@ -8,7 +8,6 @@ const { regenerateSession, saveSession } = require('../utils/sessionRegenerate')
 const { buildRows: buildCricketTemplateRows, parseOdd: parseCricketOdd, oddsShape } = require('../services/cricketMarketTemplate');
 const { upsertMarket } = require('../services/marketUpsert');
 const rbac = require('../services/rbac');
-const { payoutFor, betWins } = require('../services/layMath');
 const scheduler = require('../services/scheduler');
 // publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
@@ -78,12 +77,12 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { settleSelectionsForMarket } = require('../services/accumulator');
-const { settleBet, settleMarketBets } = require('../services/settlement');
+const { settleBet, settleMarketBets, voidMarketBets, isValidWinningRunner } = require('../services/settlement');
 const { grantFreeBet } = require('../services/freebet');
 const { settleTournament, cancelTournament } = require('../services/tournamentSettlement');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
-const { emitToUser, broadcastToAllUsers } = require('../services/notify');
+const { emitToUser, emitMyBetsChanged, broadcastToAllUsers } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 // routes/auth.js-এর মতোই — অস্তিত্বহীন অ্যাডমিন username/email-এ bcrypt.compare() না চালালে
 // টাইমিং দিয়ে বৈধ অ্যাডমিন অ্যাকাউন্ট এনিউমারেট করা যায়, তাই ডামি হ্যাশের বিপরীতে তুলনা।
@@ -2946,16 +2945,21 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
     // অডিট লগ বিভ্রান্ত করতে পারত, আর সেটেলমেন্টের পর বসা যেকোনো নতুন বাজি
     // (উদাহরণ: মার্কেট আবার open করা হলে) জানা ফলাফলে পেআউট পেয়ে যেত।
     const marketRow = await client.query(
-      `SELECT status FROM markets WHERE id = $1 FOR UPDATE`, [marketId]
+      `SELECT status, odds, depth FROM markets WHERE id = $1 FOR UPDATE`, [marketId]
     );
     if (!marketRow.rows[0]) {
       await client.query('ROLLBACK');
       req.flash('error', req.t('admin_market_not_found'));
       return redirectBack(req, res, '/admin');
     }
-    if (marketRow.rows[0].status === 'settled') {
+    if (marketRow.rows[0].status === 'settled' || marketRow.rows[0].status === 'void') {
       await client.query('ROLLBACK');
       req.flash('error', req.t('admin_market_already_settled'));
+      return redirectBack(req, res, '/admin');
+    }
+    if (!isValidWinningRunner(marketRow.rows[0], winning_runner)) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('admin_select_winner'));
       return redirectBack(req, res, '/admin');
     }
     // Back + Lay settlement lives in services/settlement.js
@@ -2967,7 +2971,7 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
     const accaNotifs = await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
     notifsToEmit.push(...accaNotifs);
-    notifsToEmit.forEach(n => emitToUser(n.userId, n.row));
+    notifsToEmit.forEach(n => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'settled'); });
     try {
       const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
@@ -3110,6 +3114,75 @@ router.post('/markets/:marketId/runner-status', rbac.requirePermission('matches_
   }
 });
 
+// Void a market (e.g. abandoned, wrong market): every pending bet gets its reserved amount back.
+// Back -> stake, Lay -> liability. Idempotent: voided bets are no longer 'pending'.
+async function voidMarketTx(client, marketId, reason) {
+  const mk = await client.query('SELECT id, status, match_id FROM markets WHERE id = $1 FOR UPDATE', [marketId]);
+  if (!mk.rows[0]) return { error: 'not_found' };
+  if (mk.rows[0].status === 'settled') return { error: 'already_settled' };
+  const acca = await client.query(
+    `SELECT 1 FROM accumulator_selections WHERE market_id = $1 AND status = 'pending' LIMIT 1`, [marketId]);
+  if (acca.rows[0]) return { error: 'accumulator_pending' };
+  const out = await voidMarketBets(client, marketId, reason);
+  await client.query(`UPDATE markets SET status = 'void', updated_at = NOW() WHERE id = $1`, [marketId]);
+  return { ...out, matchId: mk.rows[0].match_id };
+}
+const VOID_ERRORS = { not_found: 'admin_market_not_found', already_settled: 'admin_market_already_settled' };
+
+router.post('/markets/:marketId/void', rbac.requirePermission('matches_manage'), async (req, res) => {
+  const marketId = parseInt(req.params.marketId, 10);
+  if (!Number.isSafeInteger(marketId) || marketId <= 0) return res.status(400).json({ success: false, message: 'Invalid market id' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const out = await voidMarketTx(client, marketId, 'market voided');
+    if (out.error) {
+      await client.query('ROLLBACK');
+      const msg = out.error === 'accumulator_pending' ? 'Market has pending accumulator selections — resolve them first' : req.t(VOID_ERRORS[out.error]);
+      return res.status(out.error === 'not_found' ? 404 : 409).json({ success: false, message: msg });
+    }
+    await client.query('COMMIT');
+    out.notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_VOIDED', `Market #${marketId} voided — ${out.total} bets, ${out.refunded} refunded`, req.ip);
+    res.json({ success: true, voided: out.total, refunded: out.refunded });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('market void error:', err.message);
+    res.status(500).json({ success: false, message: req.t('payment_generic_error') });
+  } finally { client.release(); }
+});
+
+// Cancel a whole match: status -> cancelled (blocks new bets), every non-settled market is voided
+// and every pending bet refunded, all in ONE transaction.
+router.post('/matches/:id/cancel', rbac.requirePermission('matches_manage'), async (req, res) => {
+  const matchId = parseInt(req.params.id, 10);
+  if (!Number.isSafeInteger(matchId) || matchId <= 0) return res.status(400).json({ success: false, message: 'Invalid match id' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const m = await client.query('SELECT id FROM matches WHERE id = $1 FOR UPDATE', [matchId]);
+    if (!m.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ success: false, message: 'Match not found' }); }
+    await client.query(`UPDATE matches SET status = 'cancelled' WHERE id = $1`, [matchId]);
+    const mks = await client.query(`SELECT id FROM markets WHERE match_id = $1 AND status <> 'settled' ORDER BY id`, [matchId]);
+    let total = 0, refunded = 0; const notifs = [];
+    for (const mk of mks.rows) {
+      const out = await voidMarketTx(client, mk.id, 'match cancelled');
+      if (out.error === 'accumulator_pending') { await client.query('ROLLBACK'); return res.status(409).json({ success: false, message: 'Pending accumulator selections exist — resolve them first' }); }
+      if (out.error) continue;
+      total += out.total; refunded += out.refunded; notifs.push(...out.notifs);
+    }
+    await client.query('COMMIT');
+    notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
+    try { await cache.del(cacheKeys.matchDetail(matchId)); await cache.del('matches:live'); } catch (e) {}
+    await logAdminAction(req.session.user.id, req.session.user.username, 'MATCH_CANCELLED', `Match #${matchId} cancelled — ${total} bets voided, ${refunded} refunded`, req.ip);
+    res.json({ success: true, voided: total, refunded });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('match cancel error:', err.message);
+    res.status(500).json({ success: false, message: req.t('payment_generic_error') });
+  } finally { client.release(); }
+});
+
 router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (req, res) => {
   const { id } = req.params;
   const { result } = req.body;
@@ -3128,10 +3201,11 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
       return res.redirect('/admin/bets');
     }
     // `result` is the outcome of the BET itself (for a Lay bet, 'won' = the runner lost)
-    const res = await settleBet(client, bet, result === 'won');
-    const settleNotif = { rows: [res && res.notif] };
+    const settled = await settleBet(client, bet, result === 'won');
+    const settleNotif = { rows: [settled && settled.notif] };
     await client.query('COMMIT');
     if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
+    emitMyBetsChanged(bet.user_id, 'settled');
     await logAdminAction(req.session.user.id, req.session.user.username, 'BET_SETTLED', `Bet #${id} settled as ${result} (user #${bet.user_id}, stake ${bet.stake})`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,

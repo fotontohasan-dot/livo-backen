@@ -37,3 +37,6 @@ backup-*.bin
 reports/
 # Playwright রান আউটপুট
 test-results/
+
+# Team logos downloaded at runtime by services/teamLogo.js
+public/images/teams/*

@@ -46,6 +46,24 @@ function validateSessionSecret(secret) {
   return { valid: true };
 }
 
+/** PORT: a whole number 1-65535 (unset is fine — the app has a default). Never echoes the value. */
+function validatePort(port) {
+  if (port === undefined || port === '') return { valid: true };
+  if (!/^\d{1,5}$/.test(String(port)) || Number(port) < 1 || Number(port) > 65535) {
+    return { valid: false, reason: '১–৬৫৫৩৫ এর মধ্যে পূর্ণসংখ্যা হতে হবে' };
+  }
+  return { valid: true };
+}
+
+/** FEED_API_KEY authenticates the feed with a SHA-256 + timingSafeEqual compare, so strength is all
+ *  that protects it: >= 32 chars and not a repeated/trivial string. Never echoes the value. */
+function validateFeedKey(key) {
+  if (!key) return { valid: true }; // unset = feed endpoint answers 503 (disabled), which is safe
+  if (key.length < 32) return { valid: false, reason: 'অন্তত ৩২ ক্যারেক্টার লম্বা হতে হবে (openssl rand -hex 32)' };
+  if (new Set(key).size < 8) return { valid: false, reason: 'খুব সরল/পুনরাবৃত্ত — র‍্যান্ডম কী ব্যবহার করুন' };
+  return { valid: true };
+}
+
 /** @returns {{ok: boolean, errors: string[], warnings: string[]}} */
 function validateEnv() {
   const isProd = process.env.NODE_ENV === 'production';
@@ -79,6 +97,14 @@ function validateEnv() {
     if (process.env.SESSION_SECRET && !secretCheck.valid) {
       warnings.push(`SESSION_SECRET দুর্বল — ${secretCheck.reason} (ডেভেলপমেন্টে সতর্কতা মাত্র)`);
     }
+  }
+
+  // ---- PORT ও FEED_API_KEY ----
+  const portCheck = validatePort(process.env.PORT);
+  if (!portCheck.valid) errors.push(`PORT সঠিক নয় — ${portCheck.reason}`);
+  const feedCheck = validateFeedKey(process.env.FEED_API_KEY);
+  if (!feedCheck.valid) {
+    (isProd ? errors : warnings).push(`FEED_API_KEY দুর্বল — ${feedCheck.reason}${isProd ? '' : ' (ডেভেলপমেন্টে সতর্কতা মাত্র)'}`);
   }
 
   // ---- ঐচ্ছিক ইন্টিগ্রেশন গ্রুপ — আংশিক কনফিগার থাকলে warning ----
@@ -142,4 +168,4 @@ function runStartupValidation() {
   return { ok, errors, warnings };
 }
 
-module.exports = { validateEnv, runStartupValidation, maskSecret };
+module.exports = { validateEnv, runStartupValidation, maskSecret, validatePort, validateFeedKey };

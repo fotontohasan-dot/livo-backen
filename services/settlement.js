@@ -12,7 +12,7 @@
 // plus the `status='pending'` guard make double-settlement impossible, and a DB
 // trigger blocks UPDATEs of ledger rows that carry a ref_bet_id (migrations.js).
 // ---------------------------------------------------------------------------
-const { betWins, settlementCredit } = require('./layBet');
+const { betWins, settlementCredit, calcLiability } = require('./layBet');
 
 const TX = {
   back: { won: 'bet_win', lost: 'bet_loss' },
@@ -92,4 +92,72 @@ async function settleMarketBets(client, marketId, winningRunner) {
   return { total: bets.rows.length, winners, notifs };
 }
 
-module.exports = { settleBet, settleMarketBets };
+// What the user put at risk at placement = what a void/cancel must give back.
+//   Back -> stake      Lay -> liability (the stake is never deducted from a layer)
+function refundAmount(bet) {
+  if (bet.bet_type === 'lay') {
+    return bet.liability != null ? Number(bet.liability) : calcLiability(bet.stake, bet.odd);
+  }
+  return Number(bet.stake);
+}
+
+// Voids ONE pending bet (match cancelled / market voided): status -> 'void' and the reserved
+// amount is returned. Same guards as settleBet: the status='pending' UPDATE plus the unique
+// ledger index (ref_bet_id, type) make a second refund impossible.
+async function voidBet(client, bet, reason) {
+  const upd = await client.query(
+    `UPDATE bets SET status = 'void' WHERE id = $1 AND status = 'pending'`, [bet.id]);
+  if (upd.rowCount === 0) return null;
+
+  const refund = refundAmount(bet);
+  const type = bet.bet_type === 'lay' ? 'lay_void' : 'bet_void';
+  const description = `Bet void${reason ? ' — ' + reason : ''} — ${refund} refunded`;
+
+  if (bet.is_demo) {
+    await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id = $2', [refund, bet.user_id]);
+    await client.query(
+      `INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports',$2,$3,$4)`,
+      [bet.user_id, type, refund, description + ' (demo)']);
+  } else {
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [refund, bet.user_id]);
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description, ref_bet_id) VALUES ($1,$2,$3,$4,$5)`,
+      [bet.user_id, refund, type, description, bet.id]);
+  }
+  const notif = await client.query(
+    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,'info') RETURNING *`,
+    [bet.user_id, 'বেট বাতিল', `আপনার বেটটি বাতিল হয়েছে — ${refund} কয়েন ফেরত দেওয়া হয়েছে।`]);
+  return { refund, notif: notif.rows[0] };
+}
+
+// Voids every pending bet of a market. Returns { total, refunded, notifs }.
+async function voidMarketBets(client, marketId, reason) {
+  const bets = await client.query(
+    `SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' ORDER BY id FOR UPDATE`, [marketId]);
+  let refunded = 0;
+  const notifs = [];
+  for (const bet of bets.rows) {
+    const res = await voidBet(client, bet, reason);
+    if (!res) continue;
+    refunded += res.refund;
+    if (res.notif) notifs.push({ userId: bet.user_id, row: res.notif });
+  }
+  return { total: bets.rows.length, refunded, notifs };
+}
+
+// A winning_runner must be one of the market's actual runners. A typo used to settle every Back
+// bet as lost and every Lay bet as won. Markets with no known runner list are not checked here.
+function knownRunnerKeys(market) {
+  const keys = new Set();
+  for (const src of [market && market.odds, market && market.depth]) {
+    if (src && typeof src === 'object') Object.keys(src).forEach((k) => keys.add(String(k)));
+  }
+  return keys;
+}
+function isValidWinningRunner(market, winningRunner) {
+  const keys = knownRunnerKeys(market);
+  if (keys.size === 0) return true;
+  return keys.has(String(winningRunner));
+}
+
+module.exports = { settleBet, settleMarketBets, voidBet, voidMarketBets, refundAmount, isValidWinningRunner };

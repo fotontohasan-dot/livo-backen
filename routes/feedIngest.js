@@ -7,7 +7,7 @@
 // {
 //   "provider": "manual",                       // optional, default "admin_feed"
 //   "matches": [{
-//     "external_id": "123", "sport": "cricket", "league": "IPL",
+//     "external_id": "123", "sport": "cricket", "team_a_logo_url": "https://…", "team_b_logo_url": "https://…",  // optional "league": "IPL",
 //     "team_a": "A", "team_b": "B", "status": "live",
 //     "start_time": "2026-11-05T14:00:00Z",
 //     "score_a": "120/3", "score_b": "", "overs": "14.2",
@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const { pool } = require('../db');
 const cache = require('../services/cache');
 const { emitFeedUpdate } = require('../services/socket');
+const { syncMatchLogos } = require('../services/teamLogo');
 
 const router = express.Router();
 
@@ -31,6 +32,8 @@ const MAX_RUNNERS = 30;
 const MATCH_STATUSES = new Set(['upcoming', 'live', 'finished', 'cancelled']);
 const MARKET_STATUSES = new Set(['open', 'suspended']);
 const MAX_ODD = 1000;
+// A feed must not revive a match an admin finished/cancelled (that would reopen betting on it).
+const TERMINAL_MATCH_STATUSES = new Set(['finished', 'cancelled']);
 
 function keyOk(provided) {
   const expected = process.env.FEED_API_KEY;
@@ -64,6 +67,7 @@ router.post('/', async (req, res) => {
 
   const results = [];
   const pushes = [];
+  const logoJobs = [];
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -91,10 +95,12 @@ router.post('/', async (req, res) => {
           `${str(m.team_a)} vs ${str(m.team_b)}`, status, str(m.score_a, 50), str(m.score_b, 50), str(m.overs, 50), startTime
         ];
         const found = await client.query(
-          'SELECT id FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
+          'SELECT id, status FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
         let matchId;
         if (found.rows[0]) {
           matchId = found.rows[0].id;
+          const prev = String(found.rows[0].status || '').toLowerCase();
+          if (TERMINAL_MATCH_STATUSES.has(prev) && status !== prev) fields[5] = prev; // keep terminal status
           await client.query(
             `UPDATE matches SET sport=$1, league=$2, team_a=$3, team_b=$4, title=$5, status=$6,
                     score_a=$7, score_b=$8, overs=$9, start_time=COALESCE($10, start_time), synced_at=NOW()
@@ -145,6 +151,9 @@ router.post('/', async (req, res) => {
           marketPush.push(row);
         }
         await client.query('RELEASE SAVEPOINT m');
+        if (m.team_a_logo_url || m.team_b_logo_url) {
+          logoJobs.push({ matchId, urls: { team_a_logo_url: str(m.team_a_logo_url, 2048), team_b_logo_url: str(m.team_b_logo_url, 2048) } });
+        }
         pushes.push({ match: { id: matchId, status, score_a: fields[6], score_b: fields[7], overs: fields[8] }, markets: marketPush });
         results.push({ index: i, ok: true, match_id: matchId, markets: marketPush.length });
       } catch (err) {
@@ -165,6 +174,8 @@ router.post('/', async (req, res) => {
   // After commit: clear cached lists, then push to connected clients.
   cache.del('matches:live').catch(() => {});
   for (const p of pushes) emitFeedUpdate(p.match, p.markets);
+  // Logos are fetched only after the DB commit and never block or fail the feed response.
+  for (const j of logoJobs) syncMatchLogos(pool, j.matchId, j.urls).catch((e) => console.error('logo sync error:', e.message));
 
   res.json({ success: true, processed: results.filter(r => r.ok).length, results });
 });
