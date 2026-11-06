@@ -78,9 +78,11 @@
     transition: transform .08s ease, filter .15s ease;
   }
   .odds:active { transform: scale(.95); }
-  .back { background: #22c55e; color: #06240f; }
-  .back:hover { filter: brightness(1.08); }
-  .lay { background: #ef4444; color: #fff; }
+  /* Back = নীল, Lay = গোলাপী (এক্সচেঞ্জ সাইটের প্রচলিত রঙ) */
+  .back { background: #72bbef; color: #0b2540; }
+  .back:hover { filter: brightness(1.06); }
+  .lay { background: #faa9ba; color: #4a0d1c; }
+  .lay:hover { filter: brightness(1.06); }
 
   .md-empty { background: #1f2937; border: 1px solid #334155; border-radius: 14px; color: #f8fafc; }
   .md-empty .dz83-7 { color: #94a3b8; }
@@ -148,7 +150,14 @@
   .bs-close { background: #334155; color: #fff; border: 0; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0; }
   .bs-pick { display: flex; align-items: center; justify-content: space-between; background: #1f2937; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
   .bs-pick-name { font-weight: 800; font-size: 16px; }
-  .bs-pick-odd { background: #22c55e; color: #06240f; font-weight: 800; padding: 6px 14px; border-radius: 8px; font-size: 16px; }
+  .bs-pick-odd { background: #72bbef; color: #0b2540; font-weight: 800; padding: 6px 14px; border-radius: 8px; font-size: 16px; }
+  .bs-sheet.is-lay .bs-pick-odd { background: #faa9ba; color: #4a0d1c; }
+  .bs-side-tag { font-size: 11px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; background: #72bbef; color: #0b2540; margin-right: 8px; }
+  .bs-sheet.is-lay .bs-side-tag { background: #faa9ba; color: #4a0d1c; }
+  .bs-pick-name { flex: 1; min-width: 0; }
+  .bs-liab { display: none; }
+  .bs-sheet.is-lay .bs-liab { display: flex; }
+  .bs-sheet.is-lay .bs-liab b { color: #fca5a5; }
   .bs-label { font-size: 12px; color: #94a3b8; font-weight: 600; margin-bottom: 6px; display: block; }
   .bs-input {
     width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #475569; border-radius: 12px;
@@ -242,6 +251,7 @@
           <span class="mh-toggle">▾</span>
         </div>
         <div class="market-body">
+          <div class="susp-overlay" aria-hidden="true"><span><%= t.market_suspended %></span></div>
           <div class="market-grid cols-<%= cols %>">
             <% market.runners.forEach(function(r) { %>
               <div class="market-cell<%= r.status === 'suspended' ? ' runner-suspended' : '' %>" data-runner="<%= r.key %>">
@@ -297,7 +307,7 @@
       </div>
       <button type="button" class="bs-close" id="bsClose" aria-label="Close">×</button>
     </div>
-    <div class="bs-pick"><span class="bs-pick-name" id="bsPick"></span><span class="bs-pick-odd" id="bsOdd"></span></div>
+    <div class="bs-pick"><span class="bs-side-tag" id="bsSideTag"></span><span class="bs-pick-name" id="bsPick"></span><span class="bs-pick-odd" id="bsOdd"></span></div>
     <label class="bs-label" for="bsStake"><%= t.bet_slip_stake %></label>
     <input type="number" inputmode="numeric" min="1" step="1" class="bs-input" id="bsStake" value="50">
     <div class="bs-chips" id="bsChips">

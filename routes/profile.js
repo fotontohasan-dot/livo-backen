@@ -246,7 +246,7 @@ router.get('/stats', isAuth, async (req, res) => {
         COUNT(CASE WHEN status='lost' THEN 1 END) AS lost,
         COUNT(CASE WHEN status='pending' THEN 1 END) AS pending,
         COALESCE(SUM(stake),0) AS total_staked,
-        COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS total_won_amount
+        COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS total_won_amount
       FROM bets WHERE ${conditions.join(' AND ')}
     `, params);
 

@@ -726,6 +726,14 @@ async function runMigrations() {
     // per-runner status: { "<runnerKey>": "open" | "suspended" }
     await pool.query(`ALTER TABLE markets ADD COLUMN IF NOT EXISTS runner_status JSONB DEFAULT '{}'::jsonb`);
 
+    // Back/Lay: bets.side ('back' | 'lay'), লে-বাজির ঝুঁকি (liability) আলাদা কলামে।
+    // পুরনো সব বাজি 'back' ধরা হয় (DEFAULT), তাই আগের সেটেলমেন্ট অপরিবর্তিত থাকে।
+    await pool.query(`
+      ALTER TABLE bets
+      ADD COLUMN IF NOT EXISTS side VARCHAR(4) NOT NULL DEFAULT 'back',
+      ADD COLUMN IF NOT EXISTS liability NUMERIC(14,2);
+    `);
+
     // PARTIAL unique index — শুধু সেই রোগুলোর উপর যেগুলোর provider ও external_id দুটোই আছে।
     // এটা ইচ্ছাকৃত ও প্রোডাকশন-সেফ: পুরনো (legacy) রোগুলোতে এই দুটো কলাম NULL, তাই
     // ইনডেক্স তৈরির সময় বিদ্যমান ডুপ্লিকেটে মাইগ্রেশন ব্যর্থ হয় না এবং কোনো ঐতিহাসিক

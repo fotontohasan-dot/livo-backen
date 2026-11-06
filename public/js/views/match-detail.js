@@ -100,6 +100,7 @@
       betType: btn.getAttribute('data-bet-type') === 'lay' ? 'lay' : 'back',
       cell: btn.closest('.market-cell')
     };
+    applySide();
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
     $('bsPick').textContent = (btn.getAttribute('data-label') || '') + (current.betType === 'lay' ? ' (Lay)' : '');
     $('bsOdd').textContent = String(odd);
@@ -155,6 +156,7 @@
     var stake = stakeValue();
     if (!stake || stake < MIN_BET) { setError(cfg.minBetMsg || ('Min ' + MIN_BET)); return; }
     if (stake > MAX_BET) { setError('Max ' + MAX_BET); return; }
+    if (current.side === 'lay' && liabilityOf(stake, current.odd) > MAX_BET) { setError('Max ' + MAX_BET); return; }
 
     placeBtn.disabled = true;
     setError('');

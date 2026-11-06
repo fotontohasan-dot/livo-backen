@@ -269,6 +269,11 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
   const { market_id, runner, demo } = req.body;
   const betType = normalizeBetType(req.body.bet_type);
   const stake = parseInt(req.body.stake);
+  // Back (ডিফল্ট) বা Lay। অচেনা মান সরাসরি প্রত্যাখ্যান — চুপচাপ Back ধরলে ব্যবহারকারী উল্টো বাজি ধরত।
+  if (req.body.side !== undefined && !['back', 'lay'].includes(req.body.side)) {
+    return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
+  }
+  const side = req.body.side === 'lay' ? 'lay' : 'back';
   const isDemo = !!demo;
 
   const minBet = Number(await getSetting('min_bet'));
