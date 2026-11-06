@@ -58,9 +58,7 @@
   var stakeEl = $('bsStake');
   var errEl = $('bsError');
   var placeBtn = $('bsPlace');
-  var current = null; // { marketId, runner, odd, side, btn, cell }
-  var labels = cfg.labels || {};
-  var sheet = overlay ? overlay.querySelector('.bs-sheet') : null;
+  var current = null; // { marketId, runner, odd, cell, betType }
 
   function money(n) {
     return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -69,25 +67,26 @@
     var v = parseInt(stakeEl.value, 10);
     return Number.isFinite(v) ? v : 0;
   }
-  // লায়াবিলিটি = স্টেক × (অডস − ১)। সেন্ট পূর্ণসংখ্যায় হিসাব — সার্ভারের services/layMath.js-এর সূত্রই।
-  function liabilityOf(stake, odd) {
-    return (stake * (Math.round(odd * 100) - 100)) / 100;
+  // Lay liability: stake * (odd - 1), rounded up to whole coins (mirrors services/layBet.js)
+  function liabilityFor(stake, odd) {
+    return Math.ceil(Math.round(stake * (odd - 1) * 100) / 100);
   }
   function refreshReturn() {
     if (!current) return;
-    var stake = stakeValue();
-    if (current.side === 'lay') {
-      $('bsLiab').textContent = money(liabilityOf(stake, current.odd));
-      $('bsReturn').textContent = money(stake); // লে জিতলে লাভ = ব্যাকারের স্টেক
+    var isLay = current.betType === 'lay';
+    var liabRow = $('bsLiabRow');
+    if (liabRow) liabRow.hidden = !isLay;
+    var lbl = $('bsReturnLabel');
+    if (isLay) {
+      // Lay wins the backer's stake; liability is what is reserved from the wallet
+      if (lbl) lbl.textContent = cfg.profitLabel || 'Profit if wins';
+      $('bsReturn').textContent = money(stakeValue());
+      if ($('bsLiabLabel')) $('bsLiabLabel').textContent = cfg.liabilityLabel || 'Liability';
+      if ($('bsLiab')) $('bsLiab').textContent = money(liabilityFor(stakeValue(), current.odd));
     } else {
-      $('bsReturn').textContent = money(stake * current.odd);
+      if (lbl && cfg.returnLabel) lbl.textContent = cfg.returnLabel;
+      $('bsReturn').textContent = money(stakeValue() * current.odd);
     }
-  }
-  function applySide() {
-    var lay = current && current.side === 'lay';
-    if (sheet) sheet.classList.toggle('is-lay', !!lay);
-    $('bsSideTag').textContent = lay ? (labels.lay || 'Lay') : (labels.back || 'Back');
-    $('bsReturnLabel').textContent = lay ? (labels.layProfit || 'Profit if it wins') : (labels.ret || 'Potential return');
   }
   function setError(msg) { if (errEl) errEl.textContent = msg || ''; }
 
@@ -98,13 +97,12 @@
       marketId: btn.getAttribute('data-market-id'),
       runner: btn.getAttribute('data-runner'),
       odd: odd,
-      side: btn.getAttribute('data-side') === 'lay' ? 'lay' : 'back',
-      btn: btn,
+      betType: btn.getAttribute('data-bet-type') === 'lay' ? 'lay' : 'back',
       cell: btn.closest('.market-cell')
     };
     applySide();
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
-    $('bsPick').textContent = btn.getAttribute('data-label') || '';
+    $('bsPick').textContent = (btn.getAttribute('data-label') || '') + (current.betType === 'lay' ? ' (Lay)' : '');
     $('bsOdd').textContent = String(odd);
     if (!stakeEl.value || stakeValue() < MIN_BET) stakeEl.value = String(Math.max(MIN_BET, 50));
     setError('');
@@ -124,20 +122,25 @@
     setError('');
   }
 
-  // প্রতিটা Back/Lay বক্স আলাদা বাটন; সাসপেন্ড/Lay-দাম-নেই বাটন disabled, তাই ক্লিকই হয় না
-  document.querySelectorAll('.market-cell .odds').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      if (btn.disabled) return;
-      openSlip(btn);
-    });
+  function isLocked(el) {
+    return !!(el.closest('.runner-suspended') || el.closest('.market-suspended') || el.classList.contains('price-unavailable'));
+  }
+  // Delegated: works for server-rendered cells and survives live DOM updates.
+  document.addEventListener('click', function (e) {
+    var cell = e.target.closest ? e.target.closest('.market-cell') : null;
+    if (!cell) return;
+    var btn = e.target.closest('.odds') || cell.querySelector('.odds.back');
+    if (!btn) return;
+    if (isLocked(btn)) { toast(cfg.suspendedMsg || 'Suspended', 'err'); return; }
+    openSlip(btn);
   });
 
   if (overlay) {
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeSlip(); });
-    $('bsClose').addEventListener('click', closeSlip);
-    $('bsCancel').addEventListener('click', closeSlip);
+    if ($('bsClose')) $('bsClose').addEventListener('click', closeSlip);
+    if ($('bsCancel')) $('bsCancel').addEventListener('click', closeSlip);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSlip(); });
-    stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
+    if (stakeEl) stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
     document.querySelectorAll('.bs-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var add = parseInt(chip.getAttribute('data-add'), 10) || 0;
@@ -166,7 +169,7 @@
         market_id: current.marketId,
         runner: current.runner,
         odd: current.odd, // সার্ভার উপেক্ষা করে; শুধু সামঞ্জস্যের জন্য
-        side: current.side,
+        bet_type: current.betType,
         stake: stake
       })
     })
@@ -203,90 +206,88 @@
   }
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
 
-  // ===== রিয়েল-টাইম ওডস, সাসপেনশন ও স্কোর (socket: marketUpdate / scoreUpdate) =====
-  function setPrice(btn, value, size) {
-    if (!btn) return;
-    var priceEl = btn.querySelector('.bl-price');
-    var sizeEl = btn.querySelector('.bl-size');
-    var next = Number(value);
-    var valid = Number.isFinite(next) && next > 1;
-    var prev = parseFloat(btn.getAttribute('data-odd'));
-    if (valid) {
-      btn.setAttribute('data-odd', String(next));
-      if (priceEl) priceEl.textContent = String(next);
-      if (Number.isFinite(prev) && prev !== next) {
-        var cls = next > prev ? 'flash-up' : 'flash-down';
-        btn.classList.remove('flash-up', 'flash-down');
-        void btn.offsetWidth; // অ্যানিমেশন আবার চালু করতে
-        btn.classList.add(cls);
-        setTimeout(function () { btn.classList.remove(cls); }, 1000);
-      }
-    } else {
-      btn.setAttribute('data-odd', '');
-      if (priceEl) priceEl.textContent = '—';
+  // ===== Live odds / suspension (Socket.IO) =====
+  // Server events: oddsUpdate, marketStatusChange, runnerStatusChange (services/socket.js).
+  function findOdds(marketId, runner, type) {
+    var list = document.querySelectorAll('.odds[data-market-id="' + String(marketId) + '"]');
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].getAttribute('data-runner') === String(runner) && list[i].getAttribute('data-bet-type') === type) return list[i];
     }
-    if (sizeEl && size !== undefined) sizeEl.textContent = (size === null || size === '') ? '' : String(size);
-    return valid;
+    return null;
   }
-
-  function applyMarketUpdate(m) {
-    var box = document.querySelector('.market-box[data-market-id="' + String(m.id) + '"]');
+  function flash(el, dir) {
+    el.classList.remove('flash-up', 'flash-down');
+    void el.offsetWidth; // restart the transition if two ticks arrive back to back
+    el.classList.add(dir > 0 ? 'flash-up' : 'flash-down');
+    clearTimeout(el._flashT);
+    el._flashT = setTimeout(function () { el.classList.remove('flash-up', 'flash-down'); }, 900);
+  }
+  // price: number | null. null = no price offered right now -> grey out this button only.
+  function setPrice(el, price) {
+    if (!el) return;
+    if (price === null || !Number.isFinite(price)) { el.classList.add('price-unavailable'); return; }
+    el.classList.remove('price-unavailable');
+    var old = parseFloat(el.getAttribute('data-odd'));
+    if (price === old) return;
+    el.setAttribute('data-odd', String(price));
+    el.textContent = String(price);
+    if (Number.isFinite(old)) flash(el, price > old ? 1 : -1); // green up / red down
+    if (current && el.getAttribute('data-market-id') === String(current.marketId) &&
+        el.getAttribute('data-runner') === current.runner &&
+        el.getAttribute('data-bet-type') === current.betType) {
+      current.odd = price;
+      $('bsOdd').textContent = String(price);
+      refreshReturn();
+    }
+  }
+  function setRunnerSuspended(marketId, runner, suspended) {
+    var cells = document.querySelectorAll('.market-cell[data-runner="' + String(runner) + '"]');
+    for (var i = 0; i < cells.length; i++) {
+      var box = cells[i].closest('.market-box');
+      if (!box || box.getAttribute('data-market-id') !== String(marketId)) continue;
+      cells[i].classList.toggle('runner-suspended', !!suspended);
+      cells[i].classList.remove('selected');
+    }
+    if (suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner)) {
+      setError(cfg.suspendedMsg || 'Suspended');
+      if (placeBtn) placeBtn.disabled = true;
+    } else if (!suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner) && placeBtn) {
+      placeBtn.disabled = false; setError('');
+    }
+  }
+  function setMarketSuspended(marketId, suspended) {
+    var box = document.querySelector('.market-box[data-market-id="' + String(marketId) + '"]');
     if (!box) return;
-    var open = m.status === 'open';
-    box.setAttribute('data-status', m.status || 'open');
-    box.classList.toggle('suspended', !open);
-
-    var odds = (m.odds && typeof m.odds === 'object') ? m.odds : {};
-    var depth = (m.depth && typeof m.depth === 'object') ? m.depth : {};
-    box.querySelectorAll('.market-cell').forEach(function (cell) {
-      var key = cell.getAttribute('data-runner');
-      var d = depth[key] || {};
-      var back = d.back !== undefined && d.back !== null ? d.back : odds[key];
-      var runnerSusp = d.suspended === true;
-      cell.classList.toggle('suspended', runnerSusp);
-
-      var backBtn = cell.querySelector('.odds.back');
-      var layBtn = cell.querySelector('.odds.lay');
-      var backOk = setPrice(backBtn, back, d.back_size === undefined ? undefined : d.back_size);
-      var layOk = setPrice(layBtn, d.lay, d.lay_size === undefined ? undefined : d.lay_size);
-      if (backBtn) backBtn.disabled = !open || runnerSusp || !backOk;
-      if (layBtn) layBtn.disabled = !open || runnerSusp || !layOk;
-    });
-
-    // খোলা স্লিপের দাম/সাসপেনশন সিঙ্ক রাখা
-    if (current && String(current.marketId) === String(m.id) && current.btn) {
-      if (current.btn.disabled) {
-        setError(cfg.labels && cfg.labels.suspended ? cfg.labels.suspended : 'SUSPENDED');
-        if (placeBtn) placeBtn.disabled = true;
-      } else {
-        var o = parseFloat(current.btn.getAttribute('data-odd'));
-        if (Number.isFinite(o)) { current.odd = o; $('bsOdd').textContent = String(o); refreshReturn(); }
-        if (placeBtn) placeBtn.disabled = false;
-        setError('');
-      }
+    box.classList.toggle('market-suspended', !!suspended);
+    if (suspended && current && String(current.marketId) === String(marketId)) {
+      setError(cfg.suspendedMsg || 'Suspended');
+      if (placeBtn) placeBtn.disabled = true;
+    } else if (!suspended && current && String(current.marketId) === String(marketId) && placeBtn) {
+      placeBtn.disabled = false; setError('');
     }
   }
 
-  function applyScoreUpdate(s) {
-    function set(id, v) { var n = $(id); if (n && v !== undefined && v !== null) n.textContent = v; }
-    set('score-a', s.score_a);
-    set('score-b', s.score_b);
-    set('md-overs', s.overs);
-  }
-
-  if (typeof window.io === 'function' && cfg.matchId) {
+  if (typeof io === 'function' && cfg.matchId) {
     try {
-      var sock = window.io();
-      var join = function () { sock.emit('joinMatch', cfg.matchId); };
-      sock.on('connect', join); // রিকানেক্টেও আবার রুমে ঢোকে
-      if (sock.connected) join();
-      sock.on('marketUpdate', function (p) {
-        if (!p || String(p.matchId) !== String(cfg.matchId) || !Array.isArray(p.markets)) return;
-        p.markets.forEach(applyMarketUpdate);
+      var socket = io();
+      // (re)join on every connect so a reconnect after a network drop resumes updates
+      socket.on('connect', function () { socket.emit('joinMatch', cfg.matchId); });
+
+      socket.on('oddsUpdate', function (msg) {
+        if (!msg || String(msg.matchId) !== String(cfg.matchId) || !Array.isArray(msg.markets)) return;
+        msg.markets.forEach(function (m) {
+          (m.runners || []).forEach(function (r) {
+            setPrice(findOdds(m.marketId, r.key, 'back'), r.back);
+            setPrice(findOdds(m.marketId, r.key, 'lay'), r.lay);
+          });
+        });
       });
-      sock.on('scoreUpdate', function (p) {
-        if (p && String(p.matchId) === String(cfg.matchId)) applyScoreUpdate(p);
+      socket.on('marketStatusChange', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) setMarketSuspended(msg.marketId, msg.status !== 'open');
       });
-    } catch (e) { /* লাইভ আপডেট ছাড়াও পেজ কাজ করে */ }
+      socket.on('runnerStatusChange', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) setRunnerSuspended(msg.marketId, msg.runner, msg.status === 'suspended');
+      });
+    } catch (e) { /* page still works without live updates */ }
   }
 })();

@@ -723,6 +723,8 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS depth JSONB,
       ADD COLUMN IF NOT EXISTS market_key TEXT;
     `);
+    // per-runner status: { "<runnerKey>": "open" | "suspended" }
+    await pool.query(`ALTER TABLE markets ADD COLUMN IF NOT EXISTS runner_status JSONB DEFAULT '{}'::jsonb`);
 
     // Back/Lay: bets.side ('back' | 'lay'), লে-বাজির ঝুঁকি (liability) আলাদা কলামে।
     // পুরনো সব বাজি 'back' ধরা হয় (DEFAULT), তাই আগের সেটেলমেন্ট অপরিবর্তিত থাকে।
@@ -869,6 +871,36 @@ async function runMigrations() {
 
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_balance NUMERIC(14,2) DEFAULT 1000`);
     await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
+
+    // Back/Lay betting: bet_type, liability (coins reserved for a Lay bet) and
+    // potential_payout (total credited if the bet wins). Legacy rows are Back bets.
+    await pool.query(`
+      ALTER TABLE bets
+        ADD COLUMN IF NOT EXISTS bet_type VARCHAR(4) NOT NULL DEFAULT 'back',
+        ADD COLUMN IF NOT EXISTS liability INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS potential_payout INTEGER NOT NULL DEFAULT 0
+    `);
+    await pool.query(`ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_bet_type_check`);
+    await pool.query(`ALTER TABLE bets ADD CONSTRAINT bets_bet_type_check CHECK (bet_type IN ('back','lay'))`);
+    // backfill legacy Back bets so potential_payout is never 0 for old rows
+    await pool.query(`UPDATE bets SET potential_payout = FLOOR(stake * odd) WHERE potential_payout = 0 AND bet_type = 'back' AND odd IS NOT NULL`);
+
+    // Ledger linkage + immutability: every bet placement/settlement row carries
+    // ref_bet_id; (ref_bet_id, type) is unique (no double settlement) and such rows
+    // cannot be UPDATEd afterwards.
+    await pool.query(`ALTER TABLE coin_transactions ADD COLUMN IF NOT EXISTS ref_bet_id INTEGER`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_bet_ref ON coin_transactions(ref_bet_id, type) WHERE ref_bet_id IS NOT NULL`);
+    await pool.query(`
+      CREATE OR REPLACE FUNCTION coin_tx_block_update() RETURNS trigger AS $$
+      BEGIN
+        IF OLD.ref_bet_id IS NOT NULL THEN
+          RAISE EXCEPTION 'coin_transactions rows tied to a bet are immutable';
+        END IF;
+        RETURN NEW;
+      END; $$ LANGUAGE plpgsql
+    `);
+    await pool.query(`DROP TRIGGER IF EXISTS trg_coin_tx_block_update ON coin_transactions`);
+    await pool.query(`CREATE TRIGGER trg_coin_tx_block_update BEFORE UPDATE ON coin_transactions FOR EACH ROW EXECUTE FUNCTION coin_tx_block_update()`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS demo_transactions (
         id SERIAL PRIMARY KEY,

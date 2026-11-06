@@ -1,4 +1,12 @@
 {
+  "my_bets": "My Bets",
+  "my_bets_empty": "You have not placed any bets yet.",
+  "my_bets_stake": "Stake",
+  "my_bets_return": "Potential return",
+  "my_bets_pending": "Pending",
+  "my_bets_won": "Won",
+  "my_bets_lost": "Lost",
+  "my_bets_load_error": "Could not load your bets.",
   "balance": "Balance",
   "deposit": "Deposit",
   "withdraw": "Withdraw",

@@ -1,6 +1,7 @@
 // services/autoMarkets.js
 // ---------------------------------------------------------------------------
-// ম্যাচের জন্য ডিফল্ট মার্কেট স্বয়ংক্রিয়ভাবে তৈরি/বন্ধ করে।
+// ম্যাচের জন্য মার্কেট (বিজয়ী, রান/উইকেট, গোল ইত্যাদি) স্বয়ংক্রিয়ভাবে তৈরি/বন্ধ করে,
+// যাতে match-detail পেজ "Betting options coming soon" না দেখায়।
 //
 // আগে: প্রতি ম্যাচে শুধু একটা "Match Winner" (bookmaker) মার্কেট তৈরি হতো, ফলে ম্যাচ পেজ
 // প্রায় ফাঁকা দেখাত।
@@ -16,6 +17,8 @@
 // ---------------------------------------------------------------------------
 const { pool } = require('../db');
 const { templatesFor } = require('./marketTemplates');
+const cache = require('./cache');
+const cacheKeys = require('./cacheKeys');
 
 async function insertTemplates(client, match) {
   let created = 0;
@@ -57,8 +60,12 @@ async function closeFinishedMatchMarkets() {
   const res = await pool.query(
     `UPDATE markets SET status = 'closed', updated_at = NOW()
      WHERE status = 'open'
-       AND match_id IN (SELECT id FROM matches WHERE status = 'finished')`
+       AND match_id IN (SELECT id FROM matches WHERE status = 'finished')
+     RETURNING match_id`
   );
+  for (const id of new Set(res.rows.map((x) => x.match_id))) {
+    await cache.del(cacheKeys.matchDetail(id)).catch(() => {});
+  }
   return res.rowCount;
 }
 

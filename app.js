@@ -46,6 +46,22 @@ global.__bet420Server = server; // গ্রেসফুল শাটডাউ�
 // তখন `secure` কুকি কখনো সেট হয় না এবং ব্যবহারকারী প্রতিবার লগআউট দেখে।
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
+// CANONICAL_HOST (যেমন bet420.net) সেট করা থাকলে অন্য হোস্ট (যেমন livo-backen.onrender.com) থেকে
+// আসা GET পেজ রিকোয়েস্ট ওই হোস্টে রিডাইরেক্ট হয়। কুকি ডোমেইন-ভিত্তিক, তাই দুই ডোমেইনে
+// আলাদা লগইন/১৮+ কুকি থাকত — ইউজার ডোমেইন বদলালেই "লগআউট" ও বারবার ১৮+ পপআপ দেখত।
+// সেট না থাকলে কিছুই বদলায় না। হেলথচেক, API ও ওয়েবহুক/কলব্যাক পাথ বাদ।
+const CANONICAL_HOST = (process.env.CANONICAL_HOST || '').trim().toLowerCase();
+if (CANONICAL_HOST) {
+  const skip = /^\/(health|api|webhook|webhooks|payment|wallet|socket\.io|telegram)(\/|$)/i;
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const host = String(req.hostname || '').toLowerCase();
+    if (!host || host === CANONICAL_HOST || host === 'www.' + CANONICAL_HOST) return next();
+    if (skip.test(req.path)) return next();
+    return res.redirect(301, 'https://' + CANONICAL_HOST + req.originalUrl);
+  });
+}
+
 // services/envValidator.js (এই ফাইলের একদম শুরুতে, কোনো require-এর আগেই কল করা হয়) প্রোডাকশনে
 // SESSION_SECRET অনুপস্থিত/দুর্বল থাকলে ইতিমধ্যেই process.exit(1) করে বুট আটকে দেয় — অর্থাৎ
 // প্রোডাকশনে এই কোড আদৌ চলার কথা না। কিন্তু আগে এখানে "না থাকলে র‍্যান্ডম সিক্রেট বানাও" এই

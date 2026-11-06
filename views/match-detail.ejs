@@ -117,34 +117,18 @@
   }
   .market-cell:active { background: #273449; }
   .market-cell .mc-label { font-size: 13px; font-weight: 700; color: #e2e8f0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .market-cell .odds { min-width: 0; width: 100%; padding: 8px 0; font-size: 16px; border: 0; font-family: inherit; }
-  .market-cell.selected { background: #1e3a5f; }
-  .market-cell { cursor: default; }
-  .bl-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
-  .bl-pair .odds { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.15; }
-  .bl-price { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .bl-size { font-size: 10px; font-weight: 600; opacity: .7; min-height: 12px; font-variant-numeric: tabular-nums; }
-  .odds:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(1); transform: none; }
-
-  /* ওডস বাড়লে সবুজ, কমলে লাল ফ্ল্যাশ */
-  @keyframes flashUp { 0% { background: #22c55e; color: #fff; } 100% { } }
-  @keyframes flashDown { 0% { background: #ef4444; color: #fff; } 100% { } }
-  .odds.flash-up { animation: flashUp .9s ease-out; }
-  .odds.flash-down { animation: flashDown .9s ease-out; }
-
-  /* রানার সাসপেন্ড: পুরো সেল ধূসর, ক্লিক করা যায় না */
-  .rs-tag { display: none; font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #fbbf24; }
-  .market-cell.suspended { filter: grayscale(1); opacity: .55; pointer-events: none; }
-  .market-cell.suspended .rs-tag { display: block; }
-
-  /* মার্কেট সাসপেন্ড: স্বচ্ছ SUSPENDED ওভারলে + ব্লার */
-  .market-body { position: relative; }
-  .susp-overlay {
-    display: none; position: absolute; inset: 0; z-index: 2; align-items: center; justify-content: center;
-    background: rgba(15,23,42,.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
-    color: #fbbf24; font-weight: 900; letter-spacing: 3px; font-size: 18px; pointer-events: all;
+  .market-cell .odds { min-width: 0; width: 100%; padding: 10px 0; font-size: 16px; }
+  .market-cell.selected { background: #14532d; }
+  /* Lay cell, odds flash, suspension */
+  .market-cell .odds.lay { background: #f4a6b8; color: #111; margin-top: 4px; }
+  .market-cell .odds { transition: background-color .35s ease, color .35s ease; }
+  .odds.flash-up { background: #16a34a !important; color: #fff !important; }
+  .odds.flash-down { background: #dc2626 !important; color: #fff !important; }
+  .market-cell.runner-suspended, .market-box.market-suspended .market-cell, .odds.price-unavailable {
+    opacity: .4; filter: grayscale(1); pointer-events: none; cursor: not-allowed;
   }
-  .market-box.suspended .susp-overlay { display: flex; }
+  .market-box.market-suspended .market-header::after { content: 'SUSPENDED'; font-size: 10px; font-weight: 800; color: #f87171; margin-left: 8px; }
+  .bs-return[hidden] { display: none; }
   .md-tab-empty { display: none; text-align: center; color: #fff; padding: 30px 10px; font-weight: 600; }
 
   /* ===== বেট স্লিপ (alert/prompt/confirm-এর বদলে) ===== */
@@ -194,6 +178,15 @@
   .bs-login { display: block; text-align: center; text-decoration: none; }
 
   /* ===== টোস্ট ===== */
+  .mb-fab { position: fixed; right: 14px; bottom: 80px; z-index: 40; border: 0; border-radius: 22px; padding: 10px 16px; background: #0f6cbd; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+  .mb-panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; max-height: 75vh; overflow-y: auto; background: #111827; color: #e5e7eb; border-radius: 16px 16px 0 0; padding: 14px; transform: translateY(105%); transition: transform .25s; box-shadow: 0 -6px 24px rgba(0,0,0,.45); }
+  .mb-panel.open { transform: translateY(0); }
+  .mb-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 8px; }
+  .mb-close { background: none; border: 0; color: #9ca3af; font-size: 22px; cursor: pointer; }
+  .mb-item { border: 1px solid #263244; border-left: 4px solid #6b7280; border-radius: 10px; padding: 10px; margin-bottom: 8px; font-size: 14px; }
+  .mb-item.won { border-left-color: #22c55e; } .mb-item.lost { border-left-color: #ef4444; } .mb-item.pending { border-left-color: #f59e0b; }
+  .mb-row { display: flex; justify-content: space-between; gap: 8px; } .mb-mut { color: #9ca3af; font-size: 12px; }
+  .mb-st { font-weight: 700; font-size: 12px; }
   .md-toast {
     position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%) translateY(20px);
     z-index: 10060; max-width: 90vw; padding: 12px 18px; border-radius: 12px; font-weight: 700; font-size: 14px;
@@ -252,7 +245,7 @@
          var cols = market.runners.length >= 3 ? 3 : (market.runners.length === 2 ? 2 : 1);
          if (market.runners.length > 3) cols = 3;
     %>
-      <div class="market-box<%= market.status !== 'open' ? ' suspended' : '' %>" data-market-id="<%= market.id %>" data-status="<%= market.status %>" data-cat="<%= market.category %>" data-pop="<%= market.popular ? 1 : 0 %>">
+      <div class="market-box<%= market.status === 'suspended' ? ' market-suspended' : '' %>" data-market-id="<%= market.id %>" data-cat="<%= market.category %>" data-pop="<%= market.popular ? 1 : 0 %>">
         <div class="market-header" data-toggle>
           <span class="mh-title"><%= (market.type === 'bookmaker' || market.type === 'match_odds') ? '🏆' : '⚡' %> <%= market.name %></span>
           <span class="mh-toggle">▾</span>
@@ -261,29 +254,24 @@
           <div class="susp-overlay" aria-hidden="true"><span><%= t.market_suspended %></span></div>
           <div class="market-grid cols-<%= cols %>">
             <% market.runners.forEach(function(r) { %>
-              <div class="market-cell<%= r.suspended ? ' suspended' : '' %>" data-runner="<%= r.key %>">
+              <div class="market-cell<%= r.status === 'suspended' ? ' runner-suspended' : '' %>" data-runner="<%= r.key %>">
                 <span class="mc-label"><%= r.label %></span>
-                <span class="rs-tag"><%= t.market_suspended %></span>
-                <div class="bl-pair">
-                  <button type="button" class="odds back" data-side="back"
-                          data-market-id="<%= market.id %>"
-                          data-market-name="<%= market.name %>"
-                          data-runner="<%= r.key %>"
-                          data-label="<%= r.label %>"
-                          data-odd="<%= r.odd %>"<%= (market.status !== 'open' || r.suspended) ? ' disabled' : '' %>>
-                    <span class="bl-price"><%= r.odd %></span>
-                    <span class="bl-size"><%= r.backSize !== null ? r.backSize : '' %></span>
-                  </button>
-                  <button type="button" class="odds lay" data-side="lay"
-                          data-market-id="<%= market.id %>"
-                          data-market-name="<%= market.name %>"
-                          data-runner="<%= r.key %>"
-                          data-label="<%= r.label %>"
-                          data-odd="<%= r.lay !== null ? r.lay : '' %>"<%= (market.status !== 'open' || r.suspended || r.lay === null) ? ' disabled' : '' %>>
-                    <span class="bl-price"><%= r.lay !== null ? r.lay : '—' %></span>
-                    <span class="bl-size"><%= r.laySize !== null ? r.laySize : '' %></span>
-                  </button>
-                </div>
+                <div class="odds back"
+                     data-bet-type="back"
+                     data-market-id="<%= market.id %>"
+                     data-market-name="<%= market.name %>"
+                     data-runner="<%= r.key %>"
+                     data-label="<%= r.label %>"
+                     data-odd="<%= r.odd %>"><%= r.odd %></div>
+                <% if (r.lay) { %>
+                <div class="odds lay"
+                     data-bet-type="lay"
+                     data-market-id="<%= market.id %>"
+                     data-market-name="<%= market.name %>"
+                     data-runner="<%= r.key %>"
+                     data-label="<%= r.label %>"
+                     data-odd="<%= r.lay %>"><%= r.lay %></div>
+                <% } %>
               </div>
             <% }) %>
           </div>
@@ -328,8 +316,8 @@
       <button type="button" class="bs-chip" data-add="500">+500</button>
       <button type="button" class="bs-chip" data-add="1000">+1000</button>
     </div>
-    <div class="bs-return bs-liab"><span><%= t.bet_slip_liability %></span><b id="bsLiab">0</b></div>
     <div class="bs-return"><span id="bsReturnLabel"><%= t.bet_slip_return %></span><b id="bsReturn">0</b></div>
+    <div class="bs-return" id="bsLiabRow" hidden><span id="bsLiabLabel">Liability</span><b id="bsLiab">0</b></div>
     <div class="bs-error" id="bsError" role="alert"></div>
     <div class="bs-actions">
       <button type="button" class="bs-btn bs-btn-cancel" id="bsCancel"><%= t.bet_slip_cancel %></button>
@@ -342,6 +330,13 @@
   </div>
 </div>
 <div class="md-toast" id="mdToast" role="status" aria-live="polite"></div>
+<% if (locals.user) { %>
+<button type="button" class="mb-fab" id="mbOpen"><%= t.my_bets %></button>
+<div class="mb-panel" id="mbPanel" aria-hidden="true">
+  <div class="mb-head"><span><%= t.my_bets %></span><button type="button" class="mb-close" id="mbClose" aria-label="Close">×</button></div>
+  <div id="mbList"></div>
+</div>
+<% } %>
 
 <script type="application/json" id="match-detailConfig"><%- jsonScriptSafe({
   loggedIn: !!locals.user,
@@ -353,13 +348,11 @@
   minBet: minBet,
   maxBet: maxBet,
   sessionExpired: t.bet_slip_session_expired,
-  labels: {
-    back: t.bet_slip_back,
-    lay: t.bet_slip_lay,
-    ret: t.bet_slip_return,
-    layProfit: t.bet_slip_lay_profit,
-    suspended: t.market_suspended
-  }
+  returnLabel: t.bet_slip_return,
+  profitLabel: t.bet_slip_profit_if_wins || 'Profit if wins',
+  liabilityLabel: t.bet_slip_liability || 'Liability',
+  suspendedMsg: t.runner_suspended || 'This selection is suspended',
+  sport: match.sport
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 

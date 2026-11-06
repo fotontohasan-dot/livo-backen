@@ -93,23 +93,21 @@ function resolveOdd(market, runner) {
   return null;
 }
 
-// Lay দাম শুধু ফিড-পুশ করা depth থেকে আসে ({ "<runner>": { back, lay, back_size, lay_size, suspended } })।
-// depth না থাকলে (যেমন অ্যাডমিনের হাতে তৈরি মার্কেট) Lay বাজি নেওয়া হয় না — null ফেরত।
+// Lay price comes ONLY from the feed's depth (markets.depth[runner].lay). There is
+// no default: if the exchange shows no lay price the runner cannot be laid.
 function resolveLayOdd(market, runner) {
   if (!market || runner === null || runner === undefined) return null;
   const depth = market.depth;
-  if (!depth || typeof depth !== 'object' || Array.isArray(depth)) return null;
-  const r = depth[String(runner)];
-  if (!r) return null;
-  return toValidOdd(r.lay);
+  if (!depth || typeof depth !== 'object') return null;
+  const entry = depth[String(runner)];
+  if (!entry) return null;
+  return toValidOdd(entry.lay);
 }
 
-// নির্দিষ্ট রানার সাসপেন্ড হলে মার্কেট খোলা থাকলেও সেই রানারে বাজি চলবে না।
+// true when the runner is individually suspended (market-level status is checked separately)
 function isRunnerSuspended(market, runner) {
-  const depth = market && market.depth;
-  if (!depth || typeof depth !== 'object') return false;
-  const r = depth[String(runner)];
-  return !!(r && r.suspended === true);
+  const rs = market && market.runner_status;
+  return !!(rs && typeof rs === 'object' && String(rs[String(runner)]).toLowerCase() === 'suspended');
 }
 
 module.exports = { resolveOdd, resolveLayOdd, isRunnerSuspended, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };
