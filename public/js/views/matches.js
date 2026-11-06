@@ -16,9 +16,19 @@
     });
   }
 
+  // CSP is img-src 'self' data: — only local paths / data: images can load; anything else falls back to the jersey.
+  function safeLogo(u) {
+    if (!u || typeof u !== 'string') return '';
+    return (/^\/(?!\/)/.test(u) || /^data:image\//.test(u)) ? u : '';
+  }
+  function crest(url, cls) {
+    const src = safeLogo(url);
+    return src ? `<img class="team-logo" src="${esc(src)}" alt="" loading="lazy">` : `<div class="jersey ${cls}">👕</div>`;
+  }
+
   // ========== Card builder ==========
   function buildMatchCard(m, isLive) {
-    const sportIcon = m.sport === 'football' ? '⚽' : '🏏';
+    const sportIcon = m.sport === 'football' ? '⚽' : (m.sport === 'tennis' ? '🎾' : '🏏');
     const tournament = esc(m.league || m.name || cfg.matchLabel);
     const teamA = esc((m.teams && m.teams[0]) || m.homeTeam || cfg.teamA);
     const teamB = esc((m.teams && m.teams[1]) || m.awayTeam || cfg.teamB);
@@ -52,19 +62,19 @@
       <div class="match-card ${isLive ? 'live' : ''}" data-match-href="/matches/${encodeURIComponent(m.id)}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">
-            ${sportIcon} ${tournament}
+            ${sportIcon} <span class="lg-badge">${tournament}</span>
           </div>
           ${badge}
         </div>
         
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
-          <div class="jersey jersey-a">👕</div>
+          ${crest(m.logoA, 'jersey-a')}
           <div style="flex:1;font-weight:600;font-size:14px;color:var(--text-main);">${teamA}</div>
           ${scoreHTML}
         </div>
         
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--border-glass);">
-          <div class="jersey jersey-b">👕</div>
+          ${crest(m.logoB, 'jersey-b')}
           <div style="flex:1;font-weight:600;font-size:14px;color:var(--text-main);">${teamB}</div>
           ${scoreBHTML}
         </div>
@@ -79,6 +89,15 @@
   // ========== Render ==========
   let ALL_DATA = { cricket: [], football: [], tennis: [], other: [] };
   let statusFilter = 'all';
+  let leagueFilter = '';
+
+  // Local-calendar day key so Today/Tomorrow follow the viewer's own clock
+  function dayKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function matchDay(m) {
+    if (!m.date) return null;
+    const d = new Date(m.date);
+    return Number.isNaN(d.getTime()) ? null : dayKey(d);
+  }
 
   function isLiveStatus(m) {
     const st = (m.status || '').toLowerCase();
@@ -113,6 +132,12 @@
       if (statusFilter === 'inplay' && !isInPlay(m)) return;
       if (statusFilter === 'live' && !isLiveStatus(m)) return;
       if (statusFilter === 'upcoming' && isLiveStatus(m)) return;
+      if (statusFilter === 'today' && !(isLiveStatus(m) || matchDay(m) === dayKey(new Date()))) return;
+      if (statusFilter === 'tomorrow') {
+        const t = new Date(); t.setDate(t.getDate() + 1);
+        if (matchDay(m) !== dayKey(t)) return;
+      }
+      if (leagueFilter && (m.league || '') !== leagueFilter) return;
       const status = (m.status || '').toLowerCase();
       if (status === 'live' || status.includes('live') || status.includes('in play') || status.includes('progress')) {
         live.push(m);
@@ -159,7 +184,26 @@
     let all = [];
     if (CURRENT_SPORT === 'all') all = all.concat(ALL_DATA.cricket, ALL_DATA.football, ALL_DATA.tennis, ALL_DATA.other);
     else all = (ALL_DATA[CURRENT_SPORT] || []).slice();
+    populateLeagues(all);
     renderMatches(all);
+  }
+
+  // Competitions dropdown built from whatever leagues the current sport tab contains
+  function populateLeagues(all) {
+    const sel = document.getElementById('leagueFilter');
+    if (!sel) return;
+    const names = Array.from(new Set(all.map(function (m) { return m.league; }).filter(Boolean))).sort();
+    if (names.indexOf(leagueFilter) === -1) leagueFilter = '';
+    sel.textContent = '';
+    const first = document.createElement('option');
+    first.value = ''; first.textContent = 'Competitions';
+    sel.appendChild(first);
+    names.forEach(function (n) {
+      const o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+    sel.value = leagueFilter;
   }
 
   async function fetchMatches() {
@@ -211,9 +255,18 @@
   if (filters) {
     filters.addEventListener('click', function (e) {
       const b = e.target.closest('.flt');
-      if (!b) return;
+      if (!b || b.tagName === 'SELECT') return; // the Competitions <select> has its own change handler
       statusFilter = b.dataset.filter;
       filters.querySelectorAll('.flt').forEach(function (x) { x.classList.toggle('active', x === b); });
+      rerender();
+    });
+  }
+
+  const leagueSel = document.getElementById('leagueFilter');
+  if (leagueSel) {
+    leagueSel.addEventListener('change', function () {
+      leagueFilter = leagueSel.value;
+      leagueSel.classList.toggle('active', !!leagueFilter);
       rerender();
     });
   }

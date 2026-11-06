@@ -101,6 +101,9 @@
   .flt-row { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
   .flt { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-muted); font-weight: 700; font-size: 12px; cursor: pointer; }
   .flt.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .flt-select { appearance: none; padding-right: 14px; max-width: 220px; }
+  .lg-badge { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 8px; border-radius: 6px; background: rgba(148,163,184,.15); color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+  .team-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; background: rgba(255,255,255,.06); flex-shrink: 0; }
   .mc-overs { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-align: center; }
 </style>
 
@@ -136,9 +139,12 @@
   <!-- Status filters -->
   <div class="flt-row" id="statusFilters">
     <button type="button" class="flt active" data-filter="all">All</button>
-    <button type="button" class="flt" data-filter="live">Live</button>
-    <button type="button" class="flt" data-filter="inplay">In-Play</button>
-    <button type="button" class="flt" data-filter="upcoming">Upcoming</button>
+    <button type="button" class="flt" data-filter="live">In-Play</button>
+    <button type="button" class="flt" data-filter="today">Today</button>
+    <button type="button" class="flt" data-filter="tomorrow">Tomorrow</button>
+    <select class="flt flt-select" id="leagueFilter" aria-label="Competitions">
+      <option value="">Competitions</option>
+    </select>
   </div>
 
   <!-- Live connection status -->

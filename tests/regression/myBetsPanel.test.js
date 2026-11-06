@@ -48,6 +48,6 @@ describe('GET /matches/api/my-bets', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.bets).toHaveLength(1);
-    expect(res.body.bets[0]).toMatchObject({ matchName: 'MyBets Test', market: 'Team A Win', selection: 'yes', odd: 1.8, stake: 250, potentialReturn: 450, status: 'pending' });
+    expect(res.body.bets[0]).toMatchObject({ matchName: 'MyBets Test', market: 'Team A Win', selection: 'Yes', betType: 'back', liability: 0, odd: 1.8, stake: 250, potentialReturn: 450, status: 'pending' });
   });
 });

@@ -129,6 +129,51 @@
   }
   .market-box.market-suspended .market-header::after { content: 'SUSPENDED'; font-size: 10px; font-weight: 800; color: #f87171; margin-left: 8px; }
   .bs-return[hidden] { display: none; }
+  /* SUSPEND overlay: blurred, unclickable */
+  .market-cell { position: relative; }
+  .market-cell.runner-suspended::after, .market-box.market-suspended .market-cell::after {
+    content: 'SUSPEND'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.55); backdrop-filter: blur(2px); color: #f87171; font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  }
+  .vol { display: block; font-size: 10px; color: #94a3b8; min-height: 12px; line-height: 12px; }
+  /* Live scoreboard */
+  .lb { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 12px; margin: 10px 0; color: #e5e7eb; }
+  .lb:empty { display: none; }
+  .lb-main { font-size: 22px; font-weight: 800; color: #fbbf24; }
+  .lb-sub { font-size: 12px; color: #94a3b8; margin-left: 8px; font-weight: 600; }
+  .lb table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .lb th { color: #64748b; font-weight: 600; text-align: right; padding: 2px 4px; }
+  .lb td { text-align: right; padding: 3px 4px; }
+  .lb th:first-child, .lb td:first-child { text-align: left; }
+  .lb .strike td:first-child::after { content: ' *'; color: #fbbf24; }
+  .lb-balls { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .lb-ball { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: #1f2937; color: #e5e7eb; }
+  .lb-ball.b4 { background: #2563eb; color: #fff; } .lb-ball.b6 { background: #16a34a; color: #fff; } .lb-ball.bW { background: #dc2626; color: #fff; }
+  .lb-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 12px; font-weight: 800; }
+  .lb-mom { height: 6px; background: #7c2d12; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .lb-mom > i { display: block; height: 100%; background: #0ea5e9; transition: width .6s ease; }
+  /* Keypad */
+  .bs-kp-toggle { background: none; border: 0; color: #93c5fd; font-size: 12px; font-weight: 700; margin: 0 0 8px; cursor: pointer; }
+  .bs-keypad { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .bs-keypad.open { display: grid; }
+  .bs-key { padding: 12px 0; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #f8fafc; font-size: 18px; font-weight: 700; cursor: pointer; }
+  .bs-key:active { background: #334155; }
+  /* My Bets drawer */
+  .mb-fab { position: fixed; right: 12px; bottom: 84px; z-index: 900; padding: 10px 16px; border-radius: 999px; border: 0; background: #f59e0b; color: #111; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .mb-count { background: #111; color: #fbbf24; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
+  .mb-count:empty { display: none; }
+  .mb-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); z-index: 1100; background: #0f172a; color: #e5e7eb; transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; box-shadow: -6px 0 20px rgba(0,0,0,.5); }
+  .mb-drawer.open { transform: translateX(0); }
+  .mb-head { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 1px solid #1f2937; font-size: 16px; }
+  .mb-head button { background: none; border: 0; color: #e5e7eb; font-size: 24px; cursor: pointer; }
+  .mb-list { overflow-y: auto; padding: 10px; flex: 1; }
+  .mb-card { background: #1e293b; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #64748b; font-size: 12px; }
+  .mb-card.back { border-left-color: #3b82f6; } .mb-card.lay { border-left-color: #f4a6b8; }
+  .mb-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 3px; color: #94a3b8; }
+  .mb-row b { color: #e5e7eb; }
+  .mb-title { font-weight: 800; font-size: 13px; color: #f8fafc; }
+  .mb-st { padding: 1px 8px; border-radius: 8px; font-weight: 800; font-size: 11px; }
+  .mb-st.pending { background: #78350f; color: #fbbf24; } .mb-st.won { background: #14532d; color: #4ade80; } .mb-st.lost { background: #7f1d1d; color: #fca5a5; }
   .md-tab-empty { display: none; text-align: center; color: #fff; padding: 30px 10px; font-weight: 600; }
 
   /* ===== বেট স্লিপ (alert/prompt/confirm-এর বদলে) ===== */
@@ -233,14 +278,17 @@
     <% if (isLive && match.status) { %><div class="md-status"><%= match.status %></div><% } %>
   </div>
 
+  <div class="lb" id="liveBoard"></div>
+
   <!-- Dynamic Markets -->
-  <% if (marketView && marketView.markets.length > 0) { %>
+  <% if (marketView && (marketView.markets.length > 0 || marketView.tabs.length > 1)) { %>
     <div class="md-tabs" id="mdTabs">
       <% marketView.tabs.forEach(function(tab, i) { %>
         <button type="button" class="md-tab<%= i === 0 ? ' active' : '' %>" data-tab="<%= tab.id %>"><%= tab.label %></button>
       <% }) %>
     </div>
 
+    <% var fmtVol = function (n) { if (n == null) return '–'; n = Number(n); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }; %>
     <% marketView.markets.forEach(function(market) {
          var cols = market.runners.length >= 3 ? 3 : (market.runners.length === 2 ? 2 : 1);
          if (market.runners.length > 3) cols = 3;
@@ -263,6 +311,7 @@
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
                      data-odd="<%= r.odd %>"><%= r.odd %></div>
+                <small class="vol" data-vol="back"><%= fmtVol(r.backSize) %></small>
                 <% if (r.lay) { %>
                 <div class="odds lay"
                      data-bet-type="lay"
@@ -271,6 +320,7 @@
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
                      data-odd="<%= r.lay %>"><%= r.lay %></div>
+                <small class="vol" data-vol="lay"><%= fmtVol(r.laySize) %></small>
                 <% } %>
               </div>
             <% }) %>
@@ -278,7 +328,7 @@
         </div>
       </div>
     <% }) %>
-    <div class="md-tab-empty" id="mdTabEmpty"><%= t.betting_options_soon %></div>
+    <div class="md-tab-empty" id="mdTabEmpty"><%= t.waiting_live_feed || 'Waiting for live feed…' %></div>
   <% } else { %>
     <div class="md-empty text-center dz83-4">
       <div class="dz83-5">⏳</div>
@@ -316,6 +366,12 @@
       <button type="button" class="bs-chip" data-add="500">+500</button>
       <button type="button" class="bs-chip" data-add="1000">+1000</button>
     </div>
+    <button type="button" class="bs-kp-toggle" id="bsKpToggle">⌨ Keypad</button>
+    <div class="bs-keypad" id="bsKeypad">
+      <% ['1','2','3','4','5','6','7','8','9','C','0','⌫'].forEach(function (k) { %>
+        <button type="button" class="bs-key" data-key="<%= k %>"><%= k %></button>
+      <% }) %>
+    </div>
     <div class="bs-return"><span id="bsReturnLabel"><%= t.bet_slip_return %></span><b id="bsReturn">0</b></div>
     <div class="bs-return" id="bsLiabRow" hidden><span id="bsLiabLabel">Liability</span><b id="bsLiab">0</b></div>
     <div class="bs-error" id="bsError" role="alert"></div>
@@ -329,6 +385,13 @@
     </div>
   </div>
 </div>
+<% if (locals.user) { %>
+<button type="button" class="mb-fab" id="mbOpen">My Bets <span class="mb-count" id="mbCount"></span></button>
+<aside class="mb-drawer" id="mbDrawer" aria-hidden="true" aria-label="My Bets">
+  <div class="mb-head"><b>My Bets</b><button type="button" id="mbClose" aria-label="Close">×</button></div>
+  <div class="mb-list" id="mbList"></div>
+</aside>
+<% } %>
 <div class="md-toast" id="mdToast" role="status" aria-live="polite"></div>
 <% if (locals.user) { %>
 <button type="button" class="mb-fab" id="mbOpen"><%= t.my_bets %></button>
@@ -352,7 +415,12 @@
   profitLabel: t.bet_slip_profit_if_wins || 'Profit if wins',
   liabilityLabel: t.bet_slip_liability || 'Liability',
   suspendedMsg: t.runner_suspended || 'This selection is suspended',
-  sport: match.sport
+  sport: match.sport,
+  live: match.live || null,
+  isLive: /^(live|inplay|in_play|in-play)$/i.test(String(match.status || '')),
+  waitingMsg: t.waiting_live_feed || 'Waiting for live feed…',
+  teamA: match.teams[0],
+  teamB: match.teams[1]
 }) %></script>
 <script src="/js/views/match-detail.js"></script>
 

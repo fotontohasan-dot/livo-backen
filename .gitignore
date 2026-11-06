@@ -37,3 +37,8 @@ backup-*.bin
 reports/
 # Playwright রান আউটপুট
 test-results/
+
+# cached remote team logos (re-downloaded by services/teamLogos.js)
+public/images/teams/*
+!public/images/teams/.gitkeep
+dump.rdb
