@@ -180,7 +180,10 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         LIMIT $2`,
       params
     );
-    const bets = r.rows.map(b => {
+    // limit+1 সারি আনা হয়েছিল শুধু "আরও আছে কি না" জানতে; ক্লায়েন্টকে শুধু limit-টাই পাঠাই।
+    const hasMore = r.rows.length > limit;
+    const pageRows = hasMore ? r.rows.slice(0, limit) : r.rows;
+    const bets = pageRows.map(b => {
       // runner কলামে কাঁচা key ('0', '1x', ...) থাকে; ইউজারকে দেখাতে মার্কেট-লেআউটের লেবেল (ফিড-নামসহ) লাগে।
       let selection = b.runner || '';
       try {
@@ -211,7 +214,8 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         createdAt: b.created_at
       };
     });
-    res.json({ success: true, bets });
+    const nextBefore = hasMore && bets.length ? bets[bets.length - 1].id : null;
+    res.json({ success: true, bets, hasMore, nextBefore });
   } catch (err) {
     console.error('matches/api/my-bets error:', err.message);
     res.status(500).json({ success: false, bets: [] });

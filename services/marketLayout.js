@@ -104,6 +104,10 @@ function runnersFor(market, teamA, teamB) {
     const lay = depth[key] && Number(depth[key].lay);
     // Feed-supplied runner names (e.g. batsmen in a head-to-head market) win over generic labels
     const feedName = depth[key] && typeof depth[key].name === 'string' ? depth[key].name.trim().slice(0, 60) : '';
+    // রানার সাসপেন্ড ধরা হবে runner_status থেকে অথবা (পুরনো ফিডের আকার) depth[key].suspended === true থেকে —
+    // oddsResolver.isRunnerSuspended()-এর সাথে হুবহু একই নিয়ম, যাতে UI যা বন্ধ দেখায় সার্ভারও তা-ই প্রত্যাখ্যান করে।
+    const suspended = String(rstat[key] || '').toLowerCase() === 'suspended' ||
+      !!(depth[key] && depth[key].suspended === true);
     return {
       key,
       label: feedName || labelFor(key, type, teamA, teamB),
@@ -111,7 +115,8 @@ function runnersFor(market, teamA, teamB) {
       lay: Number.isFinite(lay) && lay > 1 ? lay : null,
       backSize: depth[key] && Number.isFinite(Number(depth[key].back_size)) ? Number(depth[key].back_size) : null,
       laySize: depth[key] && Number.isFinite(Number(depth[key].lay_size)) ? Number(depth[key].lay_size) : null,
-      status: String(rstat[key] || 'open').toLowerCase() === 'suspended' ? 'suspended' : 'open'
+      status: suspended ? 'suspended' : 'open',
+      suspended
     };
   }).filter((r) => Number.isFinite(r.odd) && r.odd > 1);
 }
@@ -158,7 +163,8 @@ function buildMarketView(markets, match) {
   }
   // Player Performance: shown when the feed/admin supplied player markets; cricket always shows it so an
   // empty tab explains "coming soon" instead of fabricating players or odds.
-  if (out.some((m) => m.category === 'player') || kind === 'cricket') tabs.push({ id: 'player', label: 'Player Performance' });
+  // (cricket-এর ট্যাব তালিকায় 'player' আগে থেকেই আছে — আবার যোগ করলে ডুপ্লিকেট ট্যাব হতো)
+  if (kind !== 'cricket' && out.some((m) => m.category === 'player')) tabs.push({ id: 'player', label: 'Player Performance' });
   return { markets: out, tabs };
 }
 

@@ -186,8 +186,8 @@ describe('My Bets API', () => {
     expect(res.body.bets).toHaveLength(2);
     const lay = res.body.bets.find((b) => b.betType === 'lay');
     const back = res.body.bets.find((b) => b.betType === 'back');
-    expect(lay).toMatchObject({ selection: 'A', odd: 2.5, stake: 100, liability: 150, potentialReturn: 250, status: 'pending' });
-    expect(back).toMatchObject({ selection: 'B', odd: 3, stake: 100, liability: 0, potentialReturn: 300, status: 'pending' });
+    expect(lay).toMatchObject({ selection: 'Alpha', odd: 2.5, stake: 100, liability: 150, potentialReturn: 250, status: 'pending' });
+    expect(back).toMatchObject({ selection: 'Beta', odd: 3, stake: 100, liability: 0, potentialReturn: 300, status: 'pending' });
   });
 
   test('requires login, ignores a user_id parameter, and paginates', async () => {

@@ -889,6 +889,25 @@ async function runMigrations() {
         ADD COLUMN IF NOT EXISTS liability INTEGER NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS potential_payout INTEGER NOT NULL DEFAULT 0
     `);
+    // দুটো মাইগ্রেশন ব্লক একই `liability` কলাম বানায়: আগেরটা NUMERIC(14,2) (nullable), পরেরটা
+    // INTEGER NOT NULL DEFAULT 0। `ADD COLUMN IF NOT EXISTS`-এ প্রথমটাই টেকে, ফলে Back বাজিতে
+    // liability '0.00' (স্ট্রিং) বা NULL আসত। লায়াবিলিটি সবসময় পূর্ণসংখ্যা (calcLiability ceil করে),
+    // তাই কলামটাকে canonical INTEGER NOT NULL DEFAULT 0-তে আনা হলো। idempotent: ইতিমধ্যে integer হলে কিছুই করে না।
+    {
+      const col = await pool.query(
+        `SELECT data_type, is_nullable FROM information_schema.columns
+          WHERE table_name = 'bets' AND column_name = 'liability' AND table_schema = current_schema()`
+      );
+      if (col.rows[0] && (col.rows[0].data_type !== 'integer' || col.rows[0].is_nullable === 'YES')) {
+        await pool.query(`UPDATE bets SET liability = 0 WHERE liability IS NULL`);
+        await pool.query(`
+          ALTER TABLE bets
+            ALTER COLUMN liability TYPE INTEGER USING CEIL(liability)::int,
+            ALTER COLUMN liability SET DEFAULT 0,
+            ALTER COLUMN liability SET NOT NULL
+        `);
+      }
+    }
     await pool.query(`ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_bet_type_check`);
     await pool.query(`ALTER TABLE bets ADD CONSTRAINT bets_bet_type_check CHECK (bet_type IN ('back','lay'))`);
     // backfill legacy Back bets so potential_payout is never 0 for old rows

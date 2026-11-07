@@ -507,6 +507,12 @@
       refreshReturn();
     }
   }
+  // screen readers: a suspended price is announced as disabled (clicks are already blocked via isLocked())
+  function setAria(nodes, on) {
+    for (var i = 0; i < nodes.length; i++) {
+      if (on) nodes[i].setAttribute('aria-disabled', 'true'); else nodes[i].removeAttribute('aria-disabled');
+    }
+  }
   function setRunnerSuspended(marketId, runner, suspended) {
     var cells = document.querySelectorAll('.market-cell[data-runner="' + String(runner) + '"]');
     for (var i = 0; i < cells.length; i++) {
@@ -514,6 +520,7 @@
       if (!box || box.getAttribute('data-market-id') !== String(marketId)) continue;
       cells[i].classList.toggle('runner-suspended', !!suspended);
       cells[i].classList.remove('selected');
+      setAria(cells[i].querySelectorAll('.odds'), !!suspended || box.classList.contains('market-suspended'));
     }
     if (suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner)) {
       setError(cfg.suspendedMsg || 'Suspended');
@@ -526,6 +533,7 @@
     var box = document.querySelector('.market-box[data-market-id="' + String(marketId) + '"]');
     if (!box) return;
     box.classList.toggle('market-suspended', !!suspended);
+    setAria(box.querySelectorAll('.odds'), !!suspended);
     if (suspended && current && String(current.marketId) === String(marketId)) {
       setError(cfg.suspendedMsg || 'Suspended');
       if (placeBtn) placeBtn.disabled = true;

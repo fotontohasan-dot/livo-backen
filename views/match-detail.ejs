@@ -335,7 +335,7 @@
                      data-market-name="<%= market.name %>"
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
-                     data-odd="<%= r.odd %>"><%= r.odd %></div>
+                     data-odd="<%= r.odd %>"<%- (r.status === 'suspended' || market.status === 'suspended') ? ' aria-disabled="true"' : '' %>><%= r.odd %></div>
                 <small class="vol" data-vol="back"><%= fmtVol(r.backSize) %></small>
                 <% if (r.lay) { %>
                 <div class="odds lay"
@@ -344,7 +344,7 @@
                      data-market-name="<%= market.name %>"
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
-                     data-odd="<%= r.lay %>"><%= r.lay %></div>
+                     data-odd="<%= r.lay %>"<%- (r.status === 'suspended' || market.status === 'suspended') ? ' aria-disabled="true"' : '' %>><%= r.lay %></div>
                 <small class="vol" data-vol="lay"><%= fmtVol(r.laySize) %></small>
                 <% } %>
               </div>
