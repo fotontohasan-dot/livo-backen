@@ -26,11 +26,13 @@
   }
 
   // ===== ট্যাব ফিল্টার =====
-  var boxes = Array.prototype.slice.call(document.querySelectorAll('.market-box'));
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.md-tab'));
+  var activeTab = tabs.length ? tabs[0].getAttribute('data-tab') : 'all';
 
   function applyTab(id) {
     var visible = 0;
+    activeTab = id;
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.market-box'));
     boxes.forEach(function (box) {
       var show = id === 'all'
         || (id === 'popular' ? box.getAttribute('data-pop') === '1' : box.getAttribute('data-cat') === id);
@@ -164,19 +166,25 @@
     });
   }
 
-  // On-screen numeric keypad (0-9, clear, backspace) — writes into the same stake input.
-  document.querySelectorAll('.bs-key').forEach(function (k) {
-    k.addEventListener('click', function () {
-      var key = k.getAttribute('data-key');
-      var v = String(stakeEl.value || '');
-      if (key === 'clear') v = '';
-      else if (key === 'back') v = v.slice(0, -1);
-      else if (/^[0-9]$/.test(key)) v = (v === '0' ? '' : v) + key;
-      if (v.length > 9) return;
-      stakeEl.value = (Number(v) > MAX_BET) ? String(MAX_BET) : v;
-      touchRef(); setError(''); refreshReturn();
+  // ===== On-screen numeric keypad =====
+  var kpToggle = $('bsKpToggle'), kp = $('bsKeypad');
+  if (kpToggle && kp) {
+    kpToggle.addEventListener('click', function () { kp.classList.toggle('open'); });
+    kp.addEventListener('click', function (e) {
+      var b = e.target.closest('.bs-key');
+      if (!b) return;
+      var k = b.getAttribute('data-key');
+      var cur = stakeEl.value || '';
+      if (k === 'C') cur = '';
+      else if (k === '\u232b') cur = cur.slice(0, -1);
+      else if (cur.length < 9) cur = (cur === '0' ? '' : cur) + k;
+      var n = parseInt(cur || '0', 10);
+      if (n > MAX_BET) cur = String(MAX_BET);
+      stakeEl.value = cur;
+      setError('');
+      refreshReturn();
     });
-  });
+  }
 
   function placeBet() {
     if (!current || inflight) return;
@@ -219,7 +227,11 @@
           closeSlip();
           loadMyBets(true);
           toast(data.message || 'OK', 'ok');
-          setTimeout(function () { location.reload(); }, 1400);
+          if (data.newBalance != null) {
+            document.querySelectorAll('.js-balance').forEach(function (n) { n.textContent = Number(data.newBalance).toLocaleString(); });
+          }
+          loadMyBets(true); // bet shows up instantly in My Bets
+          placeBtn.disabled = false;
           return;
         }
         if (data.code === 'CSRF_TOKEN_INVALID' || res.status === 401) {
@@ -238,65 +250,228 @@
   if (placeBtn) placeBtn.addEventListener('click', placeBet);
 
 
-  // ===== My Bets drawer: GET /matches/api/my-bets (own bets only, rendered with textContent) =====
-  var mbPanel = $('mbPanel'), mbList = $('mbList');
-  var mbNext = null, mbLoading = false;
-  function mbText(tag, cls, text) {
-    var n = document.createElement(tag); if (cls) n.className = cls; n.textContent = text; return n;
+  // ===== My Bets drawer =====
+  var mbDrawer = $('mbDrawer'), mbList = $('mbList'), mbCount = $('mbCount');
+  function mk(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
   }
-  var STATUS_LABEL = { pending: 'Pending', won: 'Won', lost: 'Lost', void: 'Void' };
-  function mbRow(b) {
-    var row = document.createElement('div');
-    row.className = 'mb-item mb-' + (STATUS_LABEL[b.status] ? b.status : 'pending');
-    var top = document.createElement('div'); top.className = 'mb-top';
-    top.appendChild(mbText('span', 'mb-side mb-side-' + b.betType, b.betType === 'lay' ? 'LAY' : 'BACK'));
-    top.appendChild(mbText('b', 'mb-match', b.matchName || ''));
-    top.appendChild(mbText('span', 'mb-status', STATUS_LABEL[b.status] || b.status));
-    row.appendChild(top);
-    row.appendChild(mbText('div', 'mb-sel', (b.market ? b.market + ' · ' : '') + b.selection));
-    var f = document.createElement('div'); f.className = 'mb-figs';
-    [['Odds', String(b.odd)], ['Stake', money(b.stake)]]
-      .concat(b.betType === 'lay' ? [['Liability', money(b.liability)]] : [])
-      .concat([['Return', money(b.potentialReturn)]]).forEach(function (p) {
-        var c = document.createElement('span'); c.appendChild(mbText('small', '', p[0])); c.appendChild(mbText('b', '', p[1])); f.appendChild(c);
-      });
-    row.appendChild(f);
-    return row;
+  function mbRow(label, value) {
+    var r = mk('div', 'mb-row');
+    r.appendChild(mk('span', null, label));
+    r.appendChild(mk('b', null, value));
+    return r;
   }
-  function loadMyBets(reset) {
-    if (!mbList || !cfg.loggedIn || mbLoading) return;
-    mbLoading = true;
-    var url = '/matches/api/my-bets?limit=20' + (!reset && mbNext ? '&before=' + encodeURIComponent(mbNext) : '');
-    if (reset) { mbNext = null; if (!mbList.firstChild) mbList.appendChild(mbText('div', 'mb-note', cfg.loadingMsg || 'Loading…')); }
-    fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+  function renderBets(bets) {
+    if (!mbList) return;
+    mbList.textContent = '';
+    if (!bets.length) { mbList.appendChild(mk('div', 'mb-row', 'No bets yet')); }
+    bets.forEach(function (b) {
+      var c = mk('div', 'mb-card ' + b.betType);
+      var top = mk('div', 'mb-row');
+      top.appendChild(mk('span', 'mb-title', b.match));
+      top.appendChild(mk('span', 'mb-st ' + b.status, b.status.charAt(0).toUpperCase() + b.status.slice(1)));
+      c.appendChild(top);
+      c.appendChild(mbRow('Market', b.market));
+      c.appendChild(mbRow('Selection', (b.betType === 'lay' ? 'LAY ' : 'BACK ') + b.selection));
+      c.appendChild(mbRow('Odds', String(b.odds)));
+      c.appendChild(mbRow('Stake', money(b.stake)));
+      if (b.betType === 'lay') c.appendChild(mbRow('Liability', money(b.liability)));
+      c.appendChild(mbRow(b.status === 'won' ? 'Return' : 'Potential return', b.status === 'lost' ? '0' : money(b.potentialReturn)));
+      mbList.appendChild(c);
+    });
+    var pending = bets.filter(function (b) { return b.status === 'pending'; }).length;
+    if (mbCount) mbCount.textContent = pending ? String(pending) : '';
+  }
+  function loadMyBets(openAfter) {
+    if (!mbDrawer) return;
+    fetch('/matches/api/my-bets', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
       .then(function (r) {
-        if (r.redirected || (r.headers.get('content-type') || '').indexOf('application/json') === -1) throw new Error('session');
+        if ((r.headers.get('content-type') || '').indexOf('application/json') === -1) throw new Error('auth');
         return r.json();
       })
+      .then(function (d) { if (d && d.success) { renderBets(d.bets || []); if (openAfter) openDrawer(); } })
+      .catch(function () { /* signed out or offline: leave drawer as is */ });
+  }
+  function openDrawer() { if (mbDrawer) { mbDrawer.classList.add('open'); mbDrawer.setAttribute('aria-hidden', 'false'); } }
+  function closeDrawer() { if (mbDrawer) { mbDrawer.classList.remove('open'); mbDrawer.setAttribute('aria-hidden', 'true'); } }
+  if (mbDrawer) {
+    $('mbOpen').addEventListener('click', function () { loadMyBets(true); });
+    $('mbClose').addEventListener('click', closeDrawer);
+    loadMyBets(false);
+  }
+
+  // ===== Live scoreboard (cricket / football / tennis) =====
+  var board = $('liveBoard');
+  function renderLive(live) {
+    if (!board) return;
+    board.textContent = '';
+    // No stats from the feed (yet): show a placeholder for a live match, nothing for a future one.
+    // The first real `liveUpdate` replaces this automatically.
+    if (!live || !live.kind || live.waiting) {
+      if (cfg.isLive) board.appendChild(mk('div', 'lb-sub', cfg.waitingMsg || 'Waiting for live feed…'));
+      return;
+    }
+    if (live.kind === 'cricket') {
+      var head = mk('div');
+      head.appendChild(mk('span', 'lb-main', (live.runs != null ? live.runs : '-') + '/' + (live.wickets != null ? live.wickets : '-')));
+      var sub = [];
+      if (live.overs) sub.push('(' + live.overs + ' ov)');
+      if (live.runRate != null) sub.push('RR ' + live.runRate);
+      if (live.target) sub.push('Target ' + live.target);
+      head.appendChild(mk('span', 'lb-sub', sub.join('  ')));
+      board.appendChild(head);
+      if (live.batsmen && live.batsmen.length) {
+        var t = mk('table'), hr = mk('tr');
+        ['Batsman', 'R', 'B', '4s', '6s'].forEach(function (h) { hr.appendChild(mk('th', null, h)); });
+        t.appendChild(hr);
+        live.batsmen.forEach(function (b) {
+          var r = mk('tr', b.strike ? 'strike' : '');
+          [b.name, b.runs, b.balls, b.fours, b.sixes].forEach(function (v) { r.appendChild(mk('td', null, String(v))); });
+          t.appendChild(r);
+        });
+        board.appendChild(t);
+      }
+      if (live.bowler) {
+        var bw = live.bowler;
+        board.appendChild(mk('div', 'lb-sub', 'Bowler: ' + bw.name + '  ' + bw.overs + '-' + bw.maidens + '-' + bw.runs + '-' + bw.wickets));
+      }
+      if (live.balls && live.balls.length) {
+        var balls = mk('div', 'lb-balls');
+        balls.appendChild(mk('span', 'lb-sub', 'This over'));
+        live.balls.forEach(function (b) {
+          balls.appendChild(mk('span', 'lb-ball' + (b === '4' ? ' b4' : b === '6' ? ' b6' : b === 'W' ? ' bW' : ''), b));
+        });
+        board.appendChild(balls);
+      }
+    } else if (live.kind === 'football') {
+      var f = mk('div');
+      if (live.clock) f.appendChild(mk('span', 'lb-pill', live.clock));
+      if (live.period) f.appendChild(mk('span', 'lb-sub', live.period));
+      (live.halves || []).forEach(function (h, i) { f.appendChild(mk('span', 'lb-sub', (i === 0 ? 'HT ' : '2H ') + h[0] + '-' + h[1])); });
+      board.appendChild(f);
+      addMomentum(live.momentum);
+    } else if (live.kind === 'tennis') {
+      if (live.sets && live.sets.length) {
+        var tt = mk('table'), h2 = mk('tr');
+        h2.appendChild(mk('th', null, ''));
+        live.sets.forEach(function (_, i) { h2.appendChild(mk('th', null, 'S' + (i + 1))); });
+        if (live.game) h2.appendChild(mk('th', null, 'Game'));
+        tt.appendChild(h2);
+        [0, 1].forEach(function (p) {
+          var r = mk('tr');
+          r.appendChild(mk('td', null, (live.server === p ? '● ' : '') + (p === 0 ? (cfg.teamA || 'Player 1') : (cfg.teamB || 'Player 2'))));
+          live.sets.forEach(function (s) { r.appendChild(mk('td', null, String(s[p]))); });
+          if (live.game) r.appendChild(mk('td', null, String(live.game[p])));
+          tt.appendChild(r);
+        });
+        board.appendChild(tt);
+      }
+      addMomentum(live.momentum);
+    }
+  }
+  function addMomentum(m) {
+    if (m == null) return;
+    var bar = mk('div', 'lb-mom'), fill = mk('i');
+    fill.style.width = Math.max(0, Math.min(100, m)) + '%'; // CSSOM write: allowed under style-src-attr CSP
+    bar.appendChild(fill);
+    board.appendChild(bar);
+  }
+  renderLive(cfg.live);
+
+  function setVol(marketId, runner, type, size) {
+    var o = findOdds(marketId, runner, type);
+    var v = o && o.nextElementSibling;
+    if (!v || !v.classList.contains('vol')) return;
+    var n = Number(size);
+    v.textContent = size == null || !Number.isFinite(n) ? '\u2013' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n));
+  }
+
+
+  // ===== Market hydration: build/refresh market boxes from JSON without a page reload =====
+  // Used when the feed starts sending a market (or a lay price) that the page was rendered without,
+  // e.g. Fancy / Player Performance markets that appear mid-match.
+  function sigOfModel(m) {
+    return m.runners.map(function (r) { return r.key + (r.lay ? '+' : '-'); }).join('|');
+  }
+  function sigOfDom(box) {
+    var out = [];
+    box.querySelectorAll('.market-cell').forEach(function (c) {
+      out.push(c.getAttribute('data-runner') + (c.querySelector('.odds.lay') ? '+' : '-'));
+    });
+    return out.join('|');
+  }
+  function oddsBtn(m, r, type, price) {
+    var b = mk('div', 'odds ' + type, String(price));
+    b.setAttribute('data-bet-type', type);
+    b.setAttribute('data-market-id', m.id);
+    b.setAttribute('data-market-name', m.name);
+    b.setAttribute('data-runner', r.key);
+    b.setAttribute('data-label', r.label);
+    b.setAttribute('data-odd', String(price));
+    return b;
+  }
+  function volEl(type, size) {
+    var v = mk('small', 'vol', '\u2013');
+    v.setAttribute('data-vol', type);
+    if (size != null) { var n = Number(size); v.textContent = n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }
+    return v;
+  }
+  function buildMarketBox(m) {
+    var box = mk('div', 'market-box' + (m.status === 'suspended' ? ' market-suspended' : ''));
+    box.setAttribute('data-market-id', m.id);
+    box.setAttribute('data-cat', m.category);
+    box.setAttribute('data-pop', m.popular ? '1' : '0');
+    var head = mk('div', 'market-header');
+    head.setAttribute('data-toggle', '');
+    head.appendChild(mk('span', 'mh-title', ((m.type === 'bookmaker' || m.type === 'match_odds') ? '\uD83C\uDFC6 ' : '\u26A1 ') + m.name));
+    head.appendChild(mk('span', 'mh-toggle', '\u25BE'));
+    head.addEventListener('click', function () { box.classList.toggle('collapsed'); });
+    var body = mk('div', 'market-body');
+    var cols = m.runners.length >= 3 ? 3 : (m.runners.length === 2 ? 2 : 1);
+    var grid = mk('div', 'market-grid cols-' + cols);
+    m.runners.forEach(function (r) {
+      var cell = mk('div', 'market-cell' + (r.status === 'suspended' ? ' runner-suspended' : ''));
+      cell.setAttribute('data-runner', r.key);
+      cell.appendChild(mk('span', 'mc-label', r.label));
+      cell.appendChild(oddsBtn(m, r, 'back', r.odd));
+      cell.appendChild(volEl('back', r.backSize));
+      if (r.lay) { cell.appendChild(oddsBtn(m, r, 'lay', r.lay)); cell.appendChild(volEl('lay', r.laySize)); }
+      grid.appendChild(cell);
+    });
+    body.appendChild(grid);
+    box.appendChild(head);
+    box.appendChild(body);
+    return box;
+  }
+  var hydrating = false, lastHydrate = 0;
+  function hydrateMarkets() {
+    if (hydrating || Date.now() - lastHydrate < 4000 || !cfg.matchId) return;
+    hydrating = true; lastHydrate = Date.now();
+    fetch('/matches/' + encodeURIComponent(cfg.matchId) + '/markets?tab=all', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (!d || !d.success) throw new Error('api');
-        if (reset) mbList.textContent = '';
-        else { var more = mbList.querySelector('.mb-more'); if (more) more.remove(); }
-        if (!d.bets.length && reset) mbList.appendChild(mbText('div', 'mb-note', cfg.noBetsMsg || 'No bets yet.'));
-        d.bets.forEach(function (b) { mbList.appendChild(mbRow(b)); });
-        mbNext = d.nextBefore;
-        if (d.hasMore) {
-          var btn = mbText('button', 'mb-more', cfg.loadMoreMsg || 'Load more'); btn.type = 'button';
-          btn.addEventListener('click', function () { loadMyBets(false); });
-          mbList.appendChild(btn);
-        }
+        if (!d || !d.success) return;
+        var anchor = $('mdTabEmpty');
+        (d.markets || []).forEach(function (m) {
+          var existing = document.querySelector('.market-box[data-market-id="' + String(m.id) + '"]');
+          if (existing && sigOfDom(existing) === sigOfModel(m)) return;
+          var fresh = buildMarketBox(m);
+          if (existing) {
+            if (existing.classList.contains('collapsed')) fresh.classList.add('collapsed');
+            existing.parentNode.replaceChild(fresh, existing);
+          } else if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(fresh, anchor);
+          }
+        });
+        applyTab(activeTab); // keep the user's current tab, show/hide the waiting message
       })
-      .catch(function () { mbList.textContent = ''; mbList.appendChild(mbText('div', 'mb-note mb-err', cfg.networkError || 'Could not load bets.')); })
-      .then(function () { mbLoading = false; });
+      .catch(function () { /* next oddsUpdate retries */ })
+      .then(function () { hydrating = false; });
   }
-  function setMbOpen(open) {
-    if (!mbPanel) return;
-    mbPanel.classList.toggle('open', open);
-    mbPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
-    if (open) loadMyBets(true);
-  }
-  if ($('mbOpen')) $('mbOpen').addEventListener('click', function () { setMbOpen(true); });
-  if ($('mbClose')) $('mbClose').addEventListener('click', function () { setMbOpen(false); });
+  applyTab(activeTab); // initial empty-tab state ("Waiting for live feed…")
 
   // ===== Live odds / suspension (Socket.IO) =====
   // Server events: scoreUpdate, oddsUpdate, marketStatusChange, runnerStatusChange, myBetsChanged (services/socket.js, services/notify.js).
@@ -377,13 +552,25 @@
 
       socket.on('oddsUpdate', function (msg) {
         if (!msg || String(msg.matchId) !== String(cfg.matchId) || !Array.isArray(msg.markets)) return;
+        var needHydrate = false;
         msg.markets.forEach(function (m) {
+          if (!document.querySelector('.market-box[data-market-id="' + String(m.marketId) + '"]')) needHydrate = true;
           (m.runners || []).forEach(function (r) {
+            if ((r.back != null && !findOdds(m.marketId, r.key, 'back') && document.querySelector('.market-box[data-market-id="' + String(m.marketId) + '"]')) ||
+                (r.lay != null && !findOdds(m.marketId, r.key, 'lay'))) needHydrate = true;
             setPrice(findOdds(m.marketId, r.key, 'back'), r.back);
             setPrice(findOdds(m.marketId, r.key, 'lay'), r.lay);
+            setVol(m.marketId, r.key, 'back', r.backSize);
+            setVol(m.marketId, r.key, 'lay', r.laySize);
           });
         });
+        if (needHydrate) hydrateMarkets();
       });
+      socket.on('liveUpdate', function (msg) {
+        if (msg && String(msg.matchId) === String(cfg.matchId)) renderLive(msg.live);
+      });
+      // settlement / balance notifications arrive on the user room: refresh My Bets statuses
+      socket.on('notification', function () { loadMyBets(false); });
       socket.on('marketStatusChange', function (msg) {
         if (msg && String(msg.matchId) === String(cfg.matchId)) setMarketSuspended(msg.marketId, msg.status !== 'open');
       });

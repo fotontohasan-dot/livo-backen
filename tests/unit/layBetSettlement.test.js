@@ -124,6 +124,23 @@ describe('sport tabs', () => {
     expect(filterMarketView(view, 'set').map((m) => m.id)).toEqual([2]);
     expect(filterMarketView(view, 'games').map((m) => m.id)).toEqual([3, 4]);
   });
+  test('cricket: Match Winner / Bookmaker / Fancy / Over-Under / Odd-Even / Player Performance', () => {
+    const view = buildMarketView([
+      { id: 1, type: 'bookmaker', name: 'Match Winner', odds: { 0: 1.8, 1: 2 } },
+      { id: 2, type: 'bookmaker', name: 'Bookmaker 2', odds: { 0: 1.8, 1: 2 } },
+      { id: 3, type: 'fancy', name: '6 Over Session', odds: { over: 1.9, under: 1.9 } },
+      { id: 4, type: 'over_under', name: 'Alpha Total Runs Over/Under 160.5', odds: { over: 1.9, under: 1.9 } },
+      { id: 5, type: 'odd_even', name: 'Alpha Total Runs (Odd/Even)', odds: { odd: 1.9, even: 1.9 } },
+      { id: 6, type: 'yes_no', name: 'Fifty scored — Yes/No', odds: { yes: 1.4, no: 2.6 } }
+    ], { sport: 'cricket', teams: ['A', 'B'] });
+    const by = (tab) => filterMarketView(view, tab).map((m) => m.id);
+    expect([by('match'), by('bookmaker'), by('fancy'), by('ou'), by('oe'), by('player')]).toEqual([[1], [2], [3], [4], [5], [6]]);
+  });
+  test('depth sizes flow into runners (matched volume under odds)', () => {
+    const view = buildMarketView([{ id: 1, type: 'bookmaker', name: 'Match Winner', odds: { 0: 2, 1: 2 },
+      depth: { 0: { lay: 2.1, back_size: 1500, lay_size: 900 } } }], { sport: 'tennis', teams: ['A', 'B'] });
+    expect(view.markets[0].runners[0]).toMatchObject({ backSize: 1500, laySize: 900 });
+  });
   test('runner lay price and status flow into the view', () => {
     const view = buildMarketView([{ id: 1, type: 'bookmaker', name: 'Match Winner', odds: { 0: 2, 1: 2 },
       depth: { 0: { lay: 2.1 } }, runner_status: { 1: 'suspended' } }], { sport: 'tennis', teams: ['A', 'B'] });

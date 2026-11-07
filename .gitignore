@@ -38,5 +38,7 @@ reports/
 # Playwright রান আউটপুট
 test-results/
 
-# Team logos downloaded at runtime by services/teamLogo.js
+# cached remote team logos (re-downloaded by services/teamLogos.js)
 public/images/teams/*
+!public/images/teams/.gitkeep
+dump.rdb

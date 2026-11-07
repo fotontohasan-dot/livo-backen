@@ -27,7 +27,8 @@ const { broadcastDemoStats } = require('../services/socket');
 const { emitMyBetsChanged } = require('../services/notify');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
-const { buildMarketView, filterMarketView } = require('../services/marketLayout');
+const { buildMarketView, filterMarketView, runnersFor } = require('../services/marketLayout');
+const { liveForClient } = require('../services/liveData');
 
 function formatMatch(row) {
   return {
@@ -42,7 +43,9 @@ function formatMatch(row) {
     awayScore: row.score_b != null ? row.score_b : null,
     overs: row.overs || null,
     status: row.status || 'upcoming',
-    date: row.start_time || null
+    date: row.start_time || null,
+    logoA: row.logo_a || null,
+    logoB: row.logo_b || null
   };
 }
 
@@ -112,7 +115,7 @@ router.get('/api/live', async (req, res) => {
       // ফুটবলের ভরা দিনে ক্রিকেট ট্যাব খালি দেখাত। row_number() দিয়ে
       // প্রতিটা স্পোর্ট নিজের কোটা পায়, তাই একটা অন্যটাকে চাপা দিতে পারে না।
       `SELECT id, title, team_a, team_b, sport, league, status, start_time,
-              score_a, score_b, overs
+              score_a, score_b, overs, logo_a, logo_b
        FROM (
          SELECT *, row_number() OVER (
            PARTITION BY sport
@@ -163,8 +166,11 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
     let cursorSql = '';
     if (Number.isSafeInteger(before) && before > 0) { params.push(before); cursorSql = `AND b.id < $${params.length}`; }
     const r = await pool.query(
-      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at, b.bet_type,
-              b.liability, b.potential_payout, COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
+      `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
+              b.bet_type, b.liability, b.potential_payout,
+              COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
+              mk.type AS market_type, mk.odds AS market_odds, mk.depth AS market_depth,
+              mk.runner_status AS market_runner_status, m.team_a, m.team_b,
               COALESCE(NULLIF(m.title, ''), m.team_a || ' vs ' || m.team_b) AS match_name
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
@@ -174,32 +180,38 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         LIMIT $2`,
       params
     );
-    const hasMore = r.rows.length > limit;
-    const bets = r.rows.slice(0, limit).map(b => {
-      const betType = b.bet_type === 'lay' ? 'lay' : 'back';
-      const liability = betType === 'lay' ? Number(b.liability || 0) : 0;
-      // Authoritative return = what settlement will credit if the bet wins (computed server-side
-      // with the same module as settlement): Back stake*odd, Lay stake + liability.
-      const potentialReturn = b.potential_payout > 0 ? Number(b.potential_payout)
-        : calcPotentialPayout(betType, Number(b.stake), Number(b.odd));
+    const bets = r.rows.map(b => {
+      // runner কলামে কাঁচা key ('0', '1x', ...) থাকে; ইউজারকে দেখাতে মার্কেট-লেআউটের লেবেল (ফিড-নামসহ) লাগে।
+      let selection = b.runner || '';
+      try {
+        const hit = runnersFor(
+          { type: b.market_type, odds: b.market_odds, depth: b.market_depth, runner_status: b.market_runner_status },
+          b.team_a, b.team_b
+        ).find(x => String(x.key) === String(b.runner));
+        if (hit && hit.label) selection = hit.label;
+      } catch (_) { /* মার্কেট মুছে গেলে কাঁচা key-ই দেখাও */ }
+      const betType = normalizeBetType(b.bet_type);
+      const stake = Number(b.stake);
+      const odd = Number(b.odd);
+      const stored = b.potential_payout != null ? Number(b.potential_payout) : NaN;
       return {
         id: b.id,
         matchId: b.match_id,
         matchName: b.match_name || '',
         market: b.market_name || '',
-        selection: b.runner || '',
+        selection,
         betType,
-        side: betType,
-        odd: Number(b.odd),
-        stake: Number(b.stake),
-        liability,
-        potentialReturn,
+        odd,
+        stake,
+        liability: betType === 'lay' ? Number(b.liability) || 0 : 0,
+        // বসানোর সময় সার্ভার যে potential_payout হিসাব করেছিল সেটাই; পুরনো সারিতে (০/NULL) Back-এর সূত্র।
+        potentialReturn: Number.isFinite(stored) && stored > 0 ? stored : Math.round(stake * odd * 100) / 100,
         status: b.status || 'pending',
         demo: !!b.is_demo,
         createdAt: b.created_at
       };
     });
-    res.json({ success: true, bets, hasMore, nextBefore: hasMore && bets.length ? bets[bets.length - 1].id : null });
+    res.json({ success: true, bets });
   } catch (err) {
     console.error('matches/api/my-bets error:', err.message);
     res.status(500).json({ success: false, bets: [] });
@@ -226,8 +238,9 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       score_b: row.score_b,
       overs: row.overs,
       league: row.league,
-      logo_a: row.team_a_logo || null,
-      logo_b: row.team_b_logo || null
+      live: liveForClient(row.sport, row.live_data),
+      logo_a: row.logo_a || null,
+      logo_b: row.logo_b || null
     };
 
     let markets = [];

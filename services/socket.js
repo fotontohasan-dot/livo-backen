@@ -351,6 +351,7 @@ const emitFeedUpdate = (match, markets = []) => {
       matchId: match.id, score_a: match.score_a, score_b: match.score_b,
       overs: match.overs, status: match.status, timestamp: new Date()
     });
+    if (match.live) io.to(`match:${match.id}`).emit('liveUpdate', { matchId: match.id, live: match.live, timestamp: Date.now() });
     if (markets.length) {
       io.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
       emitOddsAndStatus(match.id, markets);

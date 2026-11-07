@@ -449,6 +449,44 @@ body.light-mode .promo-banner {
      তারপর সেই খেলার Live ও Upcoming ম্যাচ দেখে। ম্যাচ রেন্ডার করার কোড এখন শুধু
      views/matches.ejs-এ, যেটা /matches/football ও /matches/cricket দুটোই সার্ভ করে। -->
 
+<!-- ===== Match Hub: In-Play / Today / Tomorrow / Competitions (client-side filtering, no reloads) ===== -->
+<section class="home-hub" id="homeHub"
+         data-empty="<%= t.hub_no_matches || 'No matches in this view' %>"
+         data-more="<%= t.hub_view_all || 'View all matches' %>"
+         data-competitions="<%= t.hub_competitions || 'Competitions' %>">
+  <div class="hh-head"><h3><%= t.hub_title || 'Sports' %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
+  <div class="hh-tabs" id="hhTabs">
+    <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
+    <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
+    <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
+    <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
+  </div>
+  <div class="hh-list" id="hhList"></div>
+</section>
+<style nonce="<%= cspNonce %>">
+  .home-hub { margin: 4px 12px 14px; padding: 12px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-glass); }
+  .hh-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .hh-head h3 { margin: 0; font-size: 15px; }
+  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; }
+  .hh-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; }
+  .hh-tabs::-webkit-scrollbar { display: none; }
+  .hh-tab, .hh-select { flex: 0 0 auto; padding: 7px 16px; border-radius: 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-weight: 700; font-size: 12px; cursor: pointer; }
+  .hh-tab.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .hh-select { max-width: 200px; }
+  .hh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  .hh-row { display: block; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); text-decoration: none; color: inherit; }
+  .hh-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-muted); }
+  .hh-league { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .hh-live { background: #dc2626; color: #fff; font-weight: 800; padding: 1px 8px; border-radius: 8px; animation: livedot 1.4s infinite; }
+  .hh-team { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; font-weight: 700; }
+  .hh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hh-score { color: var(--gold); }
+  .hh-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; flex-shrink: 0; }
+  .hh-logo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  .hh-empty, .hh-more { grid-column: 1 / -1; text-align: center; padding: 14px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+</style>
+<script src="/js/views/home-matches.js" defer></script>
+
 <!-- জনপ্রিয় গেমের হাইলাইট স্ট্রিপ সরানো হয়েছে (ইউজারের অনুরোধে)।
      নিচের ক্যাটাগরি ট্যাব + গেম গ্রিড থেকে একই গেমগুলো এখনো পাওয়া যায়,
      তাই কোনো গেম দুর্গম হয়ে যায়নি। -->
