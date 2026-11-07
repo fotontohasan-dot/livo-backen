@@ -432,3 +432,27 @@ describe('env validators', () => {
     expect(validateFeedKey(crypto.randomBytes(32).toString('hex')).valid).toBe(true);
   });
 });
+
+describe('admin UI exposes void / cancel', () => {
+  test('markets and matches pages render the Void and Cancel forms for an open market/live match', async () => {
+    const admin = await makeAdmin();
+    const { matchId, marketId } = await makeMarket();
+    const mk = await admin.agent.get(`/admin/markets/${matchId}`);
+    expect(mk.status).toBe(200);
+    expect(mk.text).toContain(`/admin/markets/${marketId}/void`);
+    const list = await admin.agent.get('/admin/matches');
+    expect(list.status).toBe(200);
+    expect(list.text).toContain(`/admin/matches/${matchId}/cancel`);
+  });
+
+  test('a browser form post (Accept: text/html) is redirected with a flash, not answered with raw JSON', async () => {
+    const u = await makeUser(1000);
+    const admin = await makeAdmin();
+    const { matchId, marketId } = await makeMarket();
+    await bet(u, matchId, { market_id: marketId, runner: 'A', side: 'back', stake: '100' });
+    const r = await admin.agent.post(`/admin/markets/${marketId}/void`).set('X-CSRF-Token', admin.token)
+      .set('Accept', 'text/html').type('form').send({}).redirects(0);
+    expect(r.status).toBe(302);
+    expect(await betNet(u.userId)).toBe(0);
+  });
+});

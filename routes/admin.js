@@ -3114,6 +3114,15 @@ router.post('/markets/:marketId/runner-status', rbac.requirePermission('matches_
   }
 });
 
+// Admin forms post as HTML (flash + redirect); API clients/tests ask for JSON.
+function respondVoid(req, res, status, payload, fallback) {
+  if (req.accepts(['json', 'html']) === 'html' && !req.xhr) {
+    req.flash(payload.success ? 'success' : 'error', payload.message || (payload.success ? 'OK' : 'Error'));
+    return redirectBack(req, res, fallback);
+  }
+  return res.status(status).json(payload);
+}
+
 // Void a market (e.g. abandoned, wrong market): every pending bet gets its reserved amount back.
 // Back -> stake, Lay -> liability. Idempotent: voided bets are no longer 'pending'.
 async function voidMarketTx(client, marketId, reason) {
@@ -3139,12 +3148,12 @@ router.post('/markets/:marketId/void', rbac.requirePermission('matches_manage'),
     if (out.error) {
       await client.query('ROLLBACK');
       const msg = out.error === 'accumulator_pending' ? 'Market has pending accumulator selections — resolve them first' : req.t(VOID_ERRORS[out.error]);
-      return res.status(out.error === 'not_found' ? 404 : 409).json({ success: false, message: msg });
+      return respondVoid(req, res, out.error === 'not_found' ? 404 : 409, { success: false, message: msg }, '/admin/markets');
     }
     await client.query('COMMIT');
     out.notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
     await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_VOIDED', `Market #${marketId} voided — ${out.total} bets, ${out.refunded} refunded`, req.ip);
-    res.json({ success: true, voided: out.total, refunded: out.refunded });
+    respondVoid(req, res, 200, { success: true, voided: out.total, refunded: out.refunded, message: `Market voided — ${out.total} bets, ${out.refunded} coins refunded` }, '/admin/markets');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('market void error:', err.message);
@@ -3167,7 +3176,7 @@ router.post('/matches/:id/cancel', rbac.requirePermission('matches_manage'), asy
     let total = 0, refunded = 0; const notifs = [];
     for (const mk of mks.rows) {
       const out = await voidMarketTx(client, mk.id, 'match cancelled');
-      if (out.error === 'accumulator_pending') { await client.query('ROLLBACK'); return res.status(409).json({ success: false, message: 'Pending accumulator selections exist — resolve them first' }); }
+      if (out.error === 'accumulator_pending') { await client.query('ROLLBACK'); return respondVoid(req, res, 409, { success: false, message: 'Pending accumulator selections exist — resolve them first' }, '/admin/matches'); }
       if (out.error) continue;
       total += out.total; refunded += out.refunded; notifs.push(...out.notifs);
     }
@@ -3175,7 +3184,7 @@ router.post('/matches/:id/cancel', rbac.requirePermission('matches_manage'), asy
     notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
     try { await cache.del(cacheKeys.matchDetail(matchId)); await cache.del('matches:live'); } catch (e) {}
     await logAdminAction(req.session.user.id, req.session.user.username, 'MATCH_CANCELLED', `Match #${matchId} cancelled — ${total} bets voided, ${refunded} refunded`, req.ip);
-    res.json({ success: true, voided: total, refunded });
+    respondVoid(req, res, 200, { success: true, voided: total, refunded, message: `Match cancelled — ${total} bets voided, ${refunded} coins refunded` }, '/admin/matches');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('match cancel error:', err.message);

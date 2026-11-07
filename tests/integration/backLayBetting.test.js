@@ -228,3 +228,6 @@ describe('ম্যাচ পেজ রেন্ডার', () => {
     expect(page.text).toMatch(/class="odds back"[^>]*aria-disabled="true"/);
   });
 });
+
+// The test DB is shared by every suite: never leave live matches behind (they crowd /matches/api/live).
+afterAll(async () => { await pool.query("UPDATE matches SET status = 'finished' WHERE title = 'BL Test'"); });

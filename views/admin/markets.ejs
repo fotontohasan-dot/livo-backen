@@ -217,6 +217,13 @@
                     <span><%= t('admin_btn_settle') %></span>
                   </button>
                   <% } %>
+                  <% if(m.status === 'open' || m.status === 'suspended') { %>
+                  <form action="/admin/markets/<%= m.id %>/void" method="POST" data-confirm="<%= t('admin_confirm_void_market') %>">
+                    <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-xl text-xs text-white transition-all flex items-center gap-1">
+                      <i class="fas fa-undo"></i><span><%= t('admin_btn_void_market') %></span>
+                    </button>
+                  </form>
+                  <% } %>
                 </div>
               </td>
             </tr>

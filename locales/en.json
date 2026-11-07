@@ -3374,5 +3374,9 @@
   "bet_slip_lay": "Lay",
   "bet_slip_liability": "Your liability (risk)",
   "bet_slip_lay_profit": "Profit if it wins",
-  "market_suspended": "SUSPENDED"
+  "market_suspended": "SUSPENDED",
+  "admin_btn_void_market": "Void",
+  "admin_confirm_void_market": "Void this market and refund every pending bet (Back stake / Lay liability)?",
+  "admin_btn_cancel_match": "Cancel",
+  "admin_confirm_cancel_match": "Cancel this match? All markets are voided and every pending bet is refunded."
 }
