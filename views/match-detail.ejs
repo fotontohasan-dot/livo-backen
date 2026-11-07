@@ -54,6 +54,7 @@
   }
   .md-shirt-a { background: #2563eb; }
   .md-shirt-b { background: #ea580c; }
+  .md-logo { object-fit: contain; background: #fff; border-radius: 50%; padding: 2px; }
   .md-team-name { flex: 1; font-size: 17px; font-weight: 700; color: #f8fafc; min-width: 0; }
   .md-team-score { font-size: 20px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
   .md-overs { padding: 0 16px 14px; font-size: 13px; color: #94a3b8; }
@@ -128,6 +129,30 @@
     opacity: .4; filter: grayscale(1); pointer-events: none; cursor: not-allowed;
   }
   .market-box.market-suspended .market-header::after { content: 'SUSPENDED'; font-size: 10px; font-weight: 800; color: #f87171; margin-left: 8px; }
+  /* Suspension overlay: blurs the market body and blocks clicks while the market is suspended */
+  .market-body { position: relative; }
+  .susp-overlay { display: none; position: absolute; inset: 0; z-index: 5; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .susp-overlay span { color: #f87171; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .market-box.market-suspended .susp-overlay { display: flex; }
+  /* On-screen numeric keypad */
+  .bs-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+  .bs-key { border: 0; border-radius: 8px; padding: 12px 0; font-size: 18px; font-weight: 700; background: #1f2937; color: #fff; }
+  .bs-key:active { background: #374151; }
+  .bs-key-fn { background: #334155; }
+  .bs-side-tag { font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-right: 6px; background: #1e3a5f; color: #fff; }
+  /* My Bets rows */
+  .mb-item { padding: 10px 14px; border-bottom: 1px solid #1f2937; font-size: 13px; }
+  .mb-top { display: flex; gap: 8px; align-items: center; }
+  .mb-match { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mb-side { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #1e3a5f; color: #fff; }
+  .mb-side-lay { background: #9d174d; }
+  .mb-status { font-size: 11px; font-weight: 700; }
+  .mb-won .mb-status { color: #4ade80; } .mb-lost .mb-status { color: #f87171; } .mb-void .mb-status { color: #fbbf24; }
+  .mb-sel { color: #94a3b8; margin: 4px 0; }
+  .mb-figs { display: flex; gap: 14px; flex-wrap: wrap; } .mb-figs small { display: block; color: #94a3b8; font-size: 10px; }
+  .mb-note { padding: 18px; text-align: center; color: #94a3b8; } .mb-err { color: #f87171; }
+  .mb-more { display: block; margin: 10px auto; padding: 8px 18px; border: 0; border-radius: 16px; background: #1f2937; color: #fff; }
   .bs-return[hidden] { display: none; }
   /* SUSPEND overlay: blurred, unclickable */
   .market-cell { position: relative; }
@@ -264,12 +289,12 @@
     </div>
     <div class="md-teams">
       <div class="md-team-row">
-        <div class="md-shirt md-shirt-a"><%= String(teamA).charAt(0).toUpperCase() %></div>
+        <% if (match.logo_a && /^\/images\/teams\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/.test(match.logo_a)) { %><img class="md-shirt md-logo" src="<%= match.logo_a %>" alt="<%= teamA %>" width="36" height="36" loading="lazy"><% } else { %><div class="md-shirt md-shirt-a"><%= String(teamA).charAt(0).toUpperCase() %></div><% } %>
         <div class="md-team-name"><%= teamA %></div>
         <div class="md-team-score" id="score-a"><%= match.score_a || '' %></div>
       </div>
       <div class="md-team-row">
-        <div class="md-shirt md-shirt-b"><%= String(teamB).charAt(0).toUpperCase() %></div>
+        <% if (match.logo_b && /^\/images\/teams\/[a-f0-9]{32}\.(png|jpg|gif|webp)$/.test(match.logo_b)) { %><img class="md-shirt md-logo" src="<%= match.logo_b %>" alt="<%= teamB %>" width="36" height="36" loading="lazy"><% } else { %><div class="md-shirt md-shirt-b"><%= String(teamB).charAt(0).toUpperCase() %></div><% } %>
         <div class="md-team-name"><%= teamB %></div>
         <div class="md-team-score" id="score-b"><%= match.score_b || '' %></div>
       </div>
@@ -310,7 +335,7 @@
                      data-market-name="<%= market.name %>"
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
-                     data-odd="<%= r.odd %>"><%= r.odd %></div>
+                     data-odd="<%= r.odd %>"<%- (r.status === 'suspended' || market.status === 'suspended') ? ' aria-disabled="true"' : '' %>><%= r.odd %></div>
                 <small class="vol" data-vol="back"><%= fmtVol(r.backSize) %></small>
                 <% if (r.lay) { %>
                 <div class="odds lay"
@@ -319,7 +344,7 @@
                      data-market-name="<%= market.name %>"
                      data-runner="<%= r.key %>"
                      data-label="<%= r.label %>"
-                     data-odd="<%= r.lay %>"><%= r.lay %></div>
+                     data-odd="<%= r.lay %>"<%- (r.status === 'suspended' || market.status === 'suspended') ? ' aria-disabled="true"' : '' %>><%= r.lay %></div>
                 <small class="vol" data-vol="lay"><%= fmtVol(r.laySize) %></small>
                 <% } %>
               </div>

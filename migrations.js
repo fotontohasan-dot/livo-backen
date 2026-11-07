@@ -889,6 +889,25 @@ async function runMigrations() {
         ADD COLUMN IF NOT EXISTS liability INTEGER NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS potential_payout INTEGER NOT NULL DEFAULT 0
     `);
+    // দুটো মাইগ্রেশন ব্লক একই `liability` কলাম বানায়: আগেরটা NUMERIC(14,2) (nullable), পরেরটা
+    // INTEGER NOT NULL DEFAULT 0। `ADD COLUMN IF NOT EXISTS`-এ প্রথমটাই টেকে, ফলে Back বাজিতে
+    // liability '0.00' (স্ট্রিং) বা NULL আসত। লায়াবিলিটি সবসময় পূর্ণসংখ্যা (calcLiability ceil করে),
+    // তাই কলামটাকে canonical INTEGER NOT NULL DEFAULT 0-তে আনা হলো। idempotent: ইতিমধ্যে integer হলে কিছুই করে না।
+    {
+      const col = await pool.query(
+        `SELECT data_type, is_nullable FROM information_schema.columns
+          WHERE table_name = 'bets' AND column_name = 'liability' AND table_schema = current_schema()`
+      );
+      if (col.rows[0] && (col.rows[0].data_type !== 'integer' || col.rows[0].is_nullable === 'YES')) {
+        await pool.query(`UPDATE bets SET liability = 0 WHERE liability IS NULL`);
+        await pool.query(`
+          ALTER TABLE bets
+            ALTER COLUMN liability TYPE INTEGER USING CEIL(liability)::int,
+            ALTER COLUMN liability SET DEFAULT 0,
+            ALTER COLUMN liability SET NOT NULL
+        `);
+      }
+    }
     await pool.query(`ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_bet_type_check`);
     await pool.query(`ALTER TABLE bets ADD CONSTRAINT bets_bet_type_check CHECK (bet_type IN ('back','lay'))`);
     // backfill legacy Back bets so potential_payout is never 0 for old rows
@@ -908,6 +927,29 @@ async function runMigrations() {
         RETURN NEW;
       END; $$ LANGUAGE plpgsql
     `);
+    // Team logos fetched from the feed (services/teamLogo.js): local web path on the match + a URL cache.
+    await pool.query(`ALTER TABLE matches ADD COLUMN IF NOT EXISTS team_a_logo TEXT, ADD COLUMN IF NOT EXISTS team_b_logo TEXT`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS team_logos (
+        url_hash CHAR(64) PRIMARY KEY,
+        file VARCHAR(64),
+        status VARCHAR(10) NOT NULL,
+        error VARCHAR(60),
+        fetched_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`);
+    // Idempotent bet placement: one (user, client_ref) can only ever create one bet.
+    await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS client_ref VARCHAR(64)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_bets_user_client_ref ON bets(user_id, client_ref) WHERE client_ref IS NOT NULL`);
+    // `bets.side` (older contract) and `bets.bet_type` (canonical) must agree. Report, then repair
+    // only the dangerous direction: a Lay row stuck as 'back' would be settled as a Back bet.
+    {
+      const mismatch = await pool.query(`SELECT COUNT(*)::int AS n FROM bets WHERE side IS DISTINCT FROM bet_type`);
+      if (mismatch.rows[0].n > 0) {
+        console.warn(`⚠️  bets.side/bet_type mismatch on ${mismatch.rows[0].n} row(s) — aligning to the stricter value`);
+        await pool.query(`UPDATE bets SET bet_type = 'lay' WHERE side = 'lay' AND bet_type = 'back'`);
+        await pool.query(`UPDATE bets SET side = bet_type WHERE side IS DISTINCT FROM bet_type`);
+      }
+    }
     await pool.query(`DROP TRIGGER IF EXISTS trg_coin_tx_block_update ON coin_transactions`);
     await pool.query(`CREATE TRIGGER trg_coin_tx_block_update BEFORE UPDATE ON coin_transactions FOR EACH ROW EXECUTE FUNCTION coin_tx_block_update()`);
     await pool.query(`

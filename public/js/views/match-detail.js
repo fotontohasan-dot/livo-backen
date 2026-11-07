@@ -60,7 +60,17 @@
   var stakeEl = $('bsStake');
   var errEl = $('bsError');
   var placeBtn = $('bsPlace');
-  var current = null; // { marketId, runner, odd, cell, betType }
+  var current = null; // { marketId, runner, odd, cell, betType, ref }
+  var inflight = false;
+  // One key per slip submission: a retry of the SAME slip is deduplicated by the server, but any
+  // change to the stake starts a new key so an edited slip is never mistaken for the old one.
+  function newRef() {
+    try {
+      var a = new Uint8Array(12); (window.crypto || window.msCrypto).getRandomValues(a);
+      return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    } catch (e) { return String(Date.now()) + Math.random().toString(16).slice(2, 12); }
+  }
+  function touchRef() { if (current) current.ref = newRef(); }
 
   function money(n) {
     return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -100,11 +110,13 @@
       runner: btn.getAttribute('data-runner'),
       odd: odd,
       betType: btn.getAttribute('data-bet-type') === 'lay' ? 'lay' : 'back',
-      cell: btn.closest('.market-cell')
+      cell: btn.closest('.market-cell'),
+      ref: newRef()
     };
     applySide();
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
     $('bsPick').textContent = (btn.getAttribute('data-label') || '') + (current.betType === 'lay' ? ' (Lay)' : '');
+    if ($('bsSideTag')) $('bsSideTag').textContent = current.betType === 'lay' ? 'LAY' : 'BACK';
     $('bsOdd').textContent = String(odd);
     if (!stakeEl.value || stakeValue() < MIN_BET) stakeEl.value = String(Math.max(MIN_BET, 50));
     setError('');
@@ -142,11 +154,12 @@
     if ($('bsClose')) $('bsClose').addEventListener('click', closeSlip);
     if ($('bsCancel')) $('bsCancel').addEventListener('click', closeSlip);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSlip(); });
-    if (stakeEl) stakeEl.addEventListener('input', function () { setError(''); refreshReturn(); });
+    if (stakeEl) stakeEl.addEventListener('input', function () { touchRef(); setError(''); refreshReturn(); });
     document.querySelectorAll('.bs-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var add = parseInt(chip.getAttribute('data-add'), 10) || 0;
         stakeEl.value = String(Math.min(MAX_BET, stakeValue() + add));
+        touchRef();
         setError('');
         refreshReturn();
       });
@@ -174,19 +187,20 @@
   }
 
   function placeBet() {
-    if (!current) return;
+    if (!current || inflight) return;
     var stake = stakeValue();
     if (!stake || stake < MIN_BET) { setError(cfg.minBetMsg || ('Min ' + MIN_BET)); return; }
     if (stake > MAX_BET) { setError('Max ' + MAX_BET); return; }
-    if (current.side === 'lay' && liabilityOf(stake, current.odd) > MAX_BET) { setError('Max ' + MAX_BET); return; }
+    if (current.betType === 'lay' && liabilityFor(stake, current.odd) > MAX_BET) { setError('Max ' + MAX_BET); return; }
 
     placeBtn.disabled = true;
+    inflight = true;
     setError('');
 
     fetch('/matches/' + encodeURIComponent(cfg.matchId) + '/bet', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Idempotency-Key': current.ref },
       body: JSON.stringify({
         market_id: current.marketId,
         runner: current.runner,
@@ -208,8 +222,10 @@
       })
       .then(function (res) {
         var data = res.data || {};
+        inflight = false;
         if (data.success) {
           closeSlip();
+          loadMyBets(true);
           toast(data.message || 'OK', 'ok');
           if (data.newBalance != null) {
             document.querySelectorAll('.js-balance').forEach(function (n) { n.textContent = Number(data.newBalance).toLocaleString(); });
@@ -226,6 +242,7 @@
         placeBtn.disabled = false;
       })
       .catch(function (e) {
+        inflight = false;
         setError(e && e.sessionExpired ? (cfg.sessionExpired || 'Session expired') : cfg.networkError);
         placeBtn.disabled = false;
       });
@@ -457,7 +474,7 @@
   applyTab(activeTab); // initial empty-tab state ("Waiting for live feed…")
 
   // ===== Live odds / suspension (Socket.IO) =====
-  // Server events: oddsUpdate, marketStatusChange, runnerStatusChange (services/socket.js).
+  // Server events: scoreUpdate, oddsUpdate, marketStatusChange, runnerStatusChange, myBetsChanged (services/socket.js, services/notify.js).
   function findOdds(marketId, runner, type) {
     var list = document.querySelectorAll('.odds[data-market-id="' + String(marketId) + '"]');
     for (var i = 0; i < list.length; i++) {
@@ -490,6 +507,12 @@
       refreshReturn();
     }
   }
+  // screen readers: a suspended price is announced as disabled (clicks are already blocked via isLocked())
+  function setAria(nodes, on) {
+    for (var i = 0; i < nodes.length; i++) {
+      if (on) nodes[i].setAttribute('aria-disabled', 'true'); else nodes[i].removeAttribute('aria-disabled');
+    }
+  }
   function setRunnerSuspended(marketId, runner, suspended) {
     var cells = document.querySelectorAll('.market-cell[data-runner="' + String(runner) + '"]');
     for (var i = 0; i < cells.length; i++) {
@@ -497,6 +520,7 @@
       if (!box || box.getAttribute('data-market-id') !== String(marketId)) continue;
       cells[i].classList.toggle('runner-suspended', !!suspended);
       cells[i].classList.remove('selected');
+      setAria(cells[i].querySelectorAll('.odds'), !!suspended || box.classList.contains('market-suspended'));
     }
     if (suspended && current && String(current.marketId) === String(marketId) && current.runner === String(runner)) {
       setError(cfg.suspendedMsg || 'Suspended');
@@ -509,6 +533,7 @@
     var box = document.querySelector('.market-box[data-market-id="' + String(marketId) + '"]');
     if (!box) return;
     box.classList.toggle('market-suspended', !!suspended);
+    setAria(box.querySelectorAll('.odds'), !!suspended);
     if (suspended && current && String(current.marketId) === String(marketId)) {
       setError(cfg.suspendedMsg || 'Suspended');
       if (placeBtn) placeBtn.disabled = true;
@@ -522,6 +547,16 @@
       var socket = io();
       // (re)join on every connect so a reconnect after a network drop resumes updates
       socket.on('connect', function () { socket.emit('joinMatch', cfg.matchId); });
+
+      // Canonical live-score event is `scoreUpdate` (server: emitFeedUpdate / updateLiveScore).
+      socket.on('scoreUpdate', function (msg) {
+        if (!msg || String(msg.matchId) !== String(cfg.matchId)) return;
+        if ($('score-a') && msg.score_a != null) $('score-a').textContent = String(msg.score_a);
+        if ($('score-b') && msg.score_b != null) $('score-b').textContent = String(msg.score_b);
+        if ($('md-overs') && msg.overs != null) $('md-overs').textContent = String(msg.overs);
+      });
+      // Private per-user room: tells us our own bets changed (placed / settled / voided) — re-fetch.
+      socket.on('myBetsChanged', function () { if (mbPanel && mbPanel.classList.contains('open')) loadMyBets(true); });
 
       socket.on('oddsUpdate', function (msg) {
         if (!msg || String(msg.matchId) !== String(cfg.matchId) || !Array.isArray(msg.markets)) return;

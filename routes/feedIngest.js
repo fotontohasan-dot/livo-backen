@@ -7,7 +7,7 @@
 // {
 //   "provider": "manual",                       // optional, default "admin_feed"
 //   "matches": [{
-//     "external_id": "123", "sport": "cricket", "league": "IPL",
+//     "external_id": "123", "sport": "cricket", "team_a_logo_url": "https://…", "team_b_logo_url": "https://…",  // optional "league": "IPL",
 //     "team_a": "A", "team_b": "B", "status": "live",
 //     "start_time": "2026-11-05T14:00:00Z",
 //     "score_a": "120/3", "score_b": "", "overs": "14.2",
@@ -33,6 +33,8 @@ const MAX_RUNNERS = 30;
 const MATCH_STATUSES = new Set(['upcoming', 'live', 'finished', 'cancelled']);
 const MARKET_STATUSES = new Set(['open', 'suspended']);
 const MAX_ODD = 1000;
+// A feed must not revive a match an admin finished/cancelled (that would reopen betting on it).
+const TERMINAL_MATCH_STATUSES = new Set(['finished', 'cancelled']);
 
 function keyOk(provided) {
   const expected = process.env.FEED_API_KEY;
@@ -113,10 +115,12 @@ router.post('/', async (req, res) => {
         if (srcA) logoQueue.add(srcA);
         if (srcB) logoQueue.add(srcB);
         const found = await client.query(
-          'SELECT id FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
+          'SELECT id, status FROM matches WHERE provider = $1 AND external_id = $2 FOR UPDATE', [provider, externalId]);
         let matchId;
         if (found.rows[0]) {
           matchId = found.rows[0].id;
+          const prev = String(found.rows[0].status || '').toLowerCase();
+          if (TERMINAL_MATCH_STATUSES.has(prev) && status !== prev) fields[5] = prev; // keep terminal status
           await client.query(
             `UPDATE matches SET sport=$1, league=$2, team_a=$3, team_b=$4, title=$5, status=$6,
                     score_a=$7, score_b=$8, overs=$9, start_time=COALESCE($10, start_time), synced_at=NOW(),

@@ -107,7 +107,10 @@ function resolveLayOdd(market, runner) {
 // true when the runner is individually suspended (market-level status is checked separately)
 function isRunnerSuspended(market, runner) {
   const rs = market && market.runner_status;
-  return !!(rs && typeof rs === 'object' && String(rs[String(runner)]).toLowerCase() === 'suspended');
+  if (rs && typeof rs === 'object' && String(rs[String(runner)]).toLowerCase() === 'suspended') return true;
+  // depth[runner].suspended === true is honoured too (older feed shape); more restrictive, never less.
+  const d = market && market.depth;
+  return !!(d && typeof d === 'object' && d[String(runner)] && d[String(runner)].suspended === true);
 }
 
 module.exports = { resolveOdd, resolveLayOdd, isRunnerSuspended, MAX_ODD, DEFAULT_ODDS, FALLBACK_ODD };

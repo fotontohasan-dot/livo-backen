@@ -2,7 +2,7 @@
 // Back/Lay এক্সচেঞ্জ গ্রিড: লায়াবিলিটি হিসাব, সার্ভার-নির্ধারিত Lay দাম, রানার/মার্কেট সাসপেনশন,
 // Lay সেটেলমেন্ট আর ম্যাচ পেজের রেন্ডার।
 const { pool } = require('../../db');
-const { liabilityFor, payoutFor, betWins } = require('../../services/layMath');
+const { calcLiability, settlementCredit, betWins } = require('../../services/layBet');
 const { resolveLayOdd, isRunnerSuspended } = require('../../services/oddsResolver');
 const { buildMarketView } = require('../../services/marketLayout');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
@@ -37,22 +37,24 @@ async function makeMarket({ status = 'open', depth = DEPTH, odds = { A: 2.0, B: 
 const bet = (u, matchId, body) =>
   u.agent.post(`/matches/${matchId}/bet`).set('X-CSRF-Token', u.token).type('form').send(body);
 
-describe('লায়াবিলিটি/পেআউট হিসাব (services/layMath.js)', () => {
-  test('liability = stake × (odds − 1), দশমিক অডসেও নির্ভুল', () => {
-    expect(liabilityFor(100, 2.5)).toBe(150);
-    expect(liabilityFor(10, 1.85)).toBe(8.5);
-    expect(liabilityFor(50, 3.45)).toBe(122.5);
-    expect(liabilityFor(10, 1.01)).toBe(0.1);
+describe('লায়াবিলিটি/পেআউট হিসাব (services/layBet.js — একমাত্র canonical মডিউল)', () => {
+  test('liability = stake × (odds − 1), সেন্টে রাউন্ড করে তারপর ceil (হাউস কখনো কম পায় না)', () => {
+    expect(calcLiability(100, 2.5)).toBe(150);
+    expect(calcLiability(100, 1.85)).toBe(85);   // 85.00000000000001 নয়, 86 নয়
+    expect(calcLiability(10, 1.85)).toBe(9);     // 8.5 -> 9
+    expect(calcLiability(50, 3.45)).toBe(123);   // 122.5 -> 123
+    expect(calcLiability(10, 1.01)).toBe(1);     // 0.1 -> 1
   });
-  test('Lay জিতলে stake + liability ফেরত; Back জিতলে floor(stake × odd)', () => {
-    expect(payoutFor({ side: 'lay', stake: 100, liability: 150, odd: 2.5 })).toBe(250);
-    expect(payoutFor({ side: 'back', stake: 50, odd: 1.85 })).toBe(92);
-    expect(payoutFor({ stake: 50, odd: 2 })).toBe(100); // পুরনো বাজি (side নেই) = back
+  test('Lay জিতলে stake + liability ফেরত; Back জিতলে floor(stake × odd); হারলে কিছু নয়', () => {
+    expect(settlementCredit({ bet_type: 'lay', stake: 100, liability: 150, odd: 2.5 }, true)).toBe(250);
+    expect(settlementCredit({ bet_type: 'back', stake: 50, odd: 1.85 }, true)).toBe(92);
+    expect(settlementCredit({ stake: 50, odd: 2 }, true)).toBe(100); // bet_type নেই = back
+    expect(settlementCredit({ bet_type: 'lay', stake: 100, liability: 150, odd: 2.5 }, false)).toBe(0);
   });
   test('Lay সেই রানার না জিতলে জেতে; Back রানার জিতলে', () => {
-    expect(betWins({ side: 'lay', runner: 'A' }, 'B')).toBe(true);
-    expect(betWins({ side: 'lay', runner: 'A' }, 'A')).toBe(false);
-    expect(betWins({ side: 'back', runner: 'A' }, 'A')).toBe(true);
+    expect(betWins({ bet_type: 'lay', runner: 'A' }, 'B')).toBe(true);
+    expect(betWins({ bet_type: 'lay', runner: 'A' }, 'A')).toBe(false);
+    expect(betWins({ bet_type: 'back', runner: 'A' }, 'A')).toBe(true);
     expect(betWins({ runner: 'A' }, 'B')).toBe(false);
   });
 });
@@ -95,11 +97,12 @@ describe('Lay বাজি (POST /matches/:id/bet)', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     const row = (await pool.query('SELECT * FROM bets WHERE user_id=$1', [u.userId])).rows[0];
+    expect(row.bet_type).toBe('lay');
     expect(row.side).toBe('lay');
     expect(Number(row.odd)).toBe(2.5);
     expect(Number(row.stake)).toBe(100);
     expect(Number(row.liability)).toBe(150);
-    const tx = await pool.query(`SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='bet'`, [u.userId]);
+    const tx = await pool.query(`SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='lay_bet'`, [u.userId]);
     expect(Number(tx.rows[0].amount)).toBe(-150);
   });
 
@@ -110,7 +113,8 @@ describe('Lay বাজি (POST /matches/:id/bet)', () => {
     expect(res.status).toBe(200);
     const row = (await pool.query('SELECT * FROM bets WHERE user_id=$1', [u.userId])).rows[0];
     expect(row.side).toBe('back');
-    expect(row.liability).toBeNull();
+    expect(row.bet_type).toBe('back');
+    expect(Number(row.liability)).toBe(0);
     const tx = await pool.query(`SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='bet'`, [u.userId]);
     expect(Number(tx.rows[0].amount)).toBe(-100);
   });
@@ -165,7 +169,7 @@ describe('Lay সেটেলমেন্ট (POST /admin/markets/:id/settle)', 
     return admin.agent.post(`/admin/markets/${marketId}/settle`)
       .set('X-CSRF-Token', admin.token).type('form').send({ winning_runner: winner });
   }
-  const wins = (userId) => pool.query(`SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='bet_win'`, [userId]);
+  const wins = (userId) => pool.query(`SELECT amount FROM coin_transactions WHERE user_id=$1 AND type IN ('bet_win','lay_win')`, [userId]);
 
   test('রানার হারলে Lay জেতে: stake + liability ফেরত; Back হারে', async () => {
     const layer = await makeUser(1000);
@@ -208,15 +212,22 @@ describe('ম্যাচ পেজ রেন্ডার', () => {
     const susp = await makeMarket({ status: 'suspended' });
     let page = await u.agent.get(`/matches/${matchId}`);
     expect(page.status).toBe(200);
-    expect(page.text).toMatch(/class="odds back"[^>]*data-side="back"/);
-    expect(page.text).toMatch(/class="odds lay"[^>]*data-side="lay"/);
-    expect(page.text).toMatch(/market-cell suspended" data-runner="B"/);
-    expect(page.text).toMatch(/class="odds lay"[^>]*data-runner="B"[^>]*disabled/);
+    expect(page.text).toMatch(/class="odds back"[^>]*data-bet-type="back"/);
+    expect(page.text).toMatch(/class="odds lay"[^>]*data-bet-type="lay"/);
+    // runner B is suspended: its cell is flagged and its back price is aria-disabled
+    expect(page.text).toMatch(/market-cell runner-suspended" data-runner="B"/);
+    expect(page.text).toMatch(/class="odds back"[^>]*data-runner="B"[^>]*aria-disabled="true"/);
+    // B has no lay price -> no Lay box at all for B; A (open) has one and it is not disabled
+    expect(page.text).not.toMatch(/class="odds lay"[^>]*data-runner="B"/);
+    expect(page.text).toMatch(/class="odds lay"[^>]*data-runner="A"[^>]*data-odd="2.5">/);
     expect(page.text).toContain('susp-overlay');
-    expect(page.text).not.toMatch(/market-box suspended/);
+    expect(page.text).not.toMatch(/market-box market-suspended/);
 
     page = await u.agent.get(`/matches/${susp.matchId}`);
-    expect(page.text).toMatch(/market-box suspended/);
-    expect(page.text).toMatch(/class="odds back"[^>]*disabled/);
+    expect(page.text).toMatch(/market-box market-suspended/);
+    expect(page.text).toMatch(/class="odds back"[^>]*aria-disabled="true"/);
   });
 });
+
+// The test DB is shared by every suite: never leave live matches behind (they crowd /matches/api/live).
+afterAll(async () => { await pool.query("UPDATE matches SET status = 'finished' WHERE title = 'BL Test'"); });

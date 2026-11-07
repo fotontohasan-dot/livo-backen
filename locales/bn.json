@@ -3374,5 +3374,9 @@
   "bet_slip_lay": "লে",
   "bet_slip_liability": "আপনার ঝুঁকি (লায়াবিলিটি)",
   "bet_slip_lay_profit": "জিতলে লাভ",
-  "market_suspended": "SUSPENDED"
+  "market_suspended": "SUSPENDED",
+  "admin_btn_void_market": "বাতিল",
+  "admin_confirm_void_market": "এই মার্কেট বাতিল করে সব pending বেট ফেরত দেবেন? (Back-এ stake, Lay-এ liability)",
+  "admin_btn_cancel_match": "ম্যাচ বাতিল",
+  "admin_confirm_cancel_match": "এই ম্যাচ বাতিল করবেন? সব মার্কেট void হবে এবং প্রতিটি pending বেট ফেরত যাবে।"
 }

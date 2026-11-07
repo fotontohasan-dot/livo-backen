@@ -166,6 +166,13 @@
               </td>
               <td class="px-6 py-4">
                 <div class="flex justify-center gap-2">
+                  <% if(m.status !== 'cancelled' && m.status !== 'completed' && m.status !== 'finished') { %>
+                  <form action="/admin/matches/<%= m.id %>/cancel" method="POST" data-confirm="<%= t('admin_confirm_cancel_match') %>">
+                    <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-xl text-xs text-white flex items-center gap-1 transition-all">
+                      <i class="fas fa-ban"></i><span><%= t('admin_btn_cancel_match') %></span>
+                    </button>
+                  </form>
+                  <% } %>
                   <form action="/admin/matches/<%= m.id %>/delete" method="POST" data-confirm="Delete this match permanently?">
                     <button type="submit" aria-label="<%= t('admin_ui_delete_match') %>" title="<%= t('admin_ui_delete_match') %>"
                             class="px-3 py-1.5 bg-red-600/90 hover:bg-red-700 rounded-xl text-xs text-white flex items-center gap-1 transition-all">

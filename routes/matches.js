@@ -2,6 +2,9 @@ const express = require('express');
 const { requireIntParam } = require('../middleware/validate');
 const router = express.Router();
 
+// Matches that must not accept new bets (feed statuses are lower-cased; admin-created rows may be capitalised).
+const BETTING_CLOSED_MATCH_STATUSES = new Set(['finished', 'completed', 'cancelled', 'canceled', 'abandoned']);
+
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
@@ -21,6 +24,7 @@ const { getSetting } = require('../services/settings');
 const { resolveOdd, resolveLayOdd, isRunnerSuspended } = require('../services/oddsResolver');
 const { normalizeBetType, calcRisk, calcLiability, calcPotentialPayout } = require('../services/layBet');
 const { broadcastDemoStats } = require('../services/socket');
+const { emitMyBetsChanged } = require('../services/notify');
 const cache = require('../services/cache');
 const { ensureDefaultMarkets } = require('../services/autoMarkets');
 const { buildMarketView, filterMarketView, runnersFor } = require('../services/marketLayout');
@@ -155,6 +159,12 @@ router.get('/api/live', async (req, res) => {
 // শুধু নিজের বাজিই ফেরে (user_id সেশন থেকে); ম্যাচ বা মার্কেট মুছে গেলেও LEFT JOIN-এ সারি হারায় না।
 router.get('/api/my-bets', isAuth, async (req, res) => {
   try {
+    // Cursor pagination: ?limit=1..100 (default 50) & ?before=<bet id>. user_id always comes from the session.
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+    const before = parseInt(req.query.before, 10);
+    const params = [req.session.user.id, limit + 1];
+    let cursorSql = '';
+    if (Number.isSafeInteger(before) && before > 0) { params.push(before); cursorSql = `AND b.id < $${params.length}`; }
     const r = await pool.query(
       `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
               b.bet_type, b.liability, b.potential_payout,
@@ -165,12 +175,15 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
          LEFT JOIN markets mk ON mk.id = b.market_id
-        WHERE b.user_id = $1
+        WHERE b.user_id = $1 ${cursorSql}
         ORDER BY b.id DESC
-        LIMIT 50`,
-      [req.session.user.id]
+        LIMIT $2`,
+      params
     );
-    const bets = r.rows.map(b => {
+    // limit+1 সারি আনা হয়েছিল শুধু "আরও আছে কি না" জানতে; ক্লায়েন্টকে শুধু limit-টাই পাঠাই।
+    const hasMore = r.rows.length > limit;
+    const pageRows = hasMore ? r.rows.slice(0, limit) : r.rows;
+    const bets = pageRows.map(b => {
       // runner কলামে কাঁচা key ('0', '1x', ...) থাকে; ইউজারকে দেখাতে মার্কেট-লেআউটের লেবেল (ফিড-নামসহ) লাগে।
       let selection = b.runner || '';
       try {
@@ -201,10 +214,11 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         createdAt: b.created_at
       };
     });
-    res.json({ success: true, bets });
+    const nextBefore = hasMore && bets.length ? bets[bets.length - 1].id : null;
+    res.json({ success: true, bets, hasMore, nextBefore });
   } catch (err) {
     console.error('matches/api/my-bets error:', err.message);
-    res.json({ success: false, bets: [] });
+    res.status(500).json({ success: false, bets: [] });
   }
 });
 
@@ -292,30 +306,42 @@ router.get('/:id/markets', async (req, res) => {
 
 router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, res) => {
   const userId = req.session.user.id;
-  const matchId = req.params.id;
-  const { market_id, runner, demo } = req.body;
-  const betType = normalizeBetType(req.body.bet_type);
-  const stake = parseInt(req.body.stake);
-  // Back (ডিফল্ট) বা Lay। অচেনা মান সরাসরি প্রত্যাখ্যান — চুপচাপ Back ধরলে ব্যবহারকারী উল্টো বাজি ধরত।
-  if (req.body.side !== undefined && !['back', 'lay'].includes(req.body.side)) {
-    return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
+  const matchId = Number(req.params.id);
+  if (!Number.isSafeInteger(matchId) || matchId <= 0) {
+    return res.status(400).json({ success: false, message: 'Invalid match id' });
   }
-  const side = req.body.side === 'lay' ? 'lay' : 'back';
+  const { market_id, runner, demo } = req.body;
+  // One contract: `bet_type` is canonical, `side` is accepted as an alias. If both are sent they
+  // must agree, and any unknown value is rejected — never silently downgraded to Back.
+  const rawType = req.body.bet_type !== undefined ? req.body.bet_type : req.body.side;
+  if (req.body.bet_type !== undefined && req.body.side !== undefined &&
+      normalizeBetType(req.body.bet_type) !== normalizeBetType(req.body.side)) {
+    return res.status(400).json({ success: false, message: 'bet_type and side disagree' });
+  }
+  const betType = normalizeBetType(rawType);
+  if (!betType) {
+    return res.status(400).json({ success: false, message: 'Invalid bet type' });
+  }
+  const marketIdNum = Number(market_id);
+  if (!Number.isSafeInteger(marketIdNum) || marketIdNum <= 0) {
+    return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
+  }
+  const stake = Number(req.body.stake);
+  // Optional idempotency key: a retry with the same key can never place (or charge) twice.
+  const rawRef = req.get('Idempotency-Key') || req.body.client_ref;
+  const clientRef = rawRef ? String(rawRef).slice(0, 64) : null;
+  if (clientRef && !/^[A-Za-z0-9_-]{8,64}$/.test(clientRef)) {
+    return res.status(400).json({ success: false, message: 'Invalid idempotency key' });
+  }
   const isDemo = !!demo;
 
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
-  if (isNaN(stake) || stake < minBet) {
+  if (!Number.isInteger(stake) || stake < minBet) {
     return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
   }
   if (stake > maxBet) {
     return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
-  }
-  if (!market_id) {
-    return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
-  }
-  if (!betType) {
-    return res.status(400).json({ success: false, message: 'Invalid bet type' });
   }
 
   const client = await pool.connect();
@@ -330,9 +356,31 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
     // `bets.market_id = B` নিয়ে বসে যেত। সেটেলমেন্ট চলে মার্কেট ধরে, আর
     // রিপোর্টিং চলে ম্যাচ ধরে — দুটো আর মেলে না, এবং একটা শেষ হয়ে যাওয়া
     // ম্যাচের ফলাফল জেনে অন্য ম্যাচের নামে বাজি ধরার সুযোগ তৈরি হয়।
+    // Idempotent replay: same user + same key => return the original bet, charge nothing.
+    if (clientRef) {
+      const dup = await client.query(
+        'SELECT id, bet_type, liability, potential_payout, is_demo FROM bets WHERE user_id = $1 AND client_ref = $2', [userId, clientRef]);
+      if (dup.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.json({ success: true, duplicate: true, betId: dup.rows[0].id, betType: dup.rows[0].bet_type,
+          liability: dup.rows[0].liability, potentialPayout: dup.rows[0].potential_payout, message: req.t('matches_bet_placed') });
+      }
+    }
+
+    // Lock order is always matches -> markets (same as the feed ingest), FOR SHARE so concurrent
+    // bets don't block each other but a feed/admin suspend (FOR UPDATE) waits for in-flight bets.
+    const mt = await client.query('SELECT status FROM matches WHERE id = $1 FOR SHARE', [matchId]);
+    if (!mt.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: req.t('matches_market_not_found') });
+    }
+    if (BETTING_CLOSED_MATCH_STATUSES.has(String(mt.rows[0].status || '').toLowerCase())) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, code: 'MATCH_CLOSED', message: req.t('matches_market_closed') });
+    }
     const m = await client.query(
-      `SELECT * FROM markets WHERE id = $1 AND match_id = $2`,
-      [market_id, matchId]
+      `SELECT * FROM markets WHERE id = $1 AND match_id = $2 FOR SHARE`,
+      [marketIdNum, matchId]
     );
     if (!m.rows[0]) {
       await client.query('ROLLBACK');
@@ -378,10 +426,10 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
 
     const ins = await client.query(
       `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo,
-                         bet_type, liability, potential_payout)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11) RETURNING id`,
-      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo,
-       betType, liability, potentialPayout]
+                         bet_type, side, liability, potential_payout, client_ref)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $9, $10, $11, $12) RETURNING id`,
+      [userId, matchId, marketIdNum, m.rows[0].type, runner || null, oddNum, stake, isDemo,
+       betType, liability, potentialPayout, clientRef]
     );
     const betId = ins.rows[0].id;
 
@@ -394,6 +442,7 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
       await client.query('COMMIT');
 
       req.session.user.demo_balance = upd.rows[0].demo_balance;
+      emitMyBetsChanged(userId, 'placed');
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
       return res.json({ success: true, message: req.t('matches_demo_bet_placed'), demo: true, betType, liability, potentialPayout, newBalance: upd.rows[0].demo_balance });
@@ -414,6 +463,7 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+    emitMyBetsChanged(userId, 'placed');
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     updateDailyTurnover(userId, risk).catch(e => console.error('dailyReward:', e.message));
@@ -426,7 +476,10 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
 
     res.json({ success: true, message: req.t('matches_bet_placed'), betType, liability, potentialPayout, newBalance: upd.rows[0].coins });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
+    if (err && err.code === '23505' && clientRef) {
+      return res.status(409).json({ success: false, code: 'DUPLICATE_REQUEST', message: 'Duplicate request' });
+    }
     console.error('bet error:', err.message);
     res.status(500).json({ success: false, message: req.t('common_server_error_short') });
   } finally {

@@ -15,13 +15,13 @@ router.get('/', async (req, res) => {
     const users = await cache.getOrSet('leaderboard:top50', 60, async () => {
       const result = await pool.query(`
         SELECT
-          u.id, u.username, u.avatar, u.total_points, u.coins,
+          u.id, u.username, u.avatar, u.total_points,
           COUNT(b.id) FILTER (WHERE b.status='won') AS wins,
-          COUNT(b.id) AS total_bets
+          COUNT(b.id) FILTER (WHERE b.status <> 'void') AS total_bets
         FROM users u
         LEFT JOIN bets b ON b.user_id = u.id
         WHERE u.role='user' AND (u.is_banned IS NULL OR u.is_banned=false)
-        GROUP BY u.id, u.username, u.avatar, u.total_points, u.coins
+        GROUP BY u.id, u.username, u.avatar, u.total_points
         ORDER BY u.total_points DESC
         LIMIT 50
       `);
