@@ -207,13 +207,29 @@ function startWorker() {
   }
   if (state.running) return;
   state.running = true;
-  state.timer = setInterval(() => { tick().catch(() => {}); }, POLL_INTERVAL_MS);
+  state.timer = setInterval(() => {
+    if (state.inFlight) return; // আগের tick শেষ না হলে নতুন tick নয় (shutdown drain-এর জন্যও দরকার)
+    state.inFlight = tick().catch(() => {}).finally(() => { state.inFlight = null; });
+  }, POLL_INTERVAL_MS);
   console.log(`[queue] worker started (poll every ${POLL_INTERVAL_MS}ms, batch ${BATCH_SIZE})`);
 }
 
 function stopWorker() {
   if (state.timer) clearInterval(state.timer);
+  state.timer = null;
   state.running = false;
+}
+
+/** নতুন tick বন্ধ করে চলমান tick (ও তার জব) শেষ হওয়ার জন্য অপেক্ষা করে — সর্বোচ্চ timeoutMs। */
+async function drainWorker(timeoutMs = 8000) {
+  stopWorker();
+  const pending = state.inFlight;
+  if (!pending) return { drained: true };
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), timeoutMs); });
+  const result = await Promise.race([pending.then(() => 'done'), timeout]);
+  clearTimeout(timer);
+  return { drained: result === 'done' };
 }
 
 /** ব্যর্থ জব আবার pending-এ ফেরত পাঠায় (ম্যানুয়াল রিট্রাই, অ্যাডমিন প্যানেল থেকে) */
@@ -416,6 +432,7 @@ module.exports = {
   processOneBatch,
   startWorker,
   stopWorker,
+  drainWorker,
   retryJob,
   retryAllFailed,
   getStats,

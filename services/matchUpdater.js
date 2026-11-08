@@ -155,4 +155,8 @@ const syncMatches = async () => {
   if (syncHandle.unref) syncHandle.unref();
 };
 
-module.exports = { syncMatches, syncOnce, upsertMatch, findLegacyDuplicateMatches };
+function stopSync() {
+  if (syncHandle) { clearInterval(syncHandle); syncHandle = null; }
+}
+
+module.exports = { syncMatches, stopSync, syncOnce, upsertMatch, findLegacyDuplicateMatches };

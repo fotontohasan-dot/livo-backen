@@ -611,6 +611,7 @@ async function runScheduledBackups() {
 }
 
 let scheduleHandle = null;
+let autoFirstRunHandle = null;
 function scheduleAutoBackup() {
   if (scheduleHandle) return;
   const hours = parseInt(process.env.BACKUP_SCHEDULE_HOURS || '24', 10);
@@ -618,9 +619,14 @@ function scheduleAutoBackup() {
   const intervalMs = hours * 60 * 60 * 1000;
   // rejection যেন কখনো unhandled না হয় — টাইমার কলব্যাকে reject হলে প্রসেস ক্র্যাশ করতে পারে
   const run = () => runScheduledBackups().catch((e) => console.error('scheduled backup runner error:', e.message));
-  setTimeout(run, 5 * 60 * 1000); // সার্ভার স্টার্টের ৫ মিনিট পর প্রথমবার
+  autoFirstRunHandle = setTimeout(run, 5 * 60 * 1000); // সার্ভার স্টার্টের ৫ মিনিট পর প্রথমবার
   scheduleHandle = setInterval(run, intervalMs);
   if (scheduleHandle.unref) scheduleHandle.unref();
+}
+
+function stopAutoBackup() {
+  if (autoFirstRunHandle) { clearTimeout(autoFirstRunHandle); autoFirstRunHandle = null; }
+  if (scheduleHandle) { clearInterval(scheduleHandle); scheduleHandle = null; }
 }
 
 // ডিস্ক ভরে যাওয়া এড়াতে scheduled ব্যাকআপ প্রতি টাইপে সর্বোচ্চ ১৪টা রাখা হয়, বাকিগুলো ডিলিট
@@ -637,5 +643,5 @@ async function pruneOldScheduledBackups() {
 module.exports = {
   createDatabaseBackup, createUploadsBackup, createConfigBackup,
   restoreBackup, listBackups, getBackupById, deleteBackup, getBackupFilePath,
-  scheduleAutoBackup, runScheduledBackups, isEncryptionEnabled, BACKUP_DIR
+  scheduleAutoBackup, stopAutoBackup, runScheduledBackups, isEncryptionEnabled, BACKUP_DIR
 };

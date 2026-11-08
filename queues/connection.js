@@ -79,4 +79,16 @@ function isQueueEnabled() {
   return !!(connection && redisAvailable);
 }
 
-module.exports = { connection, connectQueueRedis, isQueueEnabled };
+/** Shutdown-এ Redis কানেকশন গুছিয়ে বন্ধ করে (দুবার ডাকলেও নিরাপদ)। */
+async function closeQueueRedis() {
+  if (!connection) return;
+  redisAvailable = false;
+  try {
+    if (connection.status === 'end') return;
+    await connection.quit();
+  } catch (err) {
+    try { connection.disconnect(); } catch (e) { /* ignore */ }
+  }
+}
+
+module.exports = { connection, connectQueueRedis, closeQueueRedis, isQueueEnabled };
