@@ -144,15 +144,24 @@ async function findLegacyDuplicateMatches(limit = 100) {
  * ইন্টারভালে পুনরাবৃত্তি করে। ইন্টারভাল কনফিগারযোগ্য, ডিফল্ট আগের মতোই ১৫ মিনিট।
  */
 let syncHandle = null;
+// stopMatchSync() ডাকা হলে প্রথম syncOnce() চলাকালীন interval যেন পরে বসে না যায়
+let syncStopped = false;
 const syncMatches = async () => {
+  syncStopped = false;
   console.log('🔄 Syncing real matches...');
   await syncOnce();
 
-  if (syncHandle) return; // একাধিক পোলিং লুপ চালু হওয়া ঠেকানো
+  if (syncHandle || syncStopped) return; // একাধিক পোলিং লুপ চালু হওয়া ঠেকানো
   syncHandle = setInterval(() => {
     syncOnce().catch((err) => console.error('Match sync error:', err.message));
   }, getSyncIntervalMs());
   if (syncHandle.unref) syncHandle.unref();
 };
 
-module.exports = { syncMatches, syncOnce, upsertMatch, findLegacyDuplicateMatches };
+function stopMatchSync() {
+  syncStopped = true;
+  if (syncHandle) clearInterval(syncHandle);
+  syncHandle = null;
+}
+
+module.exports = { syncMatches, stopMatchSync, syncOnce, upsertMatch, findLegacyDuplicateMatches };
