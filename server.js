@@ -20,6 +20,18 @@
 require('dotenv').config();
 const process = require('node:process');
 const sentryService = require('./services/sentry');
+const { resolveProcessRole, runsWeb, runsWorker } = require('./services/processRole');
+
+// PROCESS_ROLE = all (ডিফল্ট, পুরোনো আচরণ) | web | worker — services/processRole.js দেখুন।
+// অবৈধ মান এখানে throw করা হয় না; startServer() প্রথম ধাপেই সেটা রিপোর্ট করে exit(1) করে,
+// যাতে কোনো service/DB কানেকশন চালু হওয়ার আগেই পরিষ্কার error দিয়ে থামে।
+let PROCESS_ROLE = 'all';
+let roleError = null;
+try { PROCESS_ROLE = resolveProcessRole(); } catch (err) { roleError = err; }
+// শাটডাউন কোন role-এর জন্য চলবে (startServer({ role }) দিয়ে টেস্টে বদলানো যায়)
+let activeRole = PROCESS_ROLE;
+// PROCESS_ROLE=worker হলে সক্রিয় runtime (services/workerRuntime.js)
+let workerRuntime = null;
 
 // ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
 // কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
@@ -47,7 +59,10 @@ process.on('uncaughtException', (err) => {
 // ধাপ ছাড়াই। এখন দুটো সিগন্যালই এক পথে যায়, একবারের বেশি চলে না, এবং সময়সীমার
 // মধ্যে গুছিয়ে বেরোয়। সময়সীমা পেরোলে জোর করে বেরিয়ে যায় যাতে কখনো ঝুলে না থাকে।
 let shuttingDown = false;
-const SHUTDOWN_TIMEOUT_MS = 10000;
+// worker-এ চলমান queue batch শেষ হওয়ার জন্য বাড়তি সময় লাগে; web/all-এর ১০s অপরিবর্তিত।
+const SHUTDOWN_TIMEOUT_MS = PROCESS_ROLE === 'worker'
+  ? parseInt(process.env.WORKER_SHUTDOWN_TIMEOUT_MS || '25000', 10)
+  : 10000;
 
 async function gracefulShutdown(signal) {
   if (shuttingDown) return; // ডুপ্লিকেট সিগন্যালে দুবার চলবে না
@@ -62,16 +77,34 @@ async function gracefulShutdown(signal) {
   if (forceExit.unref) forceExit.unref();
 
   // ১. নতুন কাজ নেওয়া বন্ধ (worker + scheduler টাইমার)
-  try { require('./services/scheduler').stop(); } catch (e) {}
-  try { require('./services/queue').stopWorker(); } catch (e) {}
-  // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা
+  //    worker role: runtime উল্টো ক্রমে সব সার্ভিস থামায় (scheduler, queue drain, match sync, backup timer…)
+  //    all role: আগের পথ — সাথে queue drain, match sync ও auto-backup timer বন্ধ
+  //    web role: কোনো background সার্ভিস চালু ছিল না, তাই থামানোরও কিছু নেই
+  if (activeRole === 'worker') {
+    try { if (workerRuntime) await workerRuntime.stop(); } catch (e) {}
+  } else if (activeRole === 'all') {
+    try { require('./services/scheduler').stop(); } catch (e) {}
+    try { require('./services/queue').stopWorker(); } catch (e) {}
+    // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা (ক্লেইম করা batch মাঝপথে ফেলা হয় না)
+    try { await require('./services/queue').stopWorkerAndDrain(); } catch (e) {}
+    try { require('./services/matchUpdater').stopMatchSync(); } catch (e) {}
+    try { require('./services/backupManager').stopAutoBackup(); } catch (e) {}
+  }
+  // BullMQ consumer (থাকলে) + producer Queue + shared Redis কানেকশন বন্ধ
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
-  // ৩. HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
-  try {
-    if (global.__bet420Server) {
-      await new Promise((resolve) => global.__bet420Server.close(resolve));
-    }
-  } catch (e) {}
+  // ৩. Socket.IO ও HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
+  //    (বেট/ওয়ালেট রিকোয়েস্ট শেষ হওয়ার পরেই নিচে DB pool বন্ধ হয়)
+  if (runsWeb(activeRole)) {
+    try {
+      const io = require('./services/socket').getIo();
+      if (io) await new Promise((resolve) => io.close(() => resolve()));
+    } catch (e) {}
+    try {
+      if (global.__bet420Server) {
+        await new Promise((resolve) => global.__bet420Server.close(() => resolve()));
+      }
+    } catch (e) {}
+  }
   // ৪. ডাটাবেজ/ক্যাশ কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)
   try {
     const cache = require('./services/cache');
@@ -88,8 +121,13 @@ async function gracefulShutdown(signal) {
 process.on('SIGTERM', () => { gracefulShutdown('SIGTERM'); });
 process.on('SIGINT', () => { gracefulShutdown('SIGINT'); });
 
-const app = require('./app');
-const server = app.httpServer;
+// app.js (Express + Socket.IO অবজেক্ট) শুধু web/all role-এ লোড হয়। worker role কখনো
+// এটা require করে না — নইলে অপ্রয়োজনীয় Socket.IO সার্ভার তৈরি হয়ে যেত।
+let _app = null;
+function loadApp() {
+  if (!_app) _app = require('./app');
+  return _app;
+}
 const { connectDB } = require('./db');
 const runMigrations = require('./migrations');
 const { syncMatches } = require('./services/matchUpdater');
@@ -102,6 +140,7 @@ const PORT = process.env.PORT || 3000;
 // listen() হওয়ার পরেই কেবল ব্যাকগ্রাউন্ড কাজ শুরু হয়। আগে এগুলো একটা
 // অনির্দিষ্ট `setTimeout(..., 3000)`-এর ভেতরে ছিল; সেটা রাখা হয়েছে শুধু
 // বুট-টাইম DB চাপ কমানোর জন্য, তবে টেস্ট পথে এই কোড আর কখনো চলে না।
+// এটা শুধু PROCESS_ROLE=all-এর পুরোনো পথ (অপরিবর্তিত)। worker role services/workerRuntime.js ব্যবহার করে।
 function startBackgroundWork() {
   setTimeout(() => {
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
@@ -123,37 +162,76 @@ function startBackgroundWork() {
     .catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
 }
 
-async function startServer() {
+// পাবলিক URL কনফিগার যাচাই — ভুল/অনুপস্থিত কনফিগ প্রথম রিসেট ইমেইলের
+// সময় নয়, বুটের সময়ই ধরা পড়ুক। (worker-ও ইমেইল জব পাঠায়, তাই সেখানেও দরকার)
+function assertPublicUrlOrExit() {
   try {
+    require('./utils/publicUrl').assertConfigured();
+  } catch (err) {
+    console.error('❌ কনফিগারেশন সমস্যা:', err.message);
+    process.exit(1);
+  }
+}
+
+async function startServer(opts = {}) {
+  try {
+    if (roleError) throw roleError; // অবৈধ PROCESS_ROLE — কোনো কিছু চালু হওয়ার আগেই থামো
+    const role = opts.role || PROCESS_ROLE;
+    activeRole = role;
+    console.log(`🧭 PROCESS_ROLE=${role}`);
+
     await connectDB();
     console.log("✅ PostgreSQL connected successfully");
 
-    await runMigrations();
-    console.log("✅ DB migration done");
+    if (runsWeb(role)) {
+      await runMigrations();
+      console.log("✅ DB migration done");
 
-    // PHASE 2 fix: critical table verification ব্যর্থ হলে আগে শুধু log করে
-    // listen করা হত। এখন এটি fail-closed — ভাঙা schema নিয়ে payment/admin
-    // operation চালু করা হবে না।
-    const { ensureCriticalTables } = require('./services/ensureCriticalTables');
-    await ensureCriticalTables();
-
-    await new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(PORT, resolve);
-    });
-    console.log(`✅ Server running on port ${PORT}`);
-
-    // পাবলিক URL কনফিগার যাচাই — ভুল/অনুপস্থিত কনফিগ প্রথম রিসেট ইমেইলের
-    // সময় নয়, বুটের সময়ই ধরা পড়ুক।
-    try {
-      require('./utils/publicUrl').assertConfigured();
-    } catch (err) {
-      console.error('❌ কনফিগারেশন সমস্যা:', err.message);
-      process.exit(1);
+      // PHASE 2 fix: critical table verification ব্যর্থ হলে আগে শুধু log করে
+      // listen করা হত। এখন এটি fail-closed — ভাঙা schema নিয়ে payment/admin
+      // operation চালু করা হবে না।
+      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
+      await ensureCriticalTables();
+    } else {
+      // worker migration/DDL চালায় না (একাধিক প্রসেসের migration race এড়াতে) — web/all যে schema
+      // বানায় সেটা তৈরি হওয়া পর্যন্ত সীমিত সময় অপেক্ষা করে, না হলে fail-closed।
+      const { waitForWorkerSchema } = require('./services/workerRuntime');
+      await waitForWorkerSchema(require('./db').pool);
+      console.log('✅ Worker schema ready (কোনো migration চালানো হয়নি)');
     }
 
-    startBackgroundWork();
-    return server;
+    if (runsWeb(role)) {
+      const app = loadApp();
+      const server = app.httpServer;
+      await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(PORT, resolve);
+      });
+      console.log(`✅ Server running on port ${PORT}`);
+
+      assertPublicUrlOrExit();
+
+      if (role === 'all') {
+        startBackgroundWork();
+      } else {
+        // web: শুধু producer — enqueue-এর জন্য Redis সংযোগ; কোনো consumer/scheduler/timer নয়
+        require('./queues').initQueueProducers()
+          .catch(err => console.error('queues initQueueProducers error:', err.message));
+      }
+      return server;
+    }
+
+    // ---- PROCESS_ROLE=worker: HTTP/Socket.IO নেই ----
+    assertPublicUrlOrExit();
+    const { createWorkerRuntime, defaultServices } = require('./services/workerRuntime');
+    workerRuntime = createWorkerRuntime({
+      services: defaultServices(),
+      strict: true,
+      heartbeatMs: parseInt(process.env.WORKER_HEARTBEAT_MS || '60000', 10)
+    });
+    await workerRuntime.start();
+    console.log('✅ Worker process running (HTTP listener নেই)');
+    return null;
   } catch (err) {
     console.error('❌ Server startup failed:', err);
     process.exit(1);
@@ -165,4 +243,9 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, server, startServer, startBackgroundWork };
+module.exports = {
+  get app() { return loadApp(); },
+  get server() { return loadApp().httpServer; },
+  startServer,
+  startBackgroundWork
+};
