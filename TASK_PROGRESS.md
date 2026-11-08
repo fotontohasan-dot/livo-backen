@@ -286,3 +286,73 @@ Limitations:
 
 Next microtask (2.7, awaiting owner approval; NOT started): owner confirms (a) and (b) above; then, only if confirmed, a separate approved step adds the
 pre-deploy command to `render.yaml` (web first) while boot-time migrations stay in place as a fallback; otherwise document a manual `node scripts/migrate.js` procedure.
+
+### Task 2.7 — Render migration deployment readiness (documentation only)
+Branch: `task-2.7-render-migration-readiness`, stacked on `task-2.6-standalone-migration-runner` @ `b6ee017` (-> 2.5 `89c473d` -> 2.4 `e2b47a6` -> 2.3 `e4a53bf`
+-> 2.2 `f2f5ae3`; PR #251 not assumed merged; note: the 2.6 branch was pushed earlier at the owner's explicit request and has PR #252, nothing is pushed in 2.7).
+Only `TASK_PROGRESS.md` changed. `render.yaml`, boot-time migrations and all code UNCHANGED. No merge/push/PR/deploy. Task 2.8 / Task 3 not started.
+
+**Readiness status: NOT READY to enable a pre-deploy migration.** Two blockers are unresolved: (1) `preDeployCommand` syntax/availability could not be verified
+against official Render documentation, (2) production DB connection mode is UNKNOWN.
+
+#### 1. Current Blueprint (sanitized)
+`render.yaml` parses as valid YAML (js-yaml): services `web:livo-web` (2 instances, `node server.js`, `buildCommand: npm ci && npm run build`, `autoDeploy: false`)
+and `worker:livo-worker` (`node worker.js`, `buildCommand: npm ci`, `autoDeploy: false`). Both read `DATABASE_URL` via `fromDatabase: livo-postgres`.
+No `preDeployCommand`, no migration job, no `MIGRATION_DATABASE_URL`, no pooler. Only the web service defines `SESSION_SECRET` (`generateValue`); the worker
+defines no encryption-key variable in the Blueprint (dashboard values are unknown).
+
+#### 2. Render `preDeployCommand` verification — NOT VERIFIED
+What was attempted from this sandbox: `render.com` is unreachable (network allowlist), the GitHub API is rate-limited for anonymous use, and `render-oss/docs` is not
+public on GitHub. SchemaStore's catalog confirms a Blueprint JSON schema exists at `https://render.com/schema/render.yaml.json` but it could not be fetched.
+Render's example repos (`render-examples/django`, `rails`, `flask-hello-world`, `fastapi`, `nextjs-hello-world`, `express-hello-world`) contain no `preDeployCommand` to copy.
+Therefore nothing below is confirmed from official docs. Unverified recollection (must be checked by the owner or a session with docs access): the Blueprint key is
+`preDeployCommand: <string>` on the service, runs after build and before the new version starts, a non-zero exit fails the deploy (old version keeps serving), and it needs
+a paid instance type. Unknown: whether it is supported for `type: worker`, the working directory, whether `node_modules` from `buildCommand` are present, its timeout, and log visibility.
+Check: `https://render.com/docs/deploys` (pre-deploy command section), `https://render.com/docs/blueprint-spec`, and validate any edit against the schema URL above.
+
+#### 3. How the runner would be invoked (PROPOSAL — not applied)
+Under `livo-web` only (the service whose env already has the DB URL and `SESSION_SECRET`):
+```yaml
+    preDeployCommand: node scripts/migrate.js
+```
+- No `MIGRATION_DATABASE_URL`: the runner falls back to the service's `DATABASE_URL` (the override stays unset while the DB mode is unknown).
+- Direct `node` call, not `npm start`/`npm run` (avoids `prestart`/CSS build). Exit 0/non-zero is what the platform would act on.
+- The runner redacts URLs/passwords from its own logs (Task 2.6); it ran only against scratch databases.
+
+#### 4. Findings that affect the plan
+1. **Encryption-key parity.** The merchants backfill in `migrations.js` encrypts API keys via `utils/secretBox`, whose key comes from
+   `SETTINGS_ENCRYPTION_KEY` -> `TELEGRAM_SETTINGS_KEY` -> `BACKUP_ENCRYPTION_KEY` -> `SESSION_SECRET` (first one set). A migration process must use the SAME key as the
+   runtime that later decrypts, otherwise backfilled rows could be unreadable. The pre-deploy command on `livo-web` shares web's env (safe if web is the only decrypting/serving tier);
+   the worker's env in the Blueprint has no such key, so which key it uses today when it self-migrates is unverified. Backfill only touches merchants lacking credentials (likely none in prod; unverified).
+2. **Rollback semantics.** Rolling back a Render deploy re-deploys the old code; it does NOT revert the DB. Every migration released in version N must therefore work with code N-1
+   (expand/contract). Audit of `migrations.js` (grep, not exhaustive review): 0 `DROP TABLE`, 0 `DROP COLUMN`, 0 `RENAME`, 0 `TRUNCATE`; but 6 `DROP CONSTRAINT IF EXISTS`, 2 `DROP INDEX IF EXISTS`,
+   1 `DROP TRIGGER` (recreated), 11 `ADD CONSTRAINT`, one guarded `ALTER COLUMN bets.liability TYPE INTEGER ... SET NOT NULL`, 4 `DELETE FROM`, 18 `UPDATE`. Those data-changing/constraint statements
+   need a human review for N-1 compatibility before the first pre-deploy run.
+3. **No migration ledger.** The full idempotent script re-runs on every deploy (~0.2 s on an already-migrated local scratch DB; production duration unknown).
+4. **Boot fallback stays.** With pre-deploy enabled, web and worker still call `runMigrations()` at boot (Task 2.4 lock serializes them); after a successful pre-deploy these are no-ops.
+   `worker.js` deployed alone still self-migrates (both services have `autoDeploy: false`, so they are deployed separately).
+5. **DB mode unknown** (2.5): the pre-deploy run itself is one process, but the boot fallback and the scheduler locks remain unsafe if a transaction-mode pooler fronts the DB.
+
+#### 5. Proposed deployment plan (phased; each phase needs owner approval)
+- Phase 0 — verification only (checklist below). No config change.
+- Phase 1 — rehearsal on a non-production DB (restored backup/clone): run `node scripts/migrate.js` twice; confirm exit 0 both times, second run a no-op, lock free afterwards.
+- Phase 2 — add `preDeployCommand: node scripts/migrate.js` to `livo-web` ONLY; keep every boot-time migration. Deploy web first, manually (`autoDeploy: false`), watch the pre-deploy log.
+- Phase 3 — observe several deploys; confirm pre-deploy duration, no lock-wait messages at boot, no regressions.
+- Phase 4 (separate task) — only after Phase 3: decide whether to remove boot-time migrations from web and switch the worker to `waitForWorkerSchema`, and whether to set `MIGRATION_DATABASE_URL` (direct URL) if a pooler exists.
+- Config rollback: delete the `preDeployCommand` line and redeploy; boot-time migrations continue unchanged. Code rollback is safe only under the N-1 compatibility rule above.
+
+#### 6. Must be verified BEFORE enabling (all currently OPEN)
+1. Official Render docs: exact key/syntax, support for this plan and for `type: web`/`worker`, working dir, dependencies available, timeout, failure behavior, log access; Blueprint validated against `render.yaml.json`.
+2. Production DB connection mode (direct / PgBouncer session / transaction): dashboard DB URL host/port (a separate pooler service or port 6432 means a pooler); optional read-only session probe from Task 2.5. If a transaction pooler exists, a direct URL must be supplied via `MIGRATION_DATABASE_URL` first.
+3. Encryption-key env parity between the pre-deploy environment and the runtime tiers (finding 1).
+4. A fresh Render Postgres backup/snapshot exists before the first pre-deploy run.
+5. Review of data-changing/constraint statements for N-1 compatibility (finding 2).
+6. Pre-deploy timeout vs. `MIGRATION_LOCK_TIMEOUT_MS` (default 120000) and expected migration duration.
+
+#### Validation performed
+YAML parse of `render.yaml` (valid, 2 services, no `preDeployCommand`); `git diff` confirms `render.yaml` untouched; read-only greps of `migrations.js`/secret-key code. No code or tests changed, so no new tests were run;
+Task 2.4/2.6 results (scratch DB only) stand unchanged. Nothing here proves production behavior.
+
+#### Next microtask (2.8, awaiting owner approval; NOT started)
+Owner supplies (a) the production DB URL mode (host/port class only, no credentials) and (b) the Render docs confirmation of `preDeployCommand` (or a session with docs access verifies it and validates a candidate Blueprint against the schema).
+Then, if both are acceptable, a single-line `render.yaml` change for `livo-web` as a separate PR; otherwise document the manual `node scripts/migrate.js` procedure.
