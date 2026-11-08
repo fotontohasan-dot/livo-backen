@@ -50,14 +50,27 @@ function resolveSslConfig() {
   return { rejectUnauthorized: false };
 }
 
+// ==================== কানেকশন পুল অপ্টিমাইজেশন (Render-সচেতন) ====================
+// একাধিক ওয়েব ইনস্ট্যান্স (Instance A ও B) ও ব্যাকগ্রাউন্ড ওয়ার্কার চলার সময়
+// মোট কানেকশন সংখ্যা যাতে Render PostgreSQL-এর সীমা (Starter tier-এ ১০০) অতিক্রম না করে:
+//   - Web Instance A: সর্বোচ্চ ১০ (DB_POOL_MAX=10)
+//   - Web Instance B: সর্বোচ্চ ১০ (DB_POOL_MAX=10)
+//   - Background Worker: সর্বোচ্চ ৫ (DB_POOL_MAX=5)
+//   মোট সর্বোচ্চ = ২৫ কানেকশন (নিরাপদ সীমার অনেক ভেতরে)।
+const poolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
+const idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT_MS || '30000', 10);
+const connectionTimeoutMillis = parseInt(process.env.DB_CONNECTION_TIMEOUT_MS || '5000', 10);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: resolveSslConfig(),
+  max: poolMax,
+  idleTimeoutMillis: idleTimeoutMillis,
+  connectionTimeoutMillis: connectionTimeoutMillis,
   // ম্যানেজড হোস্টে (Render ইত্যাদি) নিষ্ক্রিয় TCP কানেকশন মাঝপথে কেটে দেওয়া হয়। keepAlive
   // থাকলে কানেকশন সজীব থাকে এবং কাটা কানেকশন দ্রুত ধরা পড়ে।
   keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-  connectionTimeoutMillis: 10000
+  keepAliveInitialDelayMillis: 10000
 });
 
 // নিষ্ক্রিয় (idle) ক্লায়েন্টে এরর এলে pg পুল 'error' ইভেন্ট ছোঁড়ে। কোনো লিসনার না থাকলে সেটা
