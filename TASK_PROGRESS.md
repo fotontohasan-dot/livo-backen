@@ -177,3 +177,67 @@ Not run: full suite, lint, e2e, any PgBouncer-mode test, any test against a real
 Remaining risks: PgBouncer transaction mode (see above); a very long migration makes other instances wait up to the timeout and
 then fail-closed; web instances still do not `ensureCriticalTables` under the lock (it runs after `runMigrations()` returns, idempotent as before);
 `render.yaml`/entry points deliberately unchanged (worker.js still self-migrates, now serialized).
+
+### Task 2.5 — Migration ownership & connection-pool compatibility (audit only; no code/config changed)
+Branch: `task-2.5-migration-ownership`, stacked on `task-2.4-migration-lock` @ `e2b47a6` -> `task-2.3-worker-entry-audit` @ `e4a53bf`
+-> `task-2.2-finalize-web-worker` @ `f2f5ae3` (PR #251 not assumed merged). Only `TASK_PROGRESS.md` changed. No merge/PR/deploy,
+no production access or config change. No credentials/connection strings were printed (host/port/user/password omitted below).
+Task 2.6 / Task 3 not started.
+
+#### Sanitized configuration facts (from the repo only)
+- `render.yaml`: `livo-web` (numInstances 2, `node server.js`, `DISABLE_BACKGROUND_WORKER=true`, `DB_POOL_MAX=10`) and `livo-worker`
+  (`node worker.js`, `DB_POOL_MAX=5`). Both take `DATABASE_URL` via `fromDatabase: livo-postgres` (Render-managed Postgres 16, `connectionString`).
+  No `preDeployCommand`, no migrate job, no PgBouncer/pooler service, no `PROCESS_ROLE`. `autoDeploy: false`.
+- Search for `pgbouncer|pooler|pool_mode|6432` across the repo (excluding node_modules): matches only in `docs/AUDIT_TASK1.md`
+  (a generic warning that scheduler session locks would break under transaction pooling) and my own comments/notes. No config defines a pooler.
+- `docker-compose.yml`: app connects to `db:5432` (postgres:15-alpine) directly; app runs `node server.js` (role `all`). No pooler.
+- `Dockerfile` CMD `node server.js`; `package.json` `start` = `node server.js`; CI boot smoke test runs `node server.js` against a plain Postgres.
+- `db.js`: plain `pg.Pool` (max from `DB_POOL_MAX`), default unnamed statements (no named prepared statements found), no `SET`/`LISTEN`/temp-table usage found
+  outside migrations.
+- Session-state features in use: `services/scheduler.js:326-348` session advisory locks on a dedicated client; `app.js:417` `connect-pg-simple`
+  session store on the pool (transaction-pooling-safe); Task 2.4 migration lock.
+- Migrations have NO ledger table (`schema_migrations`-style): the full ~2.5k-line idempotent script runs on every boot of web/all and `worker.js`.
+  Re-run on an already-migrated scratch DB took ~0.2 s (local, not a production number).
+
+#### Production connection mode: **UNKNOWN / UNVERIFIED**
+Repo evidence points to a direct connection (Render-managed DB URL, no pooler defined anywhere), but the live `DATABASE_URL` and the Render
+dashboard overrides cannot be seen from the repo, and `render.yaml` may not be the blueprint actually deployed. Not claiming direct,
+session-mode or transaction-mode. Owner check (without sharing the string): in the Render dashboard confirm the DB URL used by web+worker is the
+database's own host on port 5432 and not a separate PgBouncer service/port 6432. Optional read-only probe from a one-off shell: open ONE client,
+`SELECT pg_try_advisory_lock(1)`, then in a second statement on the same client `SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND pid=pg_backend_pid()`;
+1 = session semantics hold, 0 = a transaction pooler is in front. (Not run; unlock afterwards.)
+
+#### Task 2.4 lock vs topology
+- Direct or PgBouncer SESSION mode: correct. Lock, all migration statements and unlock share one server session (verified only on a local scratch Postgres).
+- PgBouncer TRANSACTION mode: NOT safe. Each statement outside a transaction may land on a different server connection, so the lock could be taken on
+  one backend and the DDL run on another (no protection), and `pg_advisory_unlock` could hit a backend that does not hold it (returns false -> client destroyed,
+  but the real holder keeps the lock until its server connection is recycled -> other instances stall until `MIGRATION_LOCK_TIMEOUT_MS`).
+  The scheduler's cron locks have the same limitation (pre-existing).
+- Gap found in 2.4 report wording: `ensureCriticalTables()` (called after `runMigrations()` in web/all AND in `worker.js`) issues `CREATE TABLE/INDEX IF NOT EXISTS`
+  via plain `pool.query` outside the lock. All five of its tables are already created by `migrations.js`, so after a successful migration it is a no-op
+  and the earlier `pg_type` race cannot occur through it; it is a safety net only. Not changed.
+- No migration-ledger means a lock only serializes, it does not make migrations run-once; that is acceptable because the script is idempotent.
+
+#### Ownership options
+| Option | Pros | Cons / deploy implications |
+|---|---|---|
+| Web instances run migrations (today, role web/all) | no infra change | 2 instances race -> needs the lock; slow/failed migration delays or crash-loops the serving tier; web boot depends on DDL |
+| Worker runs migrations (today, `worker.js`) | single instance | worker is not guaranteed to start before web; web would then serve on an old schema; worker dies/restarts on every deploy |
+| Dedicated one-off process | explicit, serial, can use a direct DB URL | needs someone/something to trigger it each deploy; easy to forget -> web boots on stale schema unless boot also verifies |
+| Deployment pre-deploy/release step (Render `preDeployCommand: node scripts/migrate.js`, to be confirmed against current Render docs) | runs once per deploy, before new instances start; failure aborts the deploy (old version keeps serving); web/worker boot stops running DDL; can be given a direct (non-pooled) DB URL even if runtime later uses a pooler | needs a small `scripts/migrate.js` wrapper (reuses `runMigrations()` + lock) and a render.yaml change (owner-approved, not done here); migrations must stay backward-compatible with the old code still serving during the deploy (they already are additive/idempotent, but this must be a rule); runtime processes need a schema-ready check (`waitForWorkerSchema`/critical-table verify already exist) |
+
+#### Recommendation: deployment pre-deploy (release) migration step, keep the 2.4 lock as defense-in-depth
+Reasons: exactly-once-per-deploy serialization independent of instance count and start order; a failed migration blocks the rollout instead of
+crash-looping live instances; the migration connection can be forced to a direct/session-mode URL, removing the PgBouncer dependency for DDL;
+runtime roles then only verify schema (web already fails closed via `ensureCriticalTables`, `server.js` worker role via `waitForWorkerSchema`).
+Keep the advisory lock (cheap, protects manual/local runs and the interim period). Do NOT remove boot-time migrations until the release step is proven.
+Prerequisite unknown: Render's pre-deploy command availability/behavior for this plan and for `type: worker` services must be checked by the owner.
+
+#### Tests
+No new tests: the audit found no code defect that needs a test. No test was run against, or can attest to, the production database or pooler.
+Only the local scratch re-run timing above was measured. (Task 2.4's 10-suite/90-test result stands, unchanged; scratch DB only.)
+
+#### Next microtask (2.6, awaiting owner approval; NOT started)
+Owner first confirms the production DB URL mode (see check above) and Render pre-deploy support. Then add `scripts/migrate.js` (calls `runMigrations()`,
+exits non-zero on failure, honors a `MIGRATION_DATABASE_URL` override for a direct connection) plus a test, WITHOUT changing render.yaml or
+boot-time migration behavior; the render.yaml/`PROCESS_ROLE` switch comes as a separate, owner-approved step afterwards.
