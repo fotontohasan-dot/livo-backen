@@ -1,42 +1,32 @@
-# TASK 2 — Web/Worker Separation — Progress
+# TASK_PROGRESS
 
-PR #244 (`feature/task-2-web-worker-separation` → `main`): OPEN, NOT MERGED. Do not merge until owner approves.
+## Task 2 — Web / Worker separation
 
-## Baseline (PR #244 head, local PostgreSQL 16 + Redis)
-- Full suite: 218/218 suites passed (2 tests skipped: Redis/BullMQ role-split, need TEST_REDIS_URL).
-- Task 2 unit: processRole, workerRuntime, queueDrain, queueHealthRole = 34 passed.
-- processRoleProcess integration: 7 passed, 2 skipped.
+### Task 2.1 — Competing PR comparison (PR #246 vs existing implementation)
+Status: comparison complete. Nothing merged, closed, force-pushed or deployed.
 
-## Checklist
-| Item | Status |
-|---|---|
-| PROCESS_ROLE resolver + invalid handling | COMPLETE (tests) |
-| web: no background services | COMPLETE (integration) |
-| worker: no HTTP, no migrations, schema fail-closed | COMPLETE (integration) |
-| all/unset: legacy behavior | COMPLETE (integration) |
-| Worker lifecycle (once-only start, idempotent stop) | COMPLETE (unit + integration) |
-| PG queue SKIP LOCKED | PARTIAL — code verified, no 2-worker test yet |
-| Match sync concurrency | PARTIAL — idempotent upsert; no cross-process lock/test |
-| Backup duplicate execution | Task 2.1 — implemented, tested (see below) |
-| Scheduler advisory lock vs PgBouncer | BLOCKED — needs owner decision (session-level lock on pooled conn) |
-| Concurrent market creation | NOT INSPECTED |
-| Redis/BullMQ role-split tests | NOT RUN |
-| Docs / deployment instructions | NOT DONE |
+- Existing implementation = already on `main` via PR #244 (`feature/task-2-web-worker-separation`)
+  plus PR #247 (`fix/task-2-shutdown-gaps`, stopDailyBackup + closeIdleConnections).
+- PR #246 (`feature/task-2-web-worker-separation-v2`) re-implements the same feature on top of an
+  older base and is NOT safe to merge:
+  - `server.js` references `bootTimer` (never declared), `cleanupPartialStartup` (never defined)
+    and `workerRuntime.trackTimer` (does not exist; `workerRuntime` is `null` outside worker role).
+    `node --check` passes, but web/all boot throws `ReferenceError: bootTimer is not defined`.
+  - Removes the #247 fixes (`stopDailyBackup` wiring, `closeIdleConnections`, `tests/unit/backupStop.test.js`,
+    `docs/AUDIT_TASK1.md`) when compared to current `main`.
+  - Adds a second tick-overlap mechanism (`state.inFlight`) that duplicates `inflightTicks` already in `main`.
+- Identical in both (no conflict): `services/processRole.js`, `worker.js`, `render.yaml`,
+  `services/socket.js`, `queues/index.js`.
+- Recommendation: keep `main` implementation. Do not merge #246. Owner decides whether to close it.
+- Change made on this branch (`task-2.1-pr-comparison`, from `main`): `TASK_PROGRESS.md` and
+  comment-only `PROCESS_ROLE` documentation in `.env.example` (text taken from #246).
 
-## Micro-tasks
-### Task 2.1 — scheduled backup duplicate guard — DONE (pending owner review)
-- `services/backupManager.js`: new `runScheduledBackupsOnce()` — `pg_try_advisory_xact_lock` inside a
-  transaction (PgBouncer-safe, auto-released on crash) + recent-completed-backup check in `backup_history`.
-  `scheduleAutoBackup` timer now calls it. No schema change; no financial tables touched.
-- `tests/integration/backupAlerting.test.js`: source-regex updated to accept `runScheduledBackupsOnce(...).catch(` (same unhandled-rejection rule).
-- `tests/integration/scheduledBackupGuard.test.js`: 6 tests pass; mutation check (lock disabled) fails as expected.
-- Known limitation: backup files are written to each instance's local disk (BACKUP_DIR). A guard prevents
-  duplicate runs, but backups live only on the instance that ran them — needs shared storage decision.
-- Note: legacy `services/backup.js scheduleDailyBackup` is a deprecated no-op (no duplicate risk).
+### Test results (Postgres 16, `NODE_ENV=test`, relevant suites only)
+- `main`: 7/7 suites passed (46 passed, 2 skipped).
+- PR #246: boot-path suites FAIL (`bootTimer is not defined`, `cleanupPartialStartup is not defined`).
+- Full test suite, lint and e2e: not run.
 
-## Next
-- Task 2.2: two-worker PG queue test (SKIP LOCKED) with real DB.
-- Task 2.3: match sync concurrency review/test.
-- Task 2.4: concurrent market creation inspection.
-- Task 2.5: run Redis/BullMQ role tests with TEST_REDIS_URL; docs/deployment notes (PROCESS_ROLE in README/render.yaml/RUNBOOK).
-- Scheduler lock (PgBouncer) — document as BLOCKED.
+### Remaining Task 2 work (not started; waiting for owner review)
+- Owner decision on closing/archiving #246.
+- Optional: port unique tests/docs from #246 only after rewriting against `main`.
+- Task 2.2 not started.

@@ -149,6 +149,7 @@ function defaultServices({ bootDelayMs = 0 } = {}) {
     {
       name: 'dailyBackup',
       start: () => require('./backup').scheduleDailyBackup(),
+      stop: () => require('./backup').stopDailyBackup(),
     },
     {
       name: 'autoBackup',
