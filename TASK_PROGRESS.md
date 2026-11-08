@@ -241,3 +241,48 @@ Only the local scratch re-run timing above was measured. (Task 2.4's 10-suite/90
 Owner first confirms the production DB URL mode (see check above) and Render pre-deploy support. Then add `scripts/migrate.js` (calls `runMigrations()`,
 exits non-zero on failure, honors a `MIGRATION_DATABASE_URL` override for a direct connection) plus a test, WITHOUT changing render.yaml or
 boot-time migration behavior; the render.yaml/`PROCESS_ROLE` switch comes as a separate, owner-approved step afterwards.
+
+### Task 2.6 — Standalone migration runner (not wired into any deploy config)
+Branch: `task-2.6-standalone-migration-runner`, stacked on `task-2.5-migration-ownership` @ `89c473d` -> `task-2.4-migration-lock` @ `e2b47a6`
+-> `task-2.3-worker-entry-audit` @ `e4a53bf` -> `task-2.2-finalize-web-worker` @ `f2f5ae3` (PR #251 not assumed merged).
+No merge/push/PR/deploy. `render.yaml`, `migrations.js`, `db.js`, `server.js`, `worker.js` are UNCHANGED (verified with `git diff`);
+boot-time `runMigrations()` calls untouched. No betting/wallet/settlement/queue logic touched. Task 2.7 / Task 3 not started.
+
+Files added (3, all new):
+- `scripts/migrate.js` — runner
+- `tests/unit/migrateScript.test.js` — mocked unit tests (11)
+- `tests/integration/migrateScript.test.js` — real child-process runs against scratch PostgreSQL databases (6)
+
+Runner behavior (`node scripts/migrate.js`):
+- Calls the existing `runMigrations()` from `migrations.js` (no SQL duplicated; Task 2.4 advisory lock applies). Exit 0 on success, exit 1 on
+  migration failure, missing URL, or load failure.
+- DB URL: `MIGRATION_DATABASE_URL` if set and non-blank, else `DATABASE_URL` (loaded via dotenv `.env` if present; real env wins). The override only
+  rewrites `process.env.DATABASE_URL` inside this process BEFORE `db.js` is first required (db.js reads env at require time), so the shared pool
+  module and web/worker processes are not modified. No shared-behavior blocker found.
+- Process-local default `DB_POOL_MAX=2` (only if unset; explicit value respected) — the runner needs one connection.
+- Always `pool.end()` in `finally`; a `pool.end()` failure is logged as a warning and does not change the exit code. Exit via `process.exitCode`
+  plus an unref'd 5 s `process.exit` failsafe (cannot delay normal exit; prevents a hang from a stray handle).
+- Logging: only names which variable was used. Error text is redacted: both URLs (captured BEFORE the override), their passwords
+  (raw + URL-decoded) and any `postgres(ql)://...` substring become `<redacted>`.
+  Caveat: redaction covers the runner's own logs; `migrations.js` still prints its own `err.message` (pg messages contain host/port at most).
+
+Tests actually run (local PostgreSQL 16 from apt, `NODE_ENV=test`, `--runInBand --coverage=false`):
+- `migrateScript` unit + integration: 2/2 suites, 17/17 tests passed. (A first run had 1 failure: after the override the ORIGINAL `DATABASE_URL`
+  password was no longer known to the redactor, so a synthetic leaky error exposed it. Fixed by snapshotting both URLs before the override; rerun green.)
+- Regression group (`migrateScript` x2, `migrationLock`, `appLifecycle`, `databaseIntegrity`, `workerRuntime`, `workerEntryShutdown`,
+  `bootTimerShutdown`, `processRole`): 9/9 suites, 77/77 tests passed.
+- Covered: success exit 0 and prompt exit (no SIGKILL needed), failure -> non-zero with advisory lock free afterwards, pool.end called on success/failure/end-failure,
+  override selection (DATABASE_URL pointed at a non-existent DB, MIGRATION_DATABASE_URL at a scratch DB -> migrated there), no-override path, unreachable
+  host with a fake password -> non-zero and password/URL/user absent from output, no-URL -> exit 1.
+- NOT run: full suite, lint, e2e, any test with PgBouncer, any run against production or a Render environment.
+
+Limitations:
+- Not connected to deployment; nothing calls it yet. Ownership recommendation from 2.5 (pre-deploy/release step) is still PENDING owner confirmation of:
+  (a) production DB connection mode (direct / PgBouncer session / transaction) — UNKNOWN; (b) Render pre-deploy command support for this plan and for `type: worker` — UNVERIFIED.
+- No connect retry (unlike `connectDB`): a DB that is not yet reachable fails the run immediately (non-zero), which is the desired fail-fast behavior for a release step.
+- SIGTERM/SIGINT during a run are not handled specially: the session lock is released by the server when the connection drops.
+- If `MIGRATION_DATABASE_URL` is a transaction-mode pooler URL the Task 2.4 lock is still unsafe; the override is meant for a direct/session-mode URL.
+- Still no migration ledger: every run executes the full idempotent script.
+
+Next microtask (2.7, awaiting owner approval; NOT started): owner confirms (a) and (b) above; then, only if confirmed, a separate approved step adds the
+pre-deploy command to `render.yaml` (web first) while boot-time migrations stay in place as a fallback; otherwise document a manual `node scripts/migrate.js` procedure.
