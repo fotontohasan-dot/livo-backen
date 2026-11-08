@@ -20,6 +20,19 @@
 require('dotenv').config();
 const process = require('node:process');
 const sentryService = require('./services/sentry');
+const { resolveProcessRole } = require('./services/processRole');
+const workerRuntime = require('./services/workerRuntime');
+
+// PROCESS_ROLE (all | web | worker) — ভুল মান import-এ throw করে না (টেস্টে require করা যায়);
+// startServer() সবকিছু চালু করার আগেই স্পষ্ট এরর দিয়ে exit(1) করে।
+let roleInfo;
+let roleError = null;
+try {
+  roleInfo = resolveProcessRole();
+} catch (err) {
+  roleError = err;
+  roleInfo = { role: 'invalid', runsWeb: false, runsWorker: false };
+}
 
 // ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
 // কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
@@ -47,7 +60,7 @@ process.on('uncaughtException', (err) => {
 // ধাপ ছাড়াই। এখন দুটো সিগন্যালই এক পথে যায়, একবারের বেশি চলে না, এবং সময়সীমার
 // মধ্যে গুছিয়ে বেরোয়। সময়সীমা পেরোলে জোর করে বেরিয়ে যায় যাতে কখনো ঝুলে না থাকে।
 let shuttingDown = false;
-const SHUTDOWN_TIMEOUT_MS = 10000;
+const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10000;
 
 async function gracefulShutdown(signal) {
   if (shuttingDown) return; // ডুপ্লিকেট সিগন্যালে দুবার চলবে না
@@ -64,15 +77,26 @@ async function gracefulShutdown(signal) {
   // ১. নতুন কাজ নেওয়া বন্ধ (worker + scheduler টাইমার)
   try { require('./services/scheduler').stop(); } catch (e) {}
   try { require('./services/queue').stopWorker(); } catch (e) {}
-  // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা
-  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
-  // ৩. HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
+  // ২. HTTP + Socket.IO আগে: নতুন কানেকশন বন্ধ, চলমান রিকোয়েস্ট (bet/wallet ট্রানজেকশন সহ)
+  //    শেষ হওয়ার জন্য অপেক্ষা। queue/Redis এর আগে বন্ধ করা হয় না, কারণ চলমান রিকোয়েস্ট
+  //    জব enqueue করতে পারে। io.close() নিজেই underlying HTTP সার্ভারও বন্ধ করে।
   try {
-    if (global.__bet420Server) {
-      await new Promise((resolve) => global.__bet420Server.close(resolve));
+    const srv = global.__bet420Server;
+    if (srv && typeof srv.closeIdleConnections === 'function') srv.closeIdleConnections();
+    const io = require('./services/socket').getIo();
+    if (io) {
+      await new Promise((resolve) => io.close(() => resolve()));
+    } else if (srv && srv.listening) {
+      await new Promise((resolve) => srv.close(() => resolve()));
     }
   } catch (e) {}
-  // ৪. ডাটাবেজ/ক্যাশ কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)
+  // ৩. ব্যাকগ্রাউন্ড টাইমার (match sync, backup, বুট-টাইমার) বন্ধ + চলমান PG-queue batch drain
+  try {
+    await workerRuntime.stopBackgroundWork({ drainTimeoutMs: Math.max(1000, SHUTDOWN_TIMEOUT_MS - 2000) });
+  } catch (e) {}
+  // ৪. BullMQ consumer + queue Redis কানেকশন বন্ধ
+  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
+  // ৫. ক্যাশ Redis ও ডাটাবেস কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)
   try {
     const cache = require('./services/cache');
     const client = cache.getRawClient && cache.getRawClient();
@@ -88,8 +112,10 @@ async function gracefulShutdown(signal) {
 process.on('SIGTERM', () => { gracefulShutdown('SIGTERM'); });
 process.on('SIGINT', () => { gracefulShutdown('SIGINT'); });
 
-const app = require('./app');
-const server = app.httpServer;
+// web/all: Express অ্যাপ ও HTTP সার্ভার লোড হয়। worker: app.js লোডই হয় না, তাই
+// Socket.IO সার্ভার তৈরি হয় না এবং কোনো পোর্টও খোলা হয় না।
+const app = roleInfo.runsWeb ? require('./app') : null;
+const server = app ? app.httpServer : null;
 const { connectDB } = require('./db');
 const runMigrations = require('./migrations');
 const { syncMatches } = require('./services/matchUpdater');
@@ -99,11 +125,27 @@ const queueService = require('./services/queue');
 
 const PORT = process.env.PORT || 3000;
 
+let backgroundStarted = false;
+
 // listen() হওয়ার পরেই কেবল ব্যাকগ্রাউন্ড কাজ শুরু হয়। আগে এগুলো একটা
 // অনির্দিষ্ট `setTimeout(..., 3000)`-এর ভেতরে ছিল; সেটা রাখা হয়েছে শুধু
 // বুট-টাইম DB চাপ কমানোর জন্য, তবে টেস্ট পথে এই কোড আর কখনো চলে না।
+//
+// PROCESS_ROLE অনুযায়ী:
+//   web          → কোনো consumer/timer নয়; শুধু BullMQ *producer* কানেকশন (add() কাজ করার জন্য)
+//   worker / all → নিচের সব ব্যাকগ্রাউন্ড কাজ (all = আগের আচরণ হুবহু)
+// একই প্রসেসে দুবার ডাকলে দ্বিতীয়বার কিছুই হয় না।
 function startBackgroundWork() {
-  setTimeout(() => {
+  if (backgroundStarted) return;
+  backgroundStarted = true;
+
+  if (!roleInfo.runsWorker) {
+    require('./queues').initQueueProducers()
+      .catch(err => console.error('queues initQueueProducers error:', err.message));
+    return;
+  }
+
+  const bootTimer = setTimeout(() => {
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
     // PHASE 3 — বুট-টাইম ক্যাসিনো গেম sync। উদ্দেশ্য: একটা নতুন প্রোভাইডারের
     // credential .env-এ বসিয়ে ডিপ্লয় করলেই অ্যাডমিনকে কিছু না করেই গেম
@@ -115,7 +157,9 @@ function startBackgroundWork() {
     // queues/index.js (BullMQ, activity-log/fraud-scan/admin queue dashboard) — REDIS_URL
     // না থাকলে নিরাপদে false রিটার্ন করে স্কিপ করে (connection.js দেখুন)।
     require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
-  }, 3000).unref();
+  }, 3000);
+  bootTimer.unref();
+  workerRuntime.trackTimer(bootTimer);
 
   scheduleDailyBackup();
   scheduleAutoBackup();
@@ -123,25 +167,51 @@ function startBackgroundWork() {
     .catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
 }
 
+// স্টার্টআপ মাঝপথে ব্যর্থ হলে যা যা চালু হয়ে গেছে তা বন্ধ করে (সর্বোচ্চ ৫ সেকেন্ড)।
+async function cleanupPartialStartup() {
+  const cap = new Promise((resolve) => { const t = setTimeout(resolve, 5000); if (t.unref) t.unref(); });
+  const work = (async () => {
+    try { require('./services/scheduler').stop(); } catch (e) {}
+    try { await workerRuntime.stopBackgroundWork({ drainTimeoutMs: 1000 }); } catch (e) {}
+    try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
+    try { await require('./db').pool.end(); } catch (e) {}
+  })();
+  await Promise.race([work, cap]);
+}
+
 async function startServer() {
+  // ভুল PROCESS_ROLE হলে কোনো সার্ভিস (DB, Redis, টাইমার) চালু করার আগেই বন্ধ।
+  if (roleError) {
+    console.error(`❌ ${roleError.message}`);
+    process.exit(1);
+    return;
+  }
+  const { role, runsWeb } = roleInfo;
+  console.log(`🧭 PROCESS_ROLE=${role}`);
   try {
     await connectDB();
     console.log("✅ PostgreSQL connected successfully");
 
-    await runMigrations();
-    console.log("✅ DB migration done");
+    if (runsWeb) {
+      await runMigrations();
+      console.log("✅ DB migration done");
 
-    // PHASE 2 fix: critical table verification ব্যর্থ হলে আগে শুধু log করে
-    // listen করা হত। এখন এটি fail-closed — ভাঙা schema নিয়ে payment/admin
-    // operation চালু করা হবে না।
-    const { ensureCriticalTables } = require('./services/ensureCriticalTables');
-    await ensureCriticalTables();
+      // PHASE 2 fix: critical table verification ব্যর্থ হলে আগে শুধু log করে
+      // listen করা হত। এখন এটি fail-closed — ভাঙা schema নিয়ে payment/admin
+      // operation চালু করা হবে না।
+      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
+      await ensureCriticalTables();
 
-    await new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(PORT, resolve);
-    });
-    console.log(`✅ Server running on port ${PORT}`);
+      await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(PORT, resolve);
+      });
+      console.log(`✅ Server running on port ${PORT}`);
+    } else {
+      // worker মাইগ্রেশন চালায় না (web-এর সাথে DDL race এড়াতে) — শুধু schema প্রস্তুত কি না দেখে।
+      await workerRuntime.waitForSchema();
+      console.log('✅ Worker: schema যাচাই সম্পন্ন (মাইগ্রেশন web প্রসেসের দায়িত্ব)');
+    }
 
     // পাবলিক URL কনফিগার যাচাই — ভুল/অনুপস্থিত কনফিগ প্রথম রিসেট ইমেইলের
     // সময় নয়, বুটের সময়ই ধরা পড়ুক।
@@ -152,11 +222,15 @@ async function startServer() {
       process.exit(1);
     }
 
+    // worker-এ HTTP সার্ভার নেই; প্রসেস জীবিত রাখতে keep-alive টাইমার।
+    if (role === 'worker') workerRuntime.startKeepAlive();
+
     startBackgroundWork();
+    if (role === 'worker') console.log('✅ Worker চালু — ব্যাকগ্রাউন্ড কাজ সক্রিয় (কোনো HTTP পোর্ট খোলা নেই)');
     return server;
   } catch (err) {
     console.error('❌ Server startup failed:', err);
-    process.exit(1);
+    cleanupPartialStartup().finally(() => process.exit(1));
   }
 }
 
@@ -165,4 +239,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, server, startServer, startBackgroundWork };
+module.exports = { app, server, startServer, startBackgroundWork, processRole: roleInfo };
