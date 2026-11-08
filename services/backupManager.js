@@ -612,13 +612,79 @@ async function runScheduledBackups() {
 
 let scheduleHandle = null;
 let firstRunHandle = null;
+
+// ---------------------------------------------------------------------------
+// Multi-instance guard (Task 2.1)
+//
+// একাধিক worker/instance চললে প্রতিটার নিজস্ব টাইমার আছে, তাই আগে সবাই একই scheduled
+// backup চালাত। এখন প্রতিটা রান আগে একটা DB transaction-এ `pg_try_advisory_xact_lock`
+// নেয় এবং backup_history দেখে যে সম্প্রতি কেউ করেছে কি না।
+//
+//  • xact-scoped lock (session-scoped নয়): PgBouncer transaction-mode-এ নিরাপদ — lock ও
+//    transaction একই server connection-এ বাঁধা থাকে এবং COMMIT/ROLLBACK/disconnect-এ
+//    আপনা-আপনি ছাড়ে, তাই worker crash করলে lock আটকে থাকে না।
+//  • lock ধরা অবস্থায় একই সময়ের দ্বিতীয় রান skip হয় (overlap বন্ধ)।
+//  • lock ছাড়ার পর দেরিতে আসা টাইমার (অন্য instance) backup_history-তে সদ্য-সম্পন্ন
+//    scheduled database backup দেখে skip করে (back-to-back duplicate বন্ধ)।
+//  • backup নিজে আগের মতোই নিজস্ব pool connection-এ চলে; আর্থিক কোনো টেবিলে হাত নেই।
+// ---------------------------------------------------------------------------
+const BACKUP_LOCK_KEY = 'bet420:scheduled-backup';
+
+function backupLockId() {
+  // কী থেকে স্থিতিশীল 32-bit signed int (pg_try_advisory_xact_lock-এর single-key ফর্মে যায়)
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(BACKUP_LOCK_KEY).digest().readInt32BE(0);
+}
+
+async function runScheduledBackupsOnce({ intervalMs, runner = runScheduledBackups, minGapMs } = {}) {
+  // সর্বনিম্ন ব্যবধান: interval-এর অর্ধেক (ডিফল্ট), অন্তত ১ মিনিট
+  const gap = minGapMs != null ? minGapMs : Math.max(60 * 1000, Math.floor((intervalMs || 24 * 3600 * 1000) / 2));
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const got = await client.query('SELECT pg_try_advisory_xact_lock($1) AS locked', [backupLockId()]);
+    if (!got.rows[0] || got.rows[0].locked !== true) {
+      await client.query('ROLLBACK');
+      console.log('🗄️ Scheduled backup skipped — অন্য instance এখন চালাচ্ছে।');
+      return { skipped: true, reason: 'locked' };
+    }
+    const recent = await client.query(
+      `SELECT 1 FROM backup_history
+        WHERE source = 'scheduled' AND type = 'database' AND status = 'completed'
+          AND created_at > NOW() - ($1::bigint * INTERVAL '1 millisecond')
+        LIMIT 1`,
+      [gap]
+    );
+    if (recent.rowCount > 0) {
+      await client.query('ROLLBACK');
+      console.log('🗄️ Scheduled backup skipped — সম্প্রতি অন্য instance সম্পন্ন করেছে।');
+      return { skipped: true, reason: 'recent' };
+    }
+    try {
+      const result = await runner();
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    }
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 function scheduleAutoBackup() {
   if (scheduleHandle) return;
   const hours = parseInt(process.env.BACKUP_SCHEDULE_HOURS || '24', 10);
   if (!hours || hours <= 0) return; // 0/negative দিয়ে বন্ধ করা যায়
   const intervalMs = hours * 60 * 60 * 1000;
   // rejection যেন কখনো unhandled না হয় — টাইমার কলব্যাকে reject হলে প্রসেস ক্র্যাশ করতে পারে
-  const run = () => runScheduledBackups().catch((e) => console.error('scheduled backup runner error:', e.message));
+  // একাধিক worker/instance থাকলে একই সময়ে একটাই scheduled backup চলবে (runScheduledBackupsOnce)
+  const run = () => runScheduledBackupsOnce({ intervalMs })
+    .catch((e) => console.error('scheduled backup runner error:', e.message));
   firstRunHandle = setTimeout(run, 5 * 60 * 1000); // সার্ভার স্টার্টের ৫ মিনিট পর প্রথমবার
   scheduleHandle = setInterval(run, intervalMs);
   if (scheduleHandle.unref) scheduleHandle.unref();
@@ -646,5 +712,5 @@ async function pruneOldScheduledBackups() {
 module.exports = {
   createDatabaseBackup, createUploadsBackup, createConfigBackup,
   restoreBackup, listBackups, getBackupById, deleteBackup, getBackupFilePath,
-  scheduleAutoBackup, stopAutoBackup, runScheduledBackups, isEncryptionEnabled, BACKUP_DIR
+  scheduleAutoBackup, stopAutoBackup, runScheduledBackups, runScheduledBackupsOnce, isEncryptionEnabled, BACKUP_DIR
 };
