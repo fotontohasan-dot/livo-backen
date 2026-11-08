@@ -102,18 +102,21 @@ const PORT = process.env.PORT || 3000;
 // listen() হওয়ার পরেই কেবল ব্যাকগ্রাউন্ড কাজ শুরু হয়। আগে এগুলো একটা
 // অনির্দিষ্ট `setTimeout(..., 3000)`-এর ভেতরে ছিল; সেটা রাখা হয়েছে শুধু
 // বুট-টাইম DB চাপ কমানোর জন্য, তবে টেস্ট পথে এই কোড আর কখনো চলে না।
+//
+// মাল্টি-ইনস্ট্যান্স আর্কিটেকচার: আলাদা Render Background Worker থাকলে
+// DISABLE_BACKGROUND_WORKER=true বা IS_WORKER=false দিয়ে ওয়েব ইনস্ট্যান্সে
+// ব্যাকগ্রাউন্ড কাজ বন্ধ রাখা যায়, ফলে ফিড ও শিডিউলার ডুপ্লিকেট রান হয় না।
 function startBackgroundWork() {
+  if (process.env.DISABLE_BACKGROUND_WORKER === 'true' || process.env.DISABLE_BACKGROUND_WORKER === '1') {
+    console.log('ℹ️ DISABLE_BACKGROUND_WORKER সক্রিয় — এই ওয়েব ইনস্ট্যান্সে ব্যাকগ্রাউন্ড কাজ বন্ধ রাখা হয়েছে (Worker প্রসেস এটি পরিচালনা করছে)');
+    return;
+  }
+
   setTimeout(() => {
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
-    // PHASE 3 — বুট-টাইম ক্যাসিনো গেম sync। উদ্দেশ্য: একটা নতুন প্রোভাইডারের
-    // credential .env-এ বসিয়ে ডিপ্লয় করলেই অ্যাডমিনকে কিছু না করেই গেম
-    // লবিতে চলে আসবে। ইচ্ছাকৃতভাবে await করা হয় না এবং কখনো throw করে না —
-    // ক্যাটালগ sync-এর জন্য সার্ভার বুট আটকে থাকা গ্রহণযোগ্য নয়।
     require('./services/casinoGameSync').syncNewProvidersOnBoot()
       .catch(err => console.error('Initial casino game sync failed:', err.message));
     try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
-    // queues/index.js (BullMQ, activity-log/fraud-scan/admin queue dashboard) — REDIS_URL
-    // না থাকলে নিরাপদে false রিটার্ন করে স্কিপ করে (connection.js দেখুন)।
     require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
   }, 3000).unref();
 
