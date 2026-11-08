@@ -21,6 +21,7 @@ let workers = [];
 
 function startWorkers() {
   if (!connection) return [];
+  if (workers.length) return workers; // একই প্রসেসে দ্বিতীয়বার consumer চালু হবে না
   workers = WORKER_CONFIG.map(({ name, processor, concurrency }) => {
     const worker = new Worker(name, processor, { connection, concurrency });
 
@@ -59,7 +60,10 @@ function startWorkers() {
 }
 
 async function stopWorkers() {
-  await Promise.all(workers.map((w) => w.close()));
+  const toClose = workers;
+  workers = [];
+  // worker.close() নতুন job নেওয়া বন্ধ করে ও চলমান job শেষ হওয়া পর্যন্ত অপেক্ষা করে
+  await Promise.all(toClose.map((w) => w.close()));
 }
 
 module.exports = { startWorkers, stopWorkers };

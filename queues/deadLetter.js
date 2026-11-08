@@ -12,6 +12,7 @@ let queueEventsList = [];
 
 function startDeadLetterListeners() {
   if (!connection) return;
+  if (queueEventsList.length) return; // duplicate listener আটকানো
 
   queueEventsList = Object.values(QUEUE_NAMES).map((name) => {
     const qe = new QueueEvents(name, { connection });
@@ -52,7 +53,9 @@ function startDeadLetterListeners() {
 }
 
 async function stopDeadLetterListeners() {
-  await Promise.all(queueEventsList.map((qe) => qe.close()));
+  const toClose = queueEventsList;
+  queueEventsList = [];
+  await Promise.all(toClose.map((qe) => qe.close()));
 }
 
 // অ্যাডমিন প্যানেল থেকে একটা dead-letter জব আবার মূল Queue-তে পাঠানো (retry)

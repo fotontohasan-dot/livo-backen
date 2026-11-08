@@ -1,30 +1,30 @@
 // services/processRole.js
 // ---------------------------------------------------------------------------
-// PROCESS_ROLE — এই Node প্রসেসটা কোন দায়িত্ব পালন করবে।
+// PROCESS_ROLE রেজল্ভার। এই ফাইলটা কোনো I/O করে না, কোনো service require করে না।
 //
-//   all    (ডিফল্ট) → আগের মতোই: HTTP + Socket.IO + সব ব্যাকগ্রাউন্ড কাজ একই প্রসেসে।
-//   web              → শুধু HTTP/Express/Socket.IO। কোনো ব্যাকগ্রাউন্ড consumer/timer নয়।
-//   worker           → শুধু ব্যাকগ্রাউন্ড কাজ। কোনো HTTP listen বা Socket.IO সার্ভার নয়।
+//   all    → (ডিফল্ট) পুরোনো ডিপ্লয়মেন্টের মতোই: web + background একই প্রসেসে
+//   web    → HTTP + Socket.IO + user-facing; কোনো background consumer/timer নয়
+//   worker → শুধু background কাজ; কোনো HTTP listener / Socket.IO নয়
 //
-// ভুল মান দিলে নিঃশব্দে 'all'-এ নামা হয় না — স্পষ্ট এরর দিয়ে বুট বন্ধ হয়,
-// যাতে টাইপো (যেমন "workers") থেকে ভুল টপোলজিতে ডিপ্লয় না হয়।
+// PROCESS_ROLE সেট না থাকলে `all`। সেট থাকলে (খালি স্ট্রিং সহ) অবশ্যই বৈধ হতে হবে;
+// ভুল মান নীরবে `all`-এ ধরা হয় না, কারণ তাতে ভুল প্রসেসে scheduler চালু হয়ে যেতে পারে।
 // ---------------------------------------------------------------------------
 
 const VALID_ROLES = Object.freeze(['all', 'web', 'worker']);
 
 function resolveProcessRole(env = process.env) {
   const raw = env.PROCESS_ROLE;
-  const role = (raw === undefined || String(raw).trim() === '') ? 'all' : String(raw).trim().toLowerCase();
+  if (raw === undefined) return 'all';
+  const role = String(raw).trim().toLowerCase();
   if (!VALID_ROLES.includes(role)) {
     throw new Error(
-      `Invalid PROCESS_ROLE "${raw}". Allowed values: ${VALID_ROLES.join(', ')} (default: all).`
+      `অবৈধ PROCESS_ROLE="${raw}" — অনুমোদিত মান: ${VALID_ROLES.join(', ')} (সেট না থাকলে "all")`
     );
   }
-  return {
-    role,
-    runsWeb: role === 'all' || role === 'web',
-    runsWorker: role === 'all' || role === 'worker'
-  };
+  return role;
 }
 
-module.exports = { resolveProcessRole, VALID_ROLES };
+const runsWeb = (role) => role === 'all' || role === 'web';
+const runsWorker = (role) => role === 'all' || role === 'worker';
+
+module.exports = { VALID_ROLES, resolveProcessRole, runsWeb, runsWorker };

@@ -36,4 +36,9 @@ function getQueue(name) {
   return queues[name] || null;
 }
 
-module.exports = { QUEUE_NAMES, defaultJobOptions, queues, getQueue };
+/** শাটডাউনে producer-side Queue instance গুলো বন্ধ (shared connection এখানে বন্ধ হয় না)। */
+async function closeQueues() {
+  await Promise.allSettled(Object.values(queues).map((q) => q.close()));
+}
+
+module.exports = { QUEUE_NAMES, defaultJobOptions, queues, getQueue, closeQueues };

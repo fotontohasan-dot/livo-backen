@@ -3,51 +3,50 @@
 // app.js থেকে শুধু initQueueSystem() কল করলেই যথেষ্ট।
 
 const { connectQueueRedis, closeQueueRedis, isQueueEnabled } = require('./connection');
-const { queues } = require('./definitions');
+const { closeQueues } = require('./definitions');
 const { startWorkers, stopWorkers } = require('./workers');
 const { startDeadLetterListeners, stopDeadLetterListeners } = require('./deadLetter');
 
-async function initQueueSystem() {
+// PROCESS_ROLE ভাগ: web শুধু producer (enqueue) হিসেবে Redis-এ সংযুক্ত হয়,
+// worker consumer চালায়। `all` দুটোই করে (initQueueSystem — আগের আচরণ)।
+async function initQueueProducers() {
   const connected = await connectQueueRedis();
   if (!connected) {
     console.warn('⚠️ Queue System চালু হয়নি (Redis অনুপলব্ধ) — সব Background Job সরাসরি (inline) মোডে চলবে।');
-    return false;
   }
+  return connected;
+}
+
+async function startQueueConsumers() {
+  const connected = await initQueueProducers();
+  if (!connected) return false;
   startWorkers();
   startDeadLetterListeners();
   console.log('🚀 Background Queue System চালু হয়েছে (Email, Notification, Activity Log, API Log, Fraud Scan)');
   return true;
 }
 
-// PROCESS_ROLE=web — শুধু PRODUCER দিক: Redis-এ সংযোগ হয় যাতে add() কাজ করে,
-// কিন্তু কোনো Worker/QueueEvents consumer চালু হয় না।
-async function initQueueProducers() {
-  const connected = await connectQueueRedis();
-  if (!connected) {
-    console.warn('⚠️ Queue producers চালু হয়নি (Redis অনুপলব্ধ) — জব inline মোডে চলবে।');
-    return false;
-  }
-  console.log('📤 Queue producers প্রস্তুত (consumer এই প্রসেসে চালু নেই)');
-  return true;
+async function stopQueueConsumers() {
+  await stopWorkers();
+  await stopDeadLetterListeners();
 }
 
-let queueShutdownPromise = null;
-// consumer থামায় → Queue handle বন্ধ → Redis কানেকশন বন্ধ। একাধিকবার ডাকলে একবারই চলে।
-function shutdownQueueSystem() {
-  if (!queueShutdownPromise) {
-    queueShutdownPromise = (async () => {
-      await stopWorkers().catch((e) => console.error('[queues] stopWorkers:', e.message));
-      await stopDeadLetterListeners().catch((e) => console.error('[queues] stopDeadLetterListeners:', e.message));
-      await Promise.all(Object.values(queues).map((q) => q.close().catch(() => {})));
-      await closeQueueRedis();
-    })();
-  }
-  return queueShutdownPromise;
+async function initQueueSystem() {
+  return startQueueConsumers();
+}
+
+// consumer বন্ধ + producer Queue instance ও shared Redis connection বন্ধ
+async function shutdownQueueSystem() {
+  await stopQueueConsumers();
+  await closeQueues();
+  await closeQueueRedis();
 }
 
 module.exports = {
   initQueueSystem,
   initQueueProducers,
+  startQueueConsumers,
+  stopQueueConsumers,
   shutdownQueueSystem,
   isQueueEnabled,
   ...require('./producers'),

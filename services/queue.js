@@ -35,6 +35,8 @@ function startHeartbeat(jobId) {
 }
 
 const handlers = new Map(); // type -> async (payload) => void
+// চলমান processOneBatch() গুলো — গ্রেসফুল শাটডাউনে drain করার জন্য
+const inflightTicks = new Set();
 const state = {
   running: false,
   timer: null,
@@ -191,12 +193,16 @@ async function moveToDeadLetter(job, attempts, errMsg) {
 
 async function tick() {
   state.lastTickAt = new Date();
+  const batch = processOneBatch();
+  inflightTicks.add(batch);
   try {
-    await processOneBatch();
+    await batch;
   } catch (err) {
     state.lastError = err.message;
     state.lastErrorAt = new Date();
     console.error('[queue] worker tick error (non-blocking, will retry next tick):', err.message);
+  } finally {
+    inflightTicks.delete(batch);
   }
 }
 
@@ -220,16 +226,22 @@ function stopWorker() {
   state.running = false;
 }
 
-/** নতুন tick বন্ধ করে চলমান tick (ও তার জব) শেষ হওয়ার জন্য অপেক্ষা করে — সর্বোচ্চ timeoutMs। */
-async function drainWorker(timeoutMs = 8000) {
+/**
+ * নতুন poll বন্ধ করে, তারপর চলমান batch শেষ হওয়ার জন্য অপেক্ষা করে (timeoutMs পর্যন্ত)।
+ * ক্লেইম করা জব মাঝপথে ফেলে দেওয়া হয় না। সময় পেরোলে যা বাকি থাকে তা আগের মতোই
+ * stalled-recovery (heartbeat বন্ধ হলে pending-এ ফেরত) দিয়ে পুনরুদ্ধার হবে।
+ */
+async function stopWorkerAndDrain(timeoutMs = parseInt(process.env.QUEUE_DRAIN_TIMEOUT_MS || '20000', 10)) {
   stopWorker();
-  const pending = state.inFlight;
-  if (!pending) return { drained: true };
+  if (inflightTicks.size === 0) return { drained: true, pending: 0 };
   let timer;
   const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), timeoutMs); });
-  const result = await Promise.race([pending.then(() => 'done'), timeout]);
+  const done = Promise.allSettled([...inflightTicks]).then(() => 'done');
+  const outcome = await Promise.race([done, timeout]);
   clearTimeout(timer);
-  return { drained: result === 'done' };
+  const pending = inflightTicks.size;
+  if (outcome === 'timeout') console.warn(`[queue] drain সময়সীমা পেরিয়েছে — ${pending}টা batch এখনো চলছে (stalled recovery সামলাবে)`);
+  return { drained: outcome === 'done', pending };
 }
 
 /** ব্যর্থ জব আবার pending-এ ফেরত পাঠায় (ম্যানুয়াল রিট্রাই, অ্যাডমিন প্যানেল থেকে) */
@@ -322,7 +334,9 @@ async function getHealthStatus() {
   if (!QUEUE_ENABLED) {
     level = 'error';
     issues.push('কিউ ওয়ার্কার .env-এ ডিসেবল করা আছে (QUEUE_ENABLED=false)');
-  } else if (!state.running) {
+  } else if (!state.running && process.env.PROCESS_ROLE !== 'web') {
+    // PROCESS_ROLE=web-এ consumer ইচ্ছাকৃতভাবে চলে না (আলাদা worker প্রসেস চালায়)।
+    // সেখানে worker মরেছে কি না নিচের DB-ভিত্তিক চেক (stalled / oldest pending) ধরবে।
     level = 'error';
     issues.push('কিউ ওয়ার্কার চালু নেই');
   } else if (state.lastTickAt && (Date.now() - state.lastTickAt.getTime()) > POLL_INTERVAL_MS * 5) {
@@ -432,7 +446,7 @@ module.exports = {
   processOneBatch,
   startWorker,
   stopWorker,
-  drainWorker,
+  stopWorkerAndDrain,
   retryJob,
   retryAllFailed,
   getStats,

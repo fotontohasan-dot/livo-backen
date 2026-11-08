@@ -1,27 +1,26 @@
-// PROCESS_ROLE পার্সিং — ডিফল্ট all, ভুল মানে স্পষ্ট এরর (নিঃশব্দে all-এ নামে না)।
-const { resolveProcessRole, VALID_ROLES } = require('../../services/processRole');
+// Test D (unit) — PROCESS_ROLE রেজল্যুশন। কোনো I/O নেই।
+const { resolveProcessRole, runsWeb, runsWorker, VALID_ROLES } = require('../../services/processRole');
 
 describe('resolveProcessRole', () => {
-  test('অনুপস্থিত/ফাঁকা হলে ডিফল্ট all (পুরনো ডিপ্লয়মেন্ট অপরিবর্তিত)', () => {
-    expect(resolveProcessRole({})).toEqual({ role: 'all', runsWeb: true, runsWorker: true });
-    expect(resolveProcessRole({ PROCESS_ROLE: '' }).role).toBe('all');
-    expect(resolveProcessRole({ PROCESS_ROLE: '   ' }).role).toBe('all');
+  test('সেট না থাকলে all (backward-compatible)', () => {
+    expect(resolveProcessRole({})).toBe('all');
   });
 
-  test('web শুধু web, worker শুধু worker', () => {
-    expect(resolveProcessRole({ PROCESS_ROLE: 'web' })).toEqual({ role: 'web', runsWeb: true, runsWorker: false });
-    expect(resolveProcessRole({ PROCESS_ROLE: 'worker' })).toEqual({ role: 'worker', runsWeb: false, runsWorker: true });
+  test.each(['all', 'web', 'worker'])('বৈধ মান %s গ্রহণ করে', (role) => {
+    expect(resolveProcessRole({ PROCESS_ROLE: role })).toBe(role);
   });
 
-  test('বড়/ছোট হাত ও স্পেস সহ্য করে', () => {
-    expect(resolveProcessRole({ PROCESS_ROLE: ' WORKER ' }).role).toBe('worker');
+  test('case ও whitespace সহনশীল', () => {
+    expect(resolveProcessRole({ PROCESS_ROLE: '  Worker ' })).toBe('worker');
   });
 
-  test.each(['workers', 'api', 'both', 'true', '0'])('ভুল মান "%s" → throw', (bad) => {
-    expect(() => resolveProcessRole({ PROCESS_ROLE: bad })).toThrow(/Invalid PROCESS_ROLE/);
+  test.each(['', 'bogus', 'web,worker', 'api', '1'])('অবৈধ মান %p-তে পরিষ্কার error', (bad) => {
+    expect(() => resolveProcessRole({ PROCESS_ROLE: bad })).toThrow(/অবৈধ PROCESS_ROLE/);
   });
 
-  test('VALID_ROLES ঠিক তিনটি', () => {
-    expect([...VALID_ROLES]).toEqual(['all', 'web', 'worker']);
+  test('role → কোন কাজ চলে', () => {
+    expect(VALID_ROLES).toEqual(['all', 'web', 'worker']);
+    expect([runsWeb('all'), runsWeb('web'), runsWeb('worker')]).toEqual([true, true, false]);
+    expect([runsWorker('all'), runsWorker('web'), runsWorker('worker')]).toEqual([true, false, true]);
   });
 });
