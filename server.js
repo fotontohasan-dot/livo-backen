@@ -89,6 +89,7 @@ async function gracefulShutdown(signal) {
     try { await require('./services/queue').stopWorkerAndDrain(); } catch (e) {}
     try { require('./services/matchUpdater').stopMatchSync(); } catch (e) {}
     try { require('./services/backupManager').stopAutoBackup(); } catch (e) {}
+    try { require('./services/backup').stopDailyBackup(); } catch (e) {}
   }
   // BullMQ consumer (থাকলে) + producer Queue + shared Redis কানেকশন বন্ধ
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
@@ -96,6 +97,7 @@ async function gracefulShutdown(signal) {
   //    (বেট/ওয়ালেট রিকোয়েস্ট শেষ হওয়ার পরেই নিচে DB pool বন্ধ হয়)
   if (runsWeb(activeRole)) {
     try {
+      if (global.__bet420Server && typeof global.__bet420Server.closeIdleConnections === 'function') global.__bet420Server.closeIdleConnections();
       const io = require('./services/socket').getIo();
       if (io) await new Promise((resolve) => io.close(() => resolve()));
     } catch (e) {}
