@@ -34,14 +34,21 @@ async function runBackupNow() {
 // আচরণ অপরিবর্তিত রাখা হয়েছে — একাধিকবার কল করলেও একটাই টাইমার তৈরি হয়
 // এবং টাইমার ইভেন্ট লুপ আটকে রাখে না।
 let dailyBackupHandle = null;
+let firstRunHandle = null;
 function scheduleDailyBackup() {
   if (dailyBackupHandle) return; // দুবার শিডিউল হওয়া ঠেকানো
   console.warn(DEPRECATION);
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const firstRun = setTimeout(runBackupNow, 5 * 60 * 1000);
-  if (firstRun.unref) firstRun.unref();
+  firstRunHandle = setTimeout(runBackupNow, 5 * 60 * 1000);
+  if (firstRunHandle.unref) firstRunHandle.unref();
   dailyBackupHandle = setInterval(runBackupNow, DAY_MS);
   if (dailyBackupHandle.unref) dailyBackupHandle.unref();
+}
+
+/** গ্রেসফুল শাটডাউনের জন্য: দৈনিক ও প্রথম-রান টাইমার বন্ধ করে (বারবার ডাকা নিরাপদ)। */
+function stopDailyBackup() {
+  if (firstRunHandle) { clearTimeout(firstRunHandle); firstRunHandle = null; }
+  if (dailyBackupHandle) { clearInterval(dailyBackupHandle); dailyBackupHandle = null; }
 }
 
 function getBackupStatus() {
@@ -58,4 +65,4 @@ async function restoreFromBackup() {
   throw new Error(DEPRECATION);
 }
 
-module.exports = { runBackupNow, scheduleDailyBackup, getBackupStatus, restoreFromBackup, fetchLatestBackup };
+module.exports = { runBackupNow, scheduleDailyBackup, stopDailyBackup, getBackupStatus, restoreFromBackup, fetchLatestBackup };
