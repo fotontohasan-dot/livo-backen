@@ -142,3 +142,38 @@ manual script against a scratch DB, not part of the repo.
 #### Recommendation
 Do NOT consolidate yet. Next microtask (2.4, awaiting approval): add the advisory lock around `runMigrations()` (smallest fix, with a
 test running two `runMigrations()` concurrently), then reconsider making `worker.js` a thin wrapper around the runtime path.
+
+### Task 2.4 — Migration concurrency protection
+Branch: `task-2.4-migration-lock`, stacked on `task-2.3-worker-entry-audit` @ `e4a53bf` -> `task-2.2-finalize-web-worker` @ `f2f5ae3`
+(PR #251 not assumed merged). No merge/PR/deploy; production never touched; worker/server entry-point behavior, betting, wallet,
+settlement and queue logic unchanged. Task 2.5 / Task 3 not started.
+
+Change (`migrations.js` only, plus a new test file):
+- `runMigrations()` now takes a dedicated client from the pool (`appPool.connect()`), acquires a SESSION advisory lock
+  (`pg_try_advisory_lock(4200420420420::bigint)`, polled every 250 ms; key is outside the 32-bit range used by scheduler cron locks),
+  and runs the unchanged migration body on that SAME connection. The old body is now `applyMigrations(pool)` and receives a
+  single-connection adapter: `query` -> `client.query`, `connect()` -> the same client with a no-op `release` (the merchants backfill
+  `BEGIN/COMMIT` therefore also runs on the lock-holding connection). No migration SQL was edited.
+- `finally`: `pg_advisory_unlock`, then `client.release()`. If unlock fails or returns false, the connection is destroyed
+  (`release(err)`), which makes the server drop the session lock. Lock/connection failures are recorded via
+  `startupState.markMigrationsFailed` and rethrown (fail-closed as before).
+- Wait limit: `MIGRATION_LOCK_TIMEOUT_MS` (default 120000). On timeout it throws and the instance exits via the existing fail-closed path.
+- Exports unchanged for callers (`module.exports = runMigrations`); `runMigrations.MIGRATION_LOCK_KEY` added for tests.
+- Limitation (unchanged from 2.3): a session lock is only valid on direct/session-mode connections, NOT PgBouncer transaction mode.
+
+Tests (`tests/integration/migrationLock.test.js`, scratch databases created/dropped by the test, shared test DB untouched):
+1. 3 simultaneous `runMigrations()` on an empty DB -> 3/3 fulfilled; sampled `pg_locks` shows max 1 holder; no holder at end; pool fully released.
+   (Before the fix the same scenario gave 2 of 3 rejected with `pg_type_typname_nsp_index`, see 2.3.)
+2. Lock held externally -> migration stays pending (no DDL run) until the lock is released, then completes.
+3. Lock wait timeout (`MIGRATION_LOCK_TIMEOUT_MS=700`) -> rejects with "migration lock", pool released, external lock untouched.
+4. Mid-run failure (a VIEW named `users` makes a later ALTER fail) -> rejects, lock free afterwards, pool released, re-run succeeds.
+Mutation check: with `acquireMigrationLock` stubbed out, test 1 FAILED (as intended); restored afterwards.
+
+Actual results (local Postgres 16, `NODE_ENV=test`, `--runInBand --coverage=false`):
+`migrationLock`, `appLifecycle`, `databaseIntegrity`, `userDeletionIntegrity`, `performanceIntegrity`, `workerRuntime`,
+`workerEntryShutdown`, `bootTimerShutdown`, `backupStop`, `processRole`: 10/10 suites passed, 90/90 tests passed.
+Not run: full suite, lint, e2e, any PgBouncer-mode test, any test against a real multi-process deploy.
+
+Remaining risks: PgBouncer transaction mode (see above); a very long migration makes other instances wait up to the timeout and
+then fail-closed; web instances still do not `ensureCriticalTables` under the lock (it runs after `runMigrations()` returns, idempotent as before);
+`render.yaml`/entry points deliberately unchanged (worker.js still self-migrates, now serialized).
