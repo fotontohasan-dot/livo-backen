@@ -68,6 +68,10 @@ const notifySupportStatus = (userId, status) => {
 
 let io;
 
+// Redis adapter clients (pub/sub)
+let pubClient = null;
+let subClient = null;
+
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
 // type: 'deposit' | 'withdraw' | 'chat'
 const emitAdminAlert = (type, data = {}) => {
@@ -334,6 +338,35 @@ const initSocket = (server, sessionMiddleware) => {
       console.log("🔴 User disconnected:", socket.id);
     });
   });
+
+  // ===== মাল্টি-ইনস্ট্যান্স স্কেলিং: Redis Pub/Sub Adapter সংযোজন =====
+  // একাধিক নোড ইনস্ট্যান্স (Render Web Instance A ও B) থাকলে যাতে Instance A-তে
+  // তৈরি হওয়া স্কোর বা অডস পরিবর্তন Instance B-তে যুক্ত ক্লায়েন্টদের কাছে
+  // তাৎক্ষণিকভাবে পৌঁছায়। Redis না থাকলে স্বয়ংক্রিয়ভাবে in-memory মোডে চলে।
+  const redisEnabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+  const redisUrl = process.env.REDIS_URL;
+
+  if (redisEnabled && redisUrl) {
+    try {
+      const { createAdapter } = require('@socket.io/redis-adapter');
+      const Redis = require('ioredis');
+
+      pubClient = new Redis(redisUrl, { maxRetriesPerRequest: null, lazyConnect: true });
+      subClient = pubClient.duplicate();
+
+      Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log("✅ Socket.io Redis adapter connected (multi-instance sync active)");
+      }).catch((err) => {
+        console.warn("⚠️ Socket.io Redis adapter connection error (falling back to memory):", err.message);
+      });
+
+      pubClient.on('error', (err) => console.warn('[socket-redis-pub] error:', err.message));
+      subClient.on('error', (err) => console.warn('[socket-redis-sub] error:', err.message));
+    } catch (err) {
+      console.warn("⚠️ Socket.io Redis adapter initialization failed:", err.message);
+    }
+  }
 
   console.log("✅ Socket.io initialized");
   return io;

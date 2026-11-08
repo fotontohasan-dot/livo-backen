@@ -390,11 +390,39 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
 app.disable('x-powered-by');
-const sessionStore = process.env.DATABASE_URL ? new pgSession({
-  pool: pool,
-  tableName: 'user_sessions',
-  createTableIfMissing: true
-}) : undefined;
+let sessionStore;
+const redisEnabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+const useRedisSession = process.env.SESSION_STORE_TYPE === 'redis' || (redisEnabled && process.env.REDIS_URL && process.env.SESSION_STORE_TYPE !== 'postgres');
+
+if (useRedisSession && process.env.REDIS_URL) {
+  try {
+    const { RedisStore } = require('connect-redis');
+    const Redis = require('ioredis');
+    const redisClient = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: false
+    });
+    redisClient.on('error', (err) => console.warn('[session-redis] error:', err.message));
+    sessionStore = new RedisStore({
+      client: redisClient,
+      prefix: 'livo:sess:'
+    });
+    console.log('✅ Express session store: Redis (connect-redis)');
+  } catch (err) {
+    console.warn('⚠️ connect-redis initialization failed, falling back to PostgreSQL session store:', err.message);
+  }
+}
+
+if (!sessionStore) {
+  sessionStore = process.env.DATABASE_URL ? new pgSession({
+    pool: pool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }) : undefined;
+  if (sessionStore) {
+    console.log('✅ Express session store: PostgreSQL (connect-pg-simple)');
+  }
+}
 
 const isProd = process.env.NODE_ENV === 'production';
 
