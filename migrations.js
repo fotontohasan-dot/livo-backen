@@ -1,6 +1,6 @@
 const { pool } = require('./db');
 
-async function runMigrations() {
+async function runMigrationsUnlocked() {
   try {
     console.log("🚀 Running database migrations...");
 
@@ -2577,6 +2577,24 @@ async function runMigrations() {
   }
 
   try { require('./services/startupState').markMigrationsCompleted(); } catch (e) { /* non-blocking */ }
+}
+
+// একাধিক প্রসেস (web ×২ + worker) একসাথে উঠলে DDL রেস এড়াতে Postgres advisory lock।
+// session-level লক একটা dedicated কানেকশনে ধরা হয়; অন্যরা সেটা ছাড়া পর্যন্ত অপেক্ষা করে,
+// তারপর চালায় (সব migration idempotent, তাই দ্বিতীয়জনের জন্য প্রায় no-op)। কানেকশন
+// কেটে গেলে Postgres নিজেই লক ছেড়ে দেয়, তাই ক্র্যাশে ডেডলক হয় না।
+const MIGRATION_LOCK_KEY = 74210099; // adminMerchants-এর TREE_LOCK_KEY (74210001) থেকে আলাদা
+
+async function runMigrations() {
+  const lockClient = await pool.connect();
+  try {
+    console.log('🔒 Migration advisory lock নেওয়া হচ্ছে (অন্য ইনস্ট্যান্স চালালে অপেক্ষা করবে)...');
+    await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    return await runMigrationsUnlocked();
+  } finally {
+    try { await lockClient.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]); } catch (_) { /* কানেকশন গেলে লক নিজেই ছাড়ে */ }
+    lockClient.release();
+  }
 }
 
 module.exports = runMigrations;

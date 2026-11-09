@@ -11,7 +11,9 @@ try {
 }
 
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
-const REDIS_URL = process.env.REDIS_URL || '';
+// ক্যাশ + রেট-লিমিট আলাদা (allkeys-lru) Redis-এ যায়: CACHE_REDIS_URL, না থাকলে REDIS_URL-এ ফলব্যাক।
+// সেশন ও কিউ (noeviction) আলাদাভাবে শুধু REDIS_URL ব্যবহার করে — app.js, queues/connection.js।
+const REDIS_URL = process.env.CACHE_REDIS_URL || process.env.REDIS_URL || '';
 const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
@@ -221,7 +223,7 @@ function getStatus() {
   return {
     enabled: REDIS_ENABLED && !!Redis,
     connected: isAvailable(),
-    host: REDIS_URL ? '(REDIS_URL)' : `${REDIS_HOST}:${REDIS_PORT}`,
+    host: REDIS_URL ? (process.env.CACHE_REDIS_URL ? '(CACHE_REDIS_URL)' : '(REDIS_URL)') : `${REDIS_HOST}:${REDIS_PORT}`,
     lastError: state.lastError,
     lastErrorAt: state.lastErrorAt,
     disabledReason: state.disabledReason

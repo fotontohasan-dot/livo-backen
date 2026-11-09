@@ -1,11 +1,11 @@
 services:
   # ---------------------------------------------------------------------------
-  # 1. Livo Web Application (Stateless, Multi-Instance detrás Render Load Balancer)
+  # 1. Livo Web Application (Stateless, Multi-Instance behind Render Load Balancer)
   # ---------------------------------------------------------------------------
   - type: web
     name: livo-web
-    env: node
-    plan: starter # $7/month per instance
+    runtime: node
+    plan: starter
     numInstances: 2 # 2 instances for high availability and 1,000+ CCU target
     region: singapore # Closest low-latency region to Bangladesh / South Asia
     buildCommand: npm ci && npm run build
@@ -13,72 +13,105 @@ services:
     healthCheckPath: /health
     autoDeploy: false
     envVars:
+      # web + worker-এর সব শেয়ার্ড সিক্রেট/কনফিগ livo-shared গ্রুপ থেকে আসে
+      # (তালিকা: docs/ENV_RENDER.md)। মান বসান Render ড্যাশবোর্ডে — এই ফাইলে নয়।
+      - fromGroup: livo-shared
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: "3000"
       - key: DB_POOL_MAX
-        value: 10 # 2 instances * 10 = 20 DB connections max from web tier
+        value: "10" # 2 instances * 10 = 20 DB connections max from web tier
       - key: DB_IDLE_TIMEOUT_MS
-        value: 30000
+        value: "30000"
       - key: DB_CONNECTION_TIMEOUT_MS
-        value: 5000
+        value: "5000"
       - key: DISABLE_BACKGROUND_WORKER
         value: "true" # Web instances serve HTTP/WebSocket only; worker handles jobs
       - key: SESSION_STORE_TYPE
         value: "redis" # Primary session store in Redis with PostgreSQL fallback
-      - key: REDIS_URL
+      - key: TRUST_PROXY_HOPS
+        sync: false # মালিক সেট করবেন: Cloudflare + Render = 2, শুধু Render = 1 (docs/ENV_RENDER.md)
+      - key: REDIS_URL # সেশন + BullMQ + Socket.IO adapter → noeviction
         fromService:
-          type: redis
+          type: keyvalue
           name: livo-redis
+          property: connectionString
+      - key: CACHE_REDIS_URL # ক্যাশ + রেট-লিমিট → allkeys-lru
+        fromService:
+          type: keyvalue
+          name: livo-redis-cache
           property: connectionString
       - key: DATABASE_URL
         fromDatabase:
           name: livo-postgres
           property: connectionString
-      - key: SESSION_SECRET
-        generateValue: true
 
   # ---------------------------------------------------------------------------
   # 2. Livo Background Worker (Dedicated Process for Cron, Sports Ingestion & Queues)
   # ---------------------------------------------------------------------------
   - type: worker
     name: livo-worker
-    env: node
-    plan: starter # $7/month
+    runtime: node
+    plan: starter
     region: singapore
     buildCommand: npm ci
     startCommand: node worker.js
     autoDeploy: false
     envVars:
+      - fromGroup: livo-shared
       - key: NODE_ENV
         value: production
       - key: DB_POOL_MAX
-        value: 5 # 5 DB connections max for worker
+        value: "5" # 5 DB connections max for worker
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: livo-redis
+          property: connectionString
+      - key: CACHE_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: livo-redis-cache
           property: connectionString
       - key: DATABASE_URL
         fromDatabase:
           name: livo-postgres
           property: connectionString
 
+  # ---------------------------------------------------------------------------
+  # 3. Key Value stores (দুটো আলাদা eviction নীতি — সেশন/কিউ কখনো evict হবে না)
+  # ---------------------------------------------------------------------------
+  # সেশন + BullMQ: noeviction — মেমরি ভরলে লেখা ব্যর্থ হবে, কিন্তু সেশন/জব হারাবে না।
+  - type: keyvalue
+    name: livo-redis
+    plan: 256mb
+    region: singapore
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # শুধু Render ইন্টারনাল কানেকশন
+
+  # ক্যাশ + রেট-লিমিট: allkeys-lru — মেমরি ভরলে পুরনো key সরে যাবে।
+  - type: keyvalue
+    name: livo-redis-cache
+    plan: 256mb
+    region: singapore
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # শুধু Render ইন্টারনাল কানেকশন
+
 # ---------------------------------------------------------------------------
-# 3. PostgreSQL Database (Authoritative Source of Truth)
+# 4. Environment Group — মান ফাঁকা; মালিক Render ড্যাশবোর্ডে বসান (docs/ENV_RENDER.md)
+# ---------------------------------------------------------------------------
+# গ্রুপ ইচ্ছাকৃতভাবে খালি: Blueprint গ্রুপে sync:false চলে না, আর "" মান দিলে পরবর্তী
+# Blueprint sync-এ ড্যাশবোর্ডে বসানো SESSION_SECRET মুছে যাওয়ার ঝুঁকি থাকে।
+envVarGroups:
+  - name: livo-shared
+    envVars: []
+
+# ---------------------------------------------------------------------------
+# 5. PostgreSQL Database (Authoritative Source of Truth)
 # ---------------------------------------------------------------------------
 databases:
   - name: livo-postgres
-    plan: starter # $7/month, Starter PostgreSQL (up to 100 connections max)
+    plan: 0.5c-1g # সর্বোচ্চ ১০০ কানেকশন (৮GB-এর নিচে সব প্ল্যানে); ডিপ্লয়ের সময় ওভারল্যাপ সহ ~৫০ লাগে
     region: singapore
-    postgresMajorVersion: 16
-
-# ---------------------------------------------------------------------------
-# 4. Redis Key-Value Store (Socket.IO Adapter, Session Store, Cache, Rate Limits)
-# ---------------------------------------------------------------------------
-redis:
-  - name: livo-redis
-    plan: starter # $7/month (256MB memory, high throughput)
-    region: singapore
-    maxmemoryPolicy: allkeys-lru
+    postgresMajorVersion: "16"

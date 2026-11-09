@@ -123,7 +123,7 @@ function validateEnv() {
   // ক্যাশ প্রতি-ইনস্ট্যান্স আলাদা থাকে — তাই প্রোডাকশন অপারেটরকে সতর্ক করা হয়।
   if (isProd) {
     const redisEnabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
-    const hasRedisConfig = !!(process.env.REDIS_URL || process.env.REDIS_HOST);
+    const hasRedisConfig = !!(process.env.CACHE_REDIS_URL || process.env.REDIS_URL || process.env.REDIS_HOST);
     if (!redisEnabled) {
       warnings.push('Redis: REDIS_ENABLED=false — প্রোডাকশনে cache ও rate-limit in-memory/DB ফলব্যাকে চলবে (একাধিক ইনস্ট্যান্স থাকলে rate-limit শেয়ার্ড থাকবে না)');
     } else if (!hasRedisConfig) {
