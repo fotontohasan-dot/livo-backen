@@ -30,6 +30,9 @@ class RedisRateLimitStore {
 
   _localIncrement(key) {
     const now = Date.now();
+    if (this.localMap.size > 10000) { // দীর্ঘ Redis আউটেজে Map-এর বৃদ্ধি সীমিত রাখা
+      for (const [k, v] of this.localMap) if (v.resetTime <= now) this.localMap.delete(k);
+    }
     const entry = this.localMap.get(key);
     if (!entry || entry.resetTime <= now) {
       const resetTime = now + this.windowMs;

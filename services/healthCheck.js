@@ -24,8 +24,10 @@ async function checkPostgres() {
   try {
     const { pool } = require('../db');
     await withTimeout(pool.query('SELECT 1'), 3000);
-    const row = await withTimeout(pool.query(`SELECT COUNT(*) FROM users`), 3000);
-    return { status: 'healthy', latencyMs: ms(t), userCount: parseInt(row.rows[0].count) };
+    // নোট: আগে এখানে COUNT(*) FROM users ছিল (পুরো টেবিল স্ক্যান) — /admin ডায়াগনস্টিকসের জন্য রাখা হয়েছে,
+    // কিন্তু /ready আর এই ফাংশন ব্যবহার করে না। বড় টেবিলে সস্তা আনুমানিক সংখ্যা pg_class থেকে নেওয়া হয়।
+    const row = await withTimeout(pool.query(`SELECT reltuples::bigint AS n FROM pg_class WHERE relname = 'users'`), 3000);
+    return { status: 'healthy', latencyMs: ms(t), userCount: row.rows[0] ? Math.max(0, parseInt(row.rows[0].n, 10)) : null, userCountApprox: true };
   } catch (err) {
     return { status: 'error', latencyMs: ms(t), error: err.message };
   }
@@ -195,13 +197,34 @@ async function readiness() {
     throw new Error('Schema not ready: migrations did not complete' + (migrationError ? ` (${migrationError})` : ''));
   }
 
-  // DB connect হলেই ready
+  // DB: শুধু SELECT 1 (কোনো টেবিল স্ক্যান নয়), ছোট টাইমআউট — লোড ব্যালান্সার প্রোব ঘন ঘন আসে।
   try {
     const { pool } = require('../db');
-    await withTimeout(pool.query('SELECT 1'), 2000);
-    return { status: 'ready' };
+    await withTimeout(pool.query('SELECT 1'), READY_TIMEOUT_MS);
   } catch (err) {
     throw new Error('DB not ready: ' + err.message);
+  }
+
+  // Redis: PING (সেশন/কিউ Redis)। Redis কনফিগার করা থাকলে এবং সাড়া না দিলে not-ready —
+  // সেশন Redis-এ থাকায় এটা ছাড়া ইনস্ট্যান্স ইউজারদের সেশন পড়তে পারবে না।
+  const redisStatus = await pingSessionRedis();
+  if (redisStatus === 'down') throw new Error('Redis not ready: PING failed or timed out');
+  return { status: 'ready' };
+}
+
+const READY_TIMEOUT_MS = parseInt(process.env.READY_TIMEOUT_MS || '1500', 10);
+
+// 'ok' | 'down' | 'disabled' (Redis কনফিগার/সক্রিয় নেই — in-memory/DB ফলব্যাকে চলে, তাই not-ready নয়)
+async function pingSessionRedis() {
+  const enabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+  if (!enabled || !process.env.REDIS_URL) return 'disabled';
+  try {
+    const { connection } = require('../queues/connection');
+    if (!connection) return 'disabled'; // এই প্রসেসে কিউ/সেশন Redis ক্লায়েন্টই তৈরি হয়নি
+    const reply = await withTimeout(connection.ping(), READY_TIMEOUT_MS);
+    return reply === 'PONG' ? 'ok' : 'down';
+  } catch (_) {
+    return 'down';
   }
 }
 

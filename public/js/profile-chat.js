@@ -261,7 +261,7 @@
     showAiView();
     fetchStatus();
 
-    socket = window.io();
+    socket = window.livoSocket();
     socket.emit('join', userId);
 
     // কুইক-মেসেজ চিপ — বার্তাটা data-* অ্যাট্রিবিউটে

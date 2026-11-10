@@ -1,38 +1,56 @@
-const { pool } = require('../db');
+const { enqueueApiLog } = require('../queues/producers');
 
 /**
- * Logs every API request to api_usage_logs table.
- * Captures: API Key, User, IP, Endpoint, Method, Status, Response Time, Timestamp
+ * প্রতিটা API রিকোয়েস্ট api_usage_logs-এ লগ করে — কিন্তু রিকোয়েস্ট পাথে কোনো DB INSERT নেই।
+ * লগ BullMQ "api-log" কিউতে (queues/processors/apiLog.js) পাঠানো হয়; INSERT করে worker।
+ *
+ * Bounded: একসাথে সর্বোচ্চ MAX_PENDING টা enqueue চলতে পারে। ওভারলোডে (Redis ধীর/ডাউন) অতিরিক্ত লগ
+ * ফেলে দেওয়া হয় ও গোনা হয় (getApiLogStats().dropped) — রিকোয়েস্ট কখনো আটকায় না।
+ * নোট: কিউ বন্ধ থাকলে (dev, Redis নেই) producer নিজেই inline লেখে — প্রোডাকশনে কিউ চালু থাকে।
  */
+const MAX_PENDING = parseInt(process.env.API_LOG_MAX_PENDING || '500', 10);
+const stats = { enqueued: 0, dropped: 0, failed: 0 };
+let pending = 0;
+let lastDropWarnAt = 0;
+
+function noteDrop() {
+  stats.dropped++;
+  const now = Date.now();
+  if (now - lastDropWarnAt > 60000) { // সর্বোচ্চ মিনিটে একবার সতর্কবার্তা
+    lastDropWarnAt = now;
+    console.warn(`[api-log] overload: ${stats.dropped} log(s) dropped so far (pending=${pending}, cap=${MAX_PENDING})`);
+  }
+}
+
 function apiUsageLogger(req, res, next) {
   const start = Date.now();
 
-  // Capture original end to log after response
   const originalEnd = res.end;
   res.end = function (...args) {
-    const responseTime = Date.now() - start;
-    const statusCode = res.statusCode || 200;
+    const payload = {
+      apiKeyId: req.apiKey ? req.apiKey.id : null,
+      userId: (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null),
+      ip: req.ip || req.headers['x-forwarded-for'] || (req.connection && req.connection.remoteAddress) || null,
+      // কোয়েরি-স্ট্রিং বাদ: টোকেন/কোড থাকতে পারে (gateway.js-এর লগিংয়ের মতোই)
+      endpoint: String(req.originalUrl || req.url || '').split('?')[0].slice(0, 500),
+      method: req.method || 'GET',
+      statusCode: res.statusCode || 200,
+      responseTimeMs: Date.now() - start,
+      userAgent: req.headers['user-agent'] || null
+    };
 
-    // Non-blocking log
-    setImmediate(async () => {
-      try {
-        const apiKeyId = req.apiKey ? req.apiKey.id : null;
-        const userId = (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null);
-        const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || null;
-        const endpoint = req.originalUrl || req.url || '';
-        const method = req.method || 'GET';
-        const userAgent = req.headers['user-agent'] || null;
-
-        await pool.query(
-          `INSERT INTO api_usage_logs 
-           (api_key_id, user_id, ip, endpoint, method, status_code, response_time_ms, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [apiKeyId, userId, ip, endpoint.slice(0, 500), method, statusCode, responseTime, userAgent]
-        );
-      } catch (err) {
-        console.error('API usage log error:', err.message);
-      }
-    });
+    if (pending >= MAX_PENDING) {
+      noteDrop();
+    } else {
+      pending++;
+      // setImmediate: রেসপন্স ফ্লাশ হওয়ার পরে; enqueue-এর কোনো ফল রিকোয়েস্টে ফেরে না
+      setImmediate(() => {
+        enqueueApiLog(payload)
+          .then(() => { stats.enqueued++; })
+          .catch((err) => { stats.failed++; console.error('API usage log enqueue error:', err.message); })
+          .finally(() => { pending--; });
+      });
+    }
 
     return originalEnd.apply(this, args);
   };
@@ -40,4 +58,8 @@ function apiUsageLogger(req, res, next) {
   next();
 }
 
-module.exports = { apiUsageLogger };
+function getApiLogStats() {
+  return { ...stats, pending, maxPending: MAX_PENDING };
+}
+
+module.exports = { apiUsageLogger, getApiLogStats };

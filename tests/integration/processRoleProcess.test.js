@@ -96,9 +96,16 @@ describe('Test A — PROCESS_ROLE=web', () => {
     try {
       await waitFor(() => /Server running on port/.test(p.stdout()), 40000, 'web listen');
       expect((await get(14821, '/health')).status).toBe(200);
-      const io = await get(14821, '/socket.io/?EIO=4&transport=polling');
-      expect(io.status).toBe(200);
-      expect(io.body).toMatch(/^0\{.*"sid"/); // Socket.IO handshake
+      // Step 2.1: Socket.IO এখন WebSocket-only। polling handshake প্রত্যাখ্যাত (400), WebSocket handshake সফল।
+      const polling = await get(14821, '/socket.io/?EIO=4&transport=polling');
+      expect(polling.status).toBe(400);
+      const { io: ioClient } = require('socket.io-client');
+      const wsConnected = await new Promise((resolve) => {
+        const sock = ioClient('http://127.0.0.1:14821', { transports: ['websocket'], reconnection: false, timeout: 5000 });
+        sock.on('connect', () => { sock.close(); resolve(true); });
+        sock.on('connect_error', () => { sock.close(); resolve(false); });
+      });
+      expect(wsConnected).toBe(true); // Socket.IO WebSocket handshake
       await sleep(4500); // all role-এর পুরোনো ৩s বিলম্বের পরেও কিছু চালু হওয়া চলবে না
       expect(p.stdout()).toMatch(/PROCESS_ROLE=web/);
       expect(p.stdout() + p.stderr()).not.toMatch(BACKGROUND_MARKERS);

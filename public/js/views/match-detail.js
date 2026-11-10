@@ -544,7 +544,7 @@
 
   if (typeof io === 'function' && cfg.matchId) {
     try {
-      var socket = io();
+      var socket = window.livoSocket();
       // (re)join on every connect so a reconnect after a network drop resumes updates
       socket.on('connect', function () { socket.emit('joinMatch', cfg.matchId); });
 

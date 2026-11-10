@@ -97,7 +97,8 @@
 
   function connectSocket() {
     if (typeof io === 'undefined') return;
-    var socket = io();
+    var socket = window.livoSocket();
+    if (!socket) return;
     socket.on('connect', function () { socket.emit('join_admin'); });
     socket.on('admin_alert', handleAlert);
     socket.on('new_message', function (data) {
@@ -105,14 +106,19 @@
     });
   }
 
-  if (typeof io === 'undefined') {
-    var s = document.createElement('script');
-    s.src = '/socket.io/socket.io.js';
-    s.onload = connectSocket;
-    document.head.appendChild(s);
-  } else {
-    connectSocket();
+  function loadScript(src, done) {
+    var el = document.createElement('script');
+    el.src = src;
+    el.onload = done;
+    document.head.appendChild(el);
   }
+  // socket.io ক্লায়েন্ট → তারপর শেয়ার্ড helper (WebSocket-only), তারপর কানেক্ট
+  function ensureHelper() {
+    if (typeof window.livoSocket === 'function') connectSocket();
+    else loadScript('/js/socket-client.js', connectSocket);
+  }
+  if (typeof io === 'undefined') loadScript('/socket.io/socket.io.js', ensureHelper);
+  else ensureHelper();
 
   document.addEventListener('DOMContentLoaded', function () {
     // Layout A (Tailwind ড্যাশবোর্ড)-এর স্ক্রলযোগ্য কন্টেইনারে বটম-নেভের জন্য জায়গা রাখা

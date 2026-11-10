@@ -64,8 +64,9 @@ const CEILINGS = {
   adminFinancialLimiter:    { maxAtMost: 60,  windowAtLeast: 15 * 60 * 1000 },
   googleAuthLimiter:        { maxAtMost: 30,  windowAtLeast: 15 * 60 * 1000 },
   claimLimiter:             { maxAtMost: 20,  windowAtLeast: 60 * 1000 },
-  helpChatLimiter:          { maxAtMost: 20,  windowAtLeast: 60 * 1000 },
-  generalLimiter:           { maxAtMost: 500, windowAtLeast: 15 * 60 * 1000 }
+  helpChatLimiter:          { maxAtMost: 20,  windowAtLeast: 60 * 1000 }
+  // generalLimiter এখানে নেই: তার সীমা এখন ফাংশন (ইউজার ID বনাম অ্যানোনিমাস IP) — নিচে
+  // 'generalLimiter নীতি' ব্লকে middleware/rateLimitPolicy.js-এর LIMITS.general দিয়ে পাহারা দেওয়া হয়।
 };
 
 describe('রেট-লিমিট অডিট — সংবেদনশীল limiter গুলো আছে', () => {
@@ -91,6 +92,33 @@ describe('রেট-লিমিট অডিট — সীমা ঢিলা �
     expect({ name, max: cfg.max }).toEqual({ name, max: expect.any(Number) });
     expect(cfg.max).toBeLessThanOrEqual(rule.maxAtMost);
     expect(cfg.windowMs).toBeGreaterThanOrEqual(rule.windowAtLeast);
+  });
+});
+
+describe('রেট-লিমিট অডিট — generalLimiter নীতি (ইউজার-কী + CGNAT-সহনশীল IP সীমা)', () => {
+  const { LIMITS, userOrIpKey, generalMax } = require('../../middleware/rateLimitPolicy');
+
+  test('ছাদ: ইউজার-সীমা ও অ্যানোনিমাস IP-সীমা সীমিত থাকে, জানালা ≥ ১৫ মিনিট', () => {
+    expect(LIMITS.general.userMax).toBeLessThanOrEqual(1000);
+    expect(LIMITS.general.anonIpMax).toBeLessThanOrEqual(5000);
+    expect(LIMITS.general.anonIpMax).toBeGreaterThanOrEqual(LIMITS.general.userMax);
+    expect(LIMITS.general.windowMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+  });
+
+  test('app.js generalLimiter নীতি-ফাংশন ব্যবহার করে', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+    expect(src).toMatch(/const generalLimiter = rateLimit\(\{[\s\S]*?limit: generalMax[\s\S]*?keyGenerator: userOrIpKey/);
+  });
+
+  test('একই IP-র দুই ইউজারের কী আলাদা; অ্যানোনিমাস IP-কী; max ইউজার/অ্যানোনিমাস ভেদে', () => {
+    const a = { ip: '10.0.0.1', session: { user: { id: 1 } } };
+    const b = { ip: '10.0.0.1', session: { user: { id: 2 } } };
+    const anon = { ip: '10.0.0.1', session: {} };
+    expect(userOrIpKey(a)).not.toBe(userOrIpKey(b));
+    expect(userOrIpKey(a)).toBe('u:1');
+    expect(userOrIpKey(anon)).toMatch(/^ip:/);
+    expect(generalMax(a)).toBe(LIMITS.general.userMax);
+    expect(generalMax(anon)).toBe(LIMITS.general.anonIpMax);
   });
 });
 

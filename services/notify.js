@@ -12,6 +12,9 @@
 const { pool } = require('../db');
 
 let io = null;
+// web প্রসেসে সরাসরি io; worker-এ (io == null) Redis emitter — settlement/নোটিফিকেশন ইভেন্ট যাতে worker থেকেও
+// ক্লায়েন্টদের কাছে পৌঁছায় (services/socket.js-এর getEmitter; একই Redis ও adapter-এর মাধ্যমে)।
+const bus = () => io || require('./socket').getEmitter();
 function initNotifyIo(socketIoInstance) {
   io = socketIoInstance;
 }
@@ -19,9 +22,9 @@ function initNotifyIo(socketIoInstance) {
 // ইতিমধ্যে DB-তে ইনসার্ট হয়ে যাওয়া একটা নোটিফিকেশন রো-কে রিয়েল-টাইম emit করা
 // (যেমন creditApprovedDeposit-এর মতো ট্রানজেকশনের ভেতরে ইনসার্ট হওয়া রো, COMMIT-এর পর emit করতে হয়)
 function emitToUser(userId, notificationRow) {
-  if (!io || !userId || !notificationRow) return;
+  const b = bus(); if (!b || !userId || !notificationRow) return;
   try {
-    io.to(`user:${userId}`).emit('notification', {
+    b.to(`user:${userId}`).emit('notification', {
       id: notificationRow.id,
       title: notificationRow.title,
       message: notificationRow.message,
@@ -38,8 +41,8 @@ function emitToUser(userId, notificationRow) {
 // Sent only to the private `user:<id>` room and carries no bet data — the page re-fetches
 // GET /matches/api/my-bets, so nothing about a bet can leak to another socket.
 function emitMyBetsChanged(userId, reason) {
-  if (!io || !userId) return;
-  try { io.to(`user:${userId}`).emit('myBetsChanged', { reason: reason || 'update', at: Date.now() }); }
+  const b = bus(); if (!b || !userId) return;
+  try { b.to(`user:${userId}`).emit('myBetsChanged', { reason: reason || 'update', at: Date.now() }); }
   catch (err) { console.error('notify emitMyBetsChanged error:', err.message); }
 }
 
@@ -108,10 +111,10 @@ async function getBadgeCounts(userId) {
 // অ্যাডমিনের মেসেজ পাঠানো, বা কোনো কিছু "read" হিসেবে চিহ্নিত হওয়ার পরে ডাকা হয়,
 // যাতে সব ট্যাব/ডিভাইসে ব্যাজ সাথে সাথে সিঙ্ক থাকে।
 async function emitBadgeUpdate(userId) {
-  if (!io || !userId) return;
+  const b = bus(); if (!b || !userId) return;
   try {
     const counts = await getBadgeCounts(userId);
-    io.to(`user:${userId}`).emit('badges:update', counts);
+    b.to(`user:${userId}`).emit('badges:update', counts);
   } catch (err) {
     console.error('emitBadgeUpdate error:', err.message);
   }
@@ -127,9 +130,10 @@ async function broadcastToAllUsers({ title, message, type = 'announcement', cate
        RETURNING user_id, id, title, message, type, is_read, created_at`,
       [title || '', message || '', type, category]
     );
-    if (io) {
+    const b = bus();
+    if (b) {
       try {
-        io.emit('notification', {
+        b.emit('notification', {
           id: null, // ব্রডকাস্ট — নির্দিষ্ট একটা id নয়, ক্লায়েন্ট নতুন করে count/history রিফ্রেশ করবে
           title,
           message,
@@ -142,7 +146,7 @@ async function broadcastToAllUsers({ title, message, type = 'announcement', cate
         // ব্রডকাস্ট সব অনলাইন ইউজারের কাছে যায় — প্রতিটার জন্য আলাদা করে DB থেকে গুনে
         // পাঠানো ব্যয়বহুল, তাই ক্লায়েন্টকে শুধু ইঙ্গিত দেওয়া হচ্ছে যে ব্যাজ রিফ্রেশ করতে হবে
         // (client badges:refresh ইভেন্ট শুনে /notifications/badges থেকে প্রকৃত সংখ্যা আনবে)।
-        io.emit('badges:refresh', { category });
+        b.emit('badges:refresh', { category });
       } catch (err) {
         console.error('broadcast emit error:', err.message);
       }
@@ -157,9 +161,9 @@ async function broadcastToAllUsers({ title, message, type = 'announcement', cate
 // অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন — services/socket.js-এর emitAdminAlert-এর
 // পরিপূরক (deposit/withdraw/chat আগে থেকেই কভার করা, security/system/announcement যোগ)
 function notifyAdmins(type, { title, message } = {}) {
-  if (!io) return;
+  const b = bus(); if (!b) return;
   try {
-    io.to('admins').emit('admin_alert', { type, title: title || '', message: message || '', createdAt: new Date() });
+    b.to('admins').emit('admin_alert', { type, title: title || '', message: message || '', createdAt: new Date() });
   } catch (err) {
     console.error('notifyAdmins error:', err.message);
   }

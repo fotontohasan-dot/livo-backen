@@ -22,7 +22,7 @@
     try { return JSON.parse(el.textContent); } catch (e) { return null; }
   }
 
-  const socket = io();
+  const socket = window.livoSocket();
 
   let currentUserId = null;
   let currentSupportStatus = null;

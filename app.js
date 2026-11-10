@@ -472,10 +472,11 @@ app.use(flash());
 app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
 const RedisRateLimitStore = require('./services/redisRateLimitStore');
+const { LIMITS: RL, userOrIpKey, generalMax } = require('./middleware/rateLimitPolicy');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 10, // অপরিবর্তিত (IP-ভিত্তিক, প্রি-অথ) — ঢিলা করা নিষেধ (tests/security/rateLimitAuditMatrix.test.js)
   // এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
   // session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
   message: (req) => tr(req, 'common_rate_limited_15m'),
@@ -491,18 +492,23 @@ const loginLimiter = rateLimit({
   store: new RedisRateLimitStore('rl:login:')
 });
 
+// সাধারণ লিমিট: লগইন করা ইউজার → ইউজার ID দিয়ে (u:<id>), অ্যানোনিমাস → IP দিয়ে। session middleware
+// এর আগে মাউন্ট হয়েছে (উপরে), তাই req.session.user এখানে পাওয়া যায়। (আগে: ৩০০/১৫মি প্রতি IP — CGNAT-এ অপর্যাপ্ত)
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
+  windowMs: RL.general.windowMs,
+  limit: generalMax, // লগইন করা → LIMITS.general.userMax, অ্যানোনিমাস → LIMITS.general.anonIpMax
+  keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:general:')
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
+// কী: ইউজার ID (এই রুটগুলো লগইন-আবশ্যক), নইলে IP। সীমা অপরিবর্তিত: প্রতি অ্যাকাউন্টে ২০/১৫মি।
 const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  keyGenerator: userOrIpKey,
   message: (req) => tr(req, 'common_rate_limited'),
   standardHeaders: true,
   legacyHeaders: false,
