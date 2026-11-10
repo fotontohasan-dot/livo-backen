@@ -55,6 +55,10 @@ const LIMITERS = collectLimiters();
 const CEILINGS = {
   adminLoginLimiter:        { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   strict2FALimiter:         { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  loginLimiter:             { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  registerLimiter:          { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  loginIpCeilingLimiter:    { maxAtMost: 100, windowAtLeast: 15 * 60 * 1000 },
+  resetIpCeilingLimiter:    { maxAtMost: 50,  windowAtLeast: 15 * 60 * 1000 },
   resetLimiter:             { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   verifyResendLimiter:      { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   accountSecurityLimiter:   { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
@@ -130,9 +134,9 @@ describe('রেট-লিমিট অডিট — গ্লোবাল প�
   });
 
   test('লগইন ও রেজিস্ট্রেশন পথে আলাদা কড়া limiter', () => {
-    expect(appSource).toMatch(/app\.use\(\s*'\/login',\s*loginLimiter\s*\)/);
-    expect(appSource).toMatch(/app\.use\(\s*'\/register',\s*loginLimiter\s*\)/);
-    expect(appSource).toMatch(/app\.use\(\s*'\/admin\/login',\s*loginLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/login',\s*loginIpCeilingLimiter,\s*loginLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/register',\s*registerLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/admin\/login',\s*loginIpCeilingLimiter,\s*loginLimiter\s*\)/);
   });
 
   test('আর্থিক পথগুলোতে financialLimiter', () => {
@@ -159,9 +163,19 @@ describe('রেট-লিমিট অডিট — রানটাইমে �
     for (let i = 0; i < 40; i++) {
       const res = await agent.post('/login')
         .type('form')
-        .send({ identifier: 'no-such-user-' + i, password: 'wrong-password' });
+        .send({ identifier: 'no-such-user-same', password: 'wrong-password' });
       if (res.status === 429) { sawLimit = true; break; }
     }
     expect(sawLimit).toBe(true);
+  });
+
+  test('একই IP-র ভিন্ন অ্যাকাউন্ট একে অপরকে আটকায় না (A2), কিন্তু একক অ্যাকাউন্ট ১০-এ আটকায়', async () => {
+    const agent = request(app);
+    const statuses = [];
+    for (let i = 0; i < 15; i++) {
+      const res = await agent.post('/login').type('form').send({ identifier: 'distinct-user-' + i, password: 'wrong-password' });
+      statuses.push(res.status);
+    }
+    expect(statuses).not.toContain(429);
   });
 });

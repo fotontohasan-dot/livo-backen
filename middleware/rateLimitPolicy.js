@@ -35,4 +35,32 @@ function generalMax(req) {
   return sessionUserId(req) !== null ? LIMITS.general.userMax : LIMITS.general.anonIpMax;
 }
 
-module.exports = { LIMITS, userOrIpKey, generalMax, sessionUserId };
+const { normalizeIdentifier, normalizeEmail } = require('../utils/identity');
+const crypto = require('crypto');
+
+function ipKey(req) { return `ip:${ipKeyGenerator(req.ip)}`; }
+
+/**
+ * প্রি-অথ লগইন কী: বডির identifier (ইমেইল/ইউজারনেম/ফোন) normalize করে হ্যাশ করা `acct:<h>`।
+ * identifier না থাকলে (ফাঁকা/অন্য ধরনের POST) আগের মতো কড়া IP-কী — ফলে অ্যাকাউন্ট-ভিত্তিক সীমা ঢিলা হয় না।
+ * হ্যাশ করা হয় যাতে Redis কী-তে ইউজারের ফোন/ইমেইল প্লেইন থাকে না।
+ */
+function hashKey(prefix, value) {
+  return `${prefix}:` + crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 32);
+}
+function loginAccountKey(req) {
+  const raw = req.body && (req.body.identifier || req.body.username || req.body.phone || req.body.email);
+  const id = typeof raw === 'string' ? normalizeIdentifier(raw) : '';
+  return id ? hashKey('acct', id) : ipKey(req);
+}
+function resetAccountKey(req) {
+  const b = req.body || {};
+  if (req.params && req.params.token) return hashKey('tok', req.params.token);
+  const e = typeof b.email === 'string' ? normalizeEmail(b.email) : '';
+  return e ? hashKey('acct', e) : ipKey(req);
+}
+
+// প্রতি-IP ছাদ (শেয়ার্ড মোবাইল IP-তে অনেক ইউজার); একক অ্যাকাউন্টের সীমা (১০/৫) আলাদা limiter-এ অপরিবর্তিত
+const IP_CEILINGS = { login: 100, reset: 50 };
+
+module.exports = { LIMITS, userOrIpKey, generalMax, sessionUserId, loginAccountKey, resetAccountKey, ipKey, IP_CEILINGS };

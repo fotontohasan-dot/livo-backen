@@ -82,6 +82,9 @@ async function startWorker() {
     const { ensureCriticalTables } = require('./services/ensureCriticalTables');
     await ensureCriticalTables();
 
+    // Step 3: heartbeat — env-presence ফ্ল্যাগ (শুধু true/false), boot সময় ও breaker অবস্থা DB-তে; অ্যাডমিন Integrations পেজ পড়ে
+    require('./services/integrationStatus').startHeartbeat('worker');
+
     // 1. Initial sports match sync & periodic update
     syncMatches().catch(err => console.error('[worker] Initial match sync failed:', err.message));
 

@@ -9,7 +9,10 @@ const { enqueueApiLog } = require('../queues/producers');
  * নোট: কিউ বন্ধ থাকলে (dev, Redis নেই) producer নিজেই inline লেখে — প্রোডাকশনে কিউ চালু থাকে।
  */
 const MAX_PENDING = parseInt(process.env.API_LOG_MAX_PENDING || '500', 10);
-const stats = { enqueued: 0, dropped: 0, failed: 0 };
+// A1: সফল GET-গুলোর নমুনা (sampling) — ডিফল্ট ১ (সব লগ)। ট্র্যাফিক বেশি হলে API_LOG_SAMPLE_RATE=0.2 ইত্যাদি দিন;
+// ব্যর্থ (≥400) ও non-GET রিকোয়েস্ট সবসময় লগ হয়।
+const SAMPLE_RATE = Math.min(1, Math.max(0, Number(process.env.API_LOG_SAMPLE_RATE === undefined ? 1 : process.env.API_LOG_SAMPLE_RATE)));
+const stats = { enqueued: 0, dropped: 0, failed: 0, sampledOut: 0 };
 let pending = 0;
 let lastDropWarnAt = 0;
 
@@ -39,14 +42,16 @@ function apiUsageLogger(req, res, next) {
       userAgent: req.headers['user-agent'] || null
     };
 
-    if (pending >= MAX_PENDING) {
+    if (SAMPLE_RATE < 1 && payload.method === 'GET' && payload.statusCode < 400 && Math.random() >= SAMPLE_RATE) {
+      stats.sampledOut++;
+    } else if (pending >= MAX_PENDING) {
       noteDrop();
     } else {
       pending++;
       // setImmediate: রেসপন্স ফ্লাশ হওয়ার পরে; enqueue-এর কোনো ফল রিকোয়েস্টে ফেরে না
       setImmediate(() => {
         enqueueApiLog(payload)
-          .then(() => { stats.enqueued++; })
+          .then((r) => { if (r && r.dropped) { stats.dropped++; } else { stats.enqueued++; } })
           .catch((err) => { stats.failed++; console.error('API usage log enqueue error:', err.message); })
           .finally(() => { pending--; });
       });

@@ -1,4 +1,4 @@
-const { fetchWithTimeout } = require('../utils/httpClient');
+const { integrationFetch } = require('../utils/integrationHttp');
 // services/sms.js
 // ==================== SMS পাঠানোর সার্ভিস (পাবলিক জেনেরিক HTTP গেটওয়ে সাপোর্ট) ====================
 // SMS_API_URL/SMS_API_KEY কনফিগার করা না থাকলে এটা প্রকৃতপক্ষে কিছু পাঠায় না — বরং
@@ -32,7 +32,8 @@ async function sendSms(to, message) {
   }
 
   try {
-    const res = await fetchWithTimeout(apiUrl, {
+    // circuit breaker + timeout (ডিফল্ট ৫s) + স্ট্যাটাস রেকর্ড। কোনো অটো-রিট্রাই নেই (OTP দু'বার যাওয়া এড়াতে)।
+    const res = await integrationFetch('sms', apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({ to, message })
@@ -43,6 +44,9 @@ async function sendSms(to, message) {
     }
     return { ok: true, simulated: false, message: 'SMS পাঠানো হয়েছে' };
   } catch (err) {
+    if (err && err.code === 'CIRCUIT_OPEN') {
+      return { ok: false, simulated: false, code: 'SMS_CIRCUIT_OPEN', message: 'SMS গেটওয়ে সাময়িকভাবে বন্ধ (circuit open) — কিছুক্ষণ পরে আবার চেষ্টা করুন' };
+    }
     return { ok: false, simulated: false, message: err.message };
   }
 }

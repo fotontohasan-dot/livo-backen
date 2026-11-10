@@ -2567,6 +2567,30 @@ async function runMigrationsUnlocked() {
     }
     console.log('✅ merchants ক্রেডেনশিয়াল কলাম ready');
 
+    // Step 3: ইন্টিগ্রেশন স্ট্যাটাস (web ও worker আলাদা প্রসেস, তাই DB-তে) — গোপন মান কখনো নয়, শুধু ফ্ল্যাগ/সময়/ছাঁটা error
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS integration_status (
+        name TEXT PRIMARY KEY,
+        last_success_at TIMESTAMPTZ,
+        last_error_at TIMESTAMPTZ,
+        last_error_message VARCHAR(255),
+        success_count BIGINT NOT NULL DEFAULT 0,
+        error_count BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS process_heartbeat (
+        instance_id TEXT PRIMARY KEY,
+        role TEXT NOT NULL,
+        booted_at TIMESTAMPTZ NOT NULL,
+        last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        env_flags JSONB NOT NULL DEFAULT '{}'::jsonb,
+        breakers JSONB NOT NULL DEFAULT '[]'::jsonb
+      );
+    `);
+    console.log('✅ integration_status ও process_heartbeat ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

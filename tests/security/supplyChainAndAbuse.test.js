@@ -179,9 +179,9 @@ describe('Secrets, CI/CD, dependencies and resource abuse (PHASE 10-13)', () => 
     });
 
     test('login/register/admin-login ও financial limiter বহাল আছে', () => {
-      expect(appSrc).toMatch(/app\.use\('\/login', loginLimiter\)/);
-      expect(appSrc).toMatch(/app\.use\('\/register', loginLimiter\)/);
-      expect(appSrc).toMatch(/app\.use\('\/admin\/login', loginLimiter\)/);
+      expect(appSrc).toMatch(/app\.use\('\/login', loginIpCeilingLimiter, loginLimiter\)/);
+      expect(appSrc).toMatch(/app\.use\('\/register', registerLimiter\)/);
+      expect(appSrc).toMatch(/app\.use\('\/admin\/login', loginIpCeilingLimiter, loginLimiter\)/);
       expect(appSrc).toMatch(/app\.use\('\/payment\/deposit', financialLimiter\)/);
       expect(appSrc).toMatch(/app\.use\('\/payment\/withdraw', financialLimiter\)/);
     });
