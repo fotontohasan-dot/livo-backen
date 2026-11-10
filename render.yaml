@@ -5,7 +5,7 @@ services:
   - type: web
     name: livo-web
     runtime: node
-    plan: starter
+    plan: 0.5c-512mb # বর্তমান Render প্ল্যান ID (পুরনো "starter" নাম spec-এর তালিকায় নেই); ~$7/মাস
     numInstances: 2 # 2 instances for high availability and 1,000+ CCU target
     region: singapore # Closest low-latency region to Bangladesh / South Asia
     buildCommand: npm ci && npm run build
@@ -53,7 +53,7 @@ services:
   - type: worker
     name: livo-worker
     runtime: node
-    plan: starter
+    plan: 0.5c-512mb # বর্তমান Render প্ল্যান ID (পুরনো "starter" নাম spec-এর তালিকায় নেই); ~$7/মাস
     region: singapore
     buildCommand: npm ci
     startCommand: node worker.js
