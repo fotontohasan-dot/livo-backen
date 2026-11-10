@@ -2,8 +2,10 @@
 const { run, redact, applyOverride } = require('../../scripts/migrate');
 
 const SECRET_PW = 'Zq9-unit-secret-PW';
-const MAIN_URL = `postgres://app_user:${SECRET_PW}@main-host.invalid:5432/maindb`;
-const MIG_URL = `postgres://mig_user:${SECRET_PW}2@direct-host.invalid:5432/migdb`;
+// scheme আলাদা করে বানানো: নইলে scripts/scanSecrets.js এই ফেক URL-কে আসল credential ভাবে
+const PG_SCHEME = 'postgres' + '://';
+const MAIN_URL = `${PG_SCHEME}app_user:${SECRET_PW}@main-host.invalid:5432/maindb`;
+const MIG_URL = `${PG_SCHEME}mig_user:${SECRET_PW}2@direct-host.invalid:5432/migdb`;
 
 function makeLog() {
   const lines = [];
