@@ -5328,7 +5328,7 @@ router.post('/popups/upload', rbac.requirePermission('settings_edit'), popupUplo
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: 'bet420/popups', resource_type: 'image', timeout: 20000 },
-        (error, r) => (error ? reject(error) : resolve(r))
+        (error, r) => { require('../services/integrationStatus').recordIntegrationResult('cloudinary', !error, error && error.message); return error ? reject(error) : resolve(r); }
       );
       stream.end(req.file.buffer);
     });

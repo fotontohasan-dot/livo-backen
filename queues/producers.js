@@ -54,13 +54,55 @@ async function enqueueActivityLog(payload, opts = {}) {
 }
 
 // ==================== API LOG ====================
-async function enqueueApiLog(payload, opts = {}) {
-  const job = await addJob(QUEUE_NAMES.API_LOG, 'log', payload, { ...opts, attempts: 2 }).catch((err) => {
-    console.error('⚠️ enqueueApiLog ব্যর্থ, সরাসরি DB-তে লেখা হচ্ছে:', err.message);
-    return null;
-  });
-  if (job) return { queued: true, jobId: job.id };
+// A1: noeviction Redis-এ (সেশন + কিউ) এই কিউ যেন কখনো জায়গা না খেয়ে ফেলে — তাই সীমা *Redis-এর দিকে* প্রয়োগ হয়,
+// শুধু in-process নয়:
+//   • গভীরতা (waiting+delayed) Redis থেকে ≈১ সেকেন্ডে একবার পড়া হয় (BullMQ getJobCounts) — সব web ইনস্ট্যান্স ও worker মিলিয়ে।
+//     সীমা (API_LOG_MAX_QUEUE_DEPTH, ডিফল্ট ৫০০০) ছাড়ালে নতুন লগ ফেলে দেওয়া ও গোনা হয়।
+//   • সম্পন্ন/ব্যর্থ জব গণনা-সীমাসহ মুছে ফেলা (removeOnComplete/removeOnFail count) — সাধারণ ডিফল্টের (১০০০/২০০০) চেয়ে ছোট।
+//   • Redis ব্যর্থ হলে আর "সরাসরি DB INSERT" নয় (আগে প্রতি রিকোয়েস্টে হতো) — লগ ফেলে দেওয়া হয়। শুধু কিউ আদৌ
+//     কনফিগার করা না থাকলে (dev) inline লেখা হয়।
+const API_LOG_MAX_DEPTH = parseInt(process.env.API_LOG_MAX_QUEUE_DEPTH || '5000', 10);
+const API_LOG_KEEP_COMPLETED = parseInt(process.env.API_LOG_KEEP_COMPLETED || '100', 10);
+const API_LOG_KEEP_FAILED = parseInt(process.env.API_LOG_KEEP_FAILED || '200', 10);
+const apiLogGuard = { depth: 0, checkedAt: 0, checking: false, droppedDepth: 0, droppedRedisError: 0, enqueued: 0 };
 
+function refreshApiLogDepth(queue) {
+  if (apiLogGuard.checking || Date.now() - apiLogGuard.checkedAt < 1000) return;
+  apiLogGuard.checking = true;
+  queue.getJobCounts('waiting', 'delayed')
+    .then((c) => { apiLogGuard.depth = (c.waiting || 0) + (c.delayed || 0); apiLogGuard.checkedAt = Date.now(); })
+    .catch(() => { apiLogGuard.checkedAt = Date.now(); })
+    .finally(() => { apiLogGuard.checking = false; });
+}
+
+function getApiLogQueueStats() {
+  return { ...apiLogGuard, maxDepth: API_LOG_MAX_DEPTH };
+}
+
+async function enqueueApiLog(payload, opts = {}) {
+  const queue = getQueue(QUEUE_NAMES.API_LOG);
+  if (queue && isQueueEnabled()) {
+    refreshApiLogDepth(queue); // await নেই — শেষ জানা গভীরতা দিয়েই সিদ্ধান্ত
+    if (apiLogGuard.depth >= API_LOG_MAX_DEPTH) {
+      apiLogGuard.droppedDepth++;
+      return { queued: false, dropped: 'queue_depth', jobId: null };
+    }
+    try {
+      const job = await queue.add('log', payload, {
+        ...opts,
+        attempts: 2,
+        removeOnComplete: { count: API_LOG_KEEP_COMPLETED },
+        removeOnFail: { count: API_LOG_KEEP_FAILED, age: 24 * 3600 }
+      });
+      apiLogGuard.enqueued++;
+      return { queued: true, jobId: job.id };
+    } catch (err) {
+      apiLogGuard.droppedRedisError++;
+      return { queued: false, dropped: 'redis_error', jobId: null };
+    }
+  }
+
+  // কিউ কনফিগার করা নেই (dev/অফলাইন) — আগের মতো inline
   const { processApiLogJob } = require('./processors/apiLog');
   await processApiLogJob({ data: payload }).catch(() => {});
   return { queued: false, jobId: null };
@@ -84,5 +126,6 @@ module.exports = {
   enqueueNotification,
   enqueueActivityLog,
   enqueueApiLog,
+  getApiLogQueueStats,
   enqueueFraudScan
 };

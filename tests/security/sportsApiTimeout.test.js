@@ -19,63 +19,42 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'services', 'sportsAPI.js'), 'utf8');
 
-describe('Phase 9 — sports API-তে টাইমআউট আছে', () => {
-  test('fetchWithTimeout হেল্পার AbortController ব্যবহার করে', () => {
-    expect(SRC).toMatch(/async function fetchWithTimeout/);
-    expect(SRC).toMatch(/new AbortController\(\)/);
-    expect(SRC).toMatch(/controller\.abort\(\)/);
-    expect(SRC).toMatch(/signal: controller\.signal/);
-  });
-
-  test('টাইমার সবসময় পরিষ্কার হয় (finally-তে)', () => {
-    // clearTimeout না হলে প্রতিটা সফল কলেও একটা টাইমার ঝুলে থাকত এবং
-    // process বন্ধ হতে দেরি করত।
-    const body = /async function fetchWithTimeout[\s\S]*?\n\}/.exec(SRC)[0];
-    expect(body).toMatch(/finally\s*\{[\s\S]*clearTimeout\(timer\)/);
-  });
-
-  test('হেল্পার নিজেকে ডাকে না (রিকার্শন নেই)', () => {
-    // প্রথম খসড়ায় ঠিক এই ভুলটা হয়েছিল — ভেতরে fetch()-এর বদলে
-    // fetchWithTimeout() বসে গিয়েছিল, যা অসীম রিকার্শন তৈরি করত।
-    const body = /async function fetchWithTimeout[\s\S]*?\n\}/.exec(SRC)[0];
-    const inner = body.slice(body.indexOf('{'));
-    expect(inner).not.toMatch(/fetchWithTimeout\(/);
-    expect(inner).toMatch(/await fetch\(url,/);
+describe('Phase 9 — sports API-তে টাইমআউট আছে (Step 3: breaker-সহ integrationFetch)', () => {
+  test('সব কল integrationFetch (AbortController + timeout) দিয়ে যায়', () => {
+    expect(SRC).toMatch(/integrationFetch\(/);
+    expect(SRC).toMatch(/sports:cricapi/);
+    expect(SRC).toMatch(/sports:rapidapi/);
+    const http = fs.readFileSync(path.join(ROOT, 'utils', 'integrationHttp.js'), 'utf8');
+    expect(http).toMatch(/AbortController|signal/);
+    const cb = fs.readFileSync(path.join(ROOT, 'services', 'circuitBreaker.js'), 'utf8');
+    expect(cb).toMatch(/new AbortController\(\)/);
+    expect(cb).toMatch(/controller\.abort\(\)/);
+    expect(cb).toMatch(/finally\s*\{[\s\S]*clearTimeout\(timer\)/); // টাইমার সবসময় পরিষ্কার
   });
 
   test('কোনো কাঁচা fetch( অবশিষ্ট নেই', () => {
-    // একটা কল বাদ পড়লে সেটাই ঝুলে থাকার পথ হয়ে থাকত।
-    const calls = [...SRC.matchAll(/await fetch\(/g)];
-    // হেল্পারের ভেতরের একটাই বৈধ
-    expect(calls.length).toBe(1);
-    expect([...SRC.matchAll(/await fetchWithTimeout\(/g)].length).toBeGreaterThanOrEqual(4);
+    expect([...SRC.matchAll(/await fetch\(/g)].length).toBe(0);
+    expect([...SRC.matchAll(/await (cricFetch|footballFetch)\(/g)].length).toBeGreaterThanOrEqual(4);
   });
 
-  test('টাইমআউট env দিয়ে বদলানো যায়, ডিফল্ট যুক্তিসঙ্গত', () => {
+  test('টাইমআউট env দিয়ে বদলানো যায়, ডিফল্ট ৫s', () => {
     expect(SRC).toMatch(/process\.env\.SPORTS_API_TIMEOUT_MS/);
-    const m = /API_TIMEOUT_MS = Number\(process\.env\.SPORTS_API_TIMEOUT_MS\) \|\| (\d+)/.exec(SRC);
-    expect(m).not.toBeNull();
-    const def = Number(m[1]);
-    expect(def).toBeGreaterThan(1000);
-    expect(def).toBeLessThanOrEqual(30000);
+    const cb = fs.readFileSync(path.join(ROOT, 'services', 'circuitBreaker.js'), 'utf8');
+    expect(cb).toMatch(/pick\('TIMEOUT_MS', 5000\)/);
   });
 });
 
 describe('Phase 9 — API ব্যর্থতা নিরাপদে সামলানো হয়', () => {
   test('প্রতিটা external কল try/catch-এ মোড়ানো', () => {
-    // AbortError catch না হলে টাইমআউট মানে অপ্রত্যাশিত ৫০০।
-    const calls = [...SRC.matchAll(/await fetchWithTimeout\(/g)];
+    const calls = [...SRC.matchAll(/await (cricFetch|footballFetch)\(/g)];
     for (const c of calls) {
       const before = SRC.slice(0, c.index);
-      const lastTry = before.lastIndexOf('try {');
-      const lastCatch = before.lastIndexOf('catch');
-      expect(lastTry).toBeGreaterThan(lastCatch);
+      expect(before.lastIndexOf('try {')).toBeGreaterThan(before.lastIndexOf('catch'));
     }
   });
 
-  test('ব্যর্থতায় নিরাপদ ফলব্যাক ফেরত দেওয়া হয়', () => {
-    // খালি অ্যারে বা null — কখনো আংশিক/অসংগত ডেটা নয়।
-    expect(SRC).toMatch(/catch[\s\S]{0,200}?return \[\]/);
-    expect(SRC).toMatch(/catch[\s\S]{0,200}?return null/);
+  test('ব্যর্থতায় নিরাপদ ফলব্যাক: সর্বশেষ ভালো ডেটা (stale) নয়তো খালি/null', () => {
+    expect(SRC).toMatch(/function staleOr/);
+    expect(SRC).toMatch(/catch[\s\S]{0,200}?return staleOr\(/);
   });
 });

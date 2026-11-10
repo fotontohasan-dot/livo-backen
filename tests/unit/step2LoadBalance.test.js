@@ -153,7 +153,7 @@ describe('2.4 রেট-লিমিট নীতি', () => {
   });
   test('login/OTP/financial/payment সীমা আগের মতোই (ঢিলা হয়নি)', () => {
     const app = read('app.js'); const auth = read('routes/auth.js'); const pay = read('routes/payment.js');
-    expect(app).toMatch(/const loginLimiter = rateLimit\(\{\s*windowMs: 15 \* 60 \* 1000,\s*max: 10,/);
+    expect(app).toMatch(/const loginLimiter = rateLimit\(\{\s*windowMs: 15 \* 60 \* 1000,\s*keyGenerator: loginAccountKey,\s*max: 10,/);
     expect(app).toMatch(/const financialLimiter = rateLimit\(\{\s*windowMs: 15 \* 60 \* 1000,\s*max: 20,/);
     expect(pay).toMatch(/const paymentLimiter = rateLimit\(\{\s*windowMs: 15 \* 60 \* 1000,\s*max: 15,/);
     expect(auth).toMatch(/const resetLimiter = rateLimit\(\{\s*windowMs: 15 \* 60 \* 1000,\s*max: 5,/);

@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { integrationCall } = require('../utils/integrationHttp');
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -15,13 +16,20 @@ const transporter = nodemailer.createTransport({
   // timeout ছাড়া nodemailer তখন OS-লেভেল TCP timeout (৬০-১২০+ সেকেন্ড) পর্যন্ত ঝুলে থাকে।
   // এই তিনটা timeout সেট করা থাকলে ব্যর্থ হলে দ্রুত (কয়েক সেকেন্ডে) ব্যর্থ হবে, ঝুলে থাকবে না —
   // যেকোনো caller ভুলবশত এটাকে await করলেও (যেমন register route) পুরো রিকোয়েস্ট দীর্ঘক্ষণ আটকাবে না।
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000
+  // ডিফল্ট ৫s (আগে ১০s); EMAIL_TIMEOUT_MS দিয়ে বদলানো যায়। breaker-এর timeout-ও ৫s (BREAKER_EMAIL_TIMEOUT_MS)।
+  connectionTimeout: Number(process.env.EMAIL_TIMEOUT_MS) || 5000,
+  greetingTimeout: Number(process.env.EMAIL_TIMEOUT_MS) || 5000,
+  socketTimeout: Number(process.env.EMAIL_TIMEOUT_MS) || 5000
 });
 
+// সব মেইল circuit breaker + timeout + স্ট্যাটাস রেকর্ডের ভেতর দিয়ে। কোনো অটো-রিট্রাই নেই।
+// breaker OPEN থাকলে CircuitOpenError (code 'CIRCUIT_OPEN') সঙ্গে সঙ্গে — কলাররা আগের মতোই try/catch-এ ধরে।
+function sendMailGuarded(mail) {
+  return integrationCall('email', () => transporter.sendMail(mail));
+}
+
 async function sendOTP(email, otp) {
-  await transporter.sendMail({
+  await sendMailGuarded({
     from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'BET420 - আপনার OTP কোড',
@@ -37,7 +45,7 @@ async function sendOTP(email, otp) {
 }
 
 async function sendPasswordReset(email, resetUrl) {
-  await transporter.sendMail({
+  await sendMailGuarded({
     from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'BET420 - পাসওয়ার্ড রিসেট',
@@ -56,7 +64,7 @@ async function sendPasswordReset(email, resetUrl) {
 }
 
 async function sendVerificationEmail(email, verifyUrl) {
-  await transporter.sendMail({
+  await sendMailGuarded({
     from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'BET420 - আপনার ইমেইল ভেরিফাই করুন',
@@ -75,7 +83,7 @@ async function sendVerificationEmail(email, verifyUrl) {
 
 async function sendNewDeviceAlert(email, { username, deviceName, ip, location, time }) {
   const timeStr = new Date(time).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
-  await transporter.sendMail({
+  await sendMailGuarded({
     from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'BET420 - নতুন ডিভাইস থেকে লগইন শনাক্ত হয়েছে',

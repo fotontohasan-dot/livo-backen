@@ -13,7 +13,7 @@
 // ধরে এবং নিরাপদ ফলব্যাক ফেরত দেয় — অর্থাৎ এটা যোগ করায় নতুন কোনো
 // unhandled rejection তৈরি হয় না।
 
-const DEFAULT_TIMEOUT_MS = Number(process.env.HTTP_TIMEOUT_MS) || 10000;
+const DEFAULT_TIMEOUT_MS = Number(process.env.HTTP_TIMEOUT_MS) || 5000; // আগে ১০ সেকেন্ড
 
 /**
  * @param {string|URL} url
