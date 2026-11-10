@@ -1,0 +1,75 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<style nonce="<%= cspNonce %>">
+  .mbp { max-width: 860px; margin: 0 auto; padding: 14px 14px 96px; }
+  .mbp-title { font-size: 1.6rem; font-weight: 800; margin: 0 0 4px; color: var(--text-main); }
+  .mbp-sub { color: var(--text-muted); font-size: 0.85rem; margin: 0 0 14px; }
+  .mbp-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mbp-tabs::-webkit-scrollbar { display: none; }
+  .mbp-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-muted); font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+  .mbp-tab.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .mbp-count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: rgba(127,127,127,.22); font-size: 0.72rem; text-align: center; }
+  .mbp-tab.active .mbp-count { background: rgba(255,255,255,.28); }
+  .mbp-list { display: flex; flex-direction: column; gap: 10px; }
+  .mbp-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--text-muted); border-radius: 12px; padding: 12px 14px; }
+  .mbp-card.open { border-left-color: #f59e0b; }
+  .mbp-card.won { border-left-color: var(--green); }
+  .mbp-card.lost { border-left-color: var(--red-text); }
+  .mbp-card.void { border-left-color: var(--text-muted); }
+  .mbp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .mbp-match { font-weight: 800; color: var(--text-main); font-size: 0.98rem; word-break: break-word; }
+  .mbp-meta { color: var(--text-muted); font-size: 0.74rem; margin-top: 2px; }
+  .mbp-badge { flex: 0 0 auto; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; background: rgba(127,127,127,.2); color: var(--text-main); }
+  .mbp-badge.open { background: rgba(245,158,11,.2); color: #d97706; }
+  .mbp-badge.won { background: rgba(16,185,129,.2); color: var(--green); }
+  .mbp-badge.lost { background: rgba(214,40,40,.16); color: var(--red-text); }
+  .mbp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+  .mbp-cell { min-width: 0; }
+  .mbp-cell.wide { grid-column: 1 / -1; }
+  .mbp-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+  .mbp-value { display: block; font-weight: 700; color: var(--text-main); font-size: 0.88rem; word-break: break-word; }
+  .mbp-tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 6px; font-size: 0.68rem; font-weight: 800; background: rgba(59,130,246,.18); color: #3b82f6; }
+  .mbp-tag.lay { background: rgba(244,166,184,.25); color: #db6a8a; }
+  .mbp-tag.demo { background: rgba(127,127,127,.22); color: var(--text-muted); }
+  .mbp-state { text-align: center; padding: 38px 16px; color: var(--text-muted); border: 1px dashed var(--border-glass); border-radius: 12px; }
+  .mbp-btn { display: inline-block; margin-top: 12px; padding: 9px 18px; border-radius: 10px; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-weight: 800; cursor: pointer; text-decoration: none; }
+  .mbp-more { display: block; margin: 14px auto 0; }
+  .mbp-spin { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--border-glass); border-top-color: var(--gold); border-radius: 50%; animation: mbp-rot .8s linear infinite; margin-bottom: 8px; }
+  @keyframes mbp-rot { to { transform: rotate(360deg); } }
+  @media (min-width: 700px) { .mbp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .mbp-cell.wide { grid-column: span 2; } }
+  @media (prefers-reduced-motion: reduce) { .mbp-spin { animation: none; } }
+</style>
+
+<main class="mbp" id="mbpRoot">
+  <h1 class="mbp-title"><%= t.my_bets %></h1>
+  <p class="mbp-sub"><%= t.mybets_subtitle %></p>
+
+  <div class="mbp-tabs" role="tablist" aria-label="<%= t.my_bets %>">
+    <button type="button" class="mbp-tab active" role="tab" aria-selected="true" data-tab="all"><span><%= t.mybets_tab_all %></span><span class="mbp-count" data-count="total"></span></button>
+    <button type="button" class="mbp-tab" role="tab" aria-selected="false" data-tab="open"><span><%= t.mybets_tab_open %></span><span class="mbp-count" data-count="open"></span></button>
+    <button type="button" class="mbp-tab" role="tab" aria-selected="false" data-tab="won"><span><%= t.mybets_tab_won %></span><span class="mbp-count" data-count="won"></span></button>
+    <button type="button" class="mbp-tab" role="tab" aria-selected="false" data-tab="lost"><span><%= t.mybets_tab_lost %></span><span class="mbp-count" data-count="lost"></span></button>
+    <button type="button" class="mbp-tab" role="tab" aria-selected="false" data-tab="void"><span><%= t.mybets_tab_void %></span><span class="mbp-count" data-count="void"></span></button>
+  </div>
+
+  <div class="mbp-list" id="mbpList" aria-live="polite"></div>
+  <div id="mbpState"></div>
+  <button type="button" class="mbp-btn mbp-more" id="mbpMore" hidden><%= t.mybets_load_more %></button>
+</main>
+
+<script type="application/json" id="myBetsConfig"><%- jsonScriptSafe({
+  loading: t.mybets_loading, error: t.mybets_error, retry: t.mybets_retry, sessionExpired: t.mybets_session_expired,
+  browse: t.mybets_browse, loadMore: t.mybets_load_more,
+  empty: { all: t.mybets_empty_all, open: t.mybets_empty_open, won: t.mybets_empty_won, lost: t.mybets_empty_lost, void: t.mybets_empty_void },
+  status: { open: t.mybets_status_open, won: t.mybets_status_won, lost: t.mybets_status_lost, void: t.mybets_status_void },
+  result: { pending: t.mybets_result_pending, won: t.mybets_result_won, lost: t.mybets_result_lost, void: t.mybets_result_void },
+  labels: { betId: t.mybets_bet_id, match: t.mybets_match, matchTime: t.mybets_match_time, selection: t.mybets_selection, market: t.mybets_market,
+            odds: t.mybets_odds, stake: t.mybets_stake, liability: t.mybets_liability, potential: t.mybets_potential, result: t.mybets_result,
+            placed: t.mybets_placed, back: t.mybets_back, lay: t.mybets_lay, demo: t.mybets_demo, timeTbd: t.mybets_time_tbd }
+}) %></script>
+<script src="/js/views/my-bets.js"></script>
+
+<%- include('partials/bottom-nav') %>
+</body>
+</html>
