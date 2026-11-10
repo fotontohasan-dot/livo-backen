@@ -18,20 +18,20 @@ const BASE_URL = IS_LIVE
 // (৬০-১২০+ সেকেন্ড) পর্যন্ত ঝুলে থাকে — যতক্ষণ /success ও /ipn এই কল await করে,
 // ততক্ষণ পেমেন্ট রো-এর row lock ও DB connection ধরে রাখে (services/email.js-এ
 // একই কারণে যোগ করা timeout প্যাটার্নটাই এখানে অনুসরণ করা হয়েছে)।
+const { integrationFetch } = require('../utils/integrationHttp');
 const GATEWAY_TIMEOUT_MS = Number(process.env.SSLCZ_TIMEOUT_MS) || 15000;
 
+// ⚠️ পেমেন্ট কল: circuit breaker-এ ঢোকানো হয় না (breaker:false) ও কোনো অটো-রিট্রাই নেই — validation/IPN
+// fast-fail হলে callback হারানো বা ডাবল পেমেন্টের ঝুঁকি থাকে। শুধু timeout + স্ট্যাটাস রেকর্ড।
+// ব্যর্থ হলে আগের মতো স্পষ্ট error ছোঁড়া হয়; gatewayReconcile পরে নিজে যাচাই করে।
 async function fetchWithTimeout(url, options) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await integrationFetch('payment:sslcommerz', url, options, { breaker: false, timeoutMs: GATEWAY_TIMEOUT_MS });
   } catch (err) {
-    if (err.name === 'AbortError') {
+    if (err.name === 'AbortError' || /timeout/i.test(err.message || '')) {
       throw new Error('SSLCommerz গেটওয়ে সময়মতো সাড়া দেয়নি (timeout)');
     }
     throw err;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

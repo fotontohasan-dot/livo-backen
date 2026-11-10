@@ -71,7 +71,7 @@
 
     // অন্য স্ক্রিপ্ট (যেমন profile-chat.js) আগে থেকে io() কল করে থাকতে পারে; socket.io v4
     // একই origin/path-এর জন্য কানেকশন multiplex করে, তাই নতুন io() কল বাড়তি TCP কানেকশন তৈরি করে না।
-    var socket = window.io();
+    var socket = window.livoSocket();
 
     socket.on('connect', function () {
       socket.emit('join');

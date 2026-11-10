@@ -472,37 +472,70 @@ app.use(flash());
 app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
 const RedisRateLimitStore = require('./services/redisRateLimitStore');
+const { LIMITS: RL, userOrIpKey, generalMax, loginAccountKey, ipKey, IP_CEILINGS } = require('./middleware/rateLimitPolicy');
 
+// এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
+// session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
+// লিমিটারটা /login, /register ও /admin/login — তিন জায়গাতেই একই কী (IP) দিয়ে গোনে।
+// আগে GET রিকোয়েস্টও গোনা হতো, অর্থাৎ শুধু পেজ লোড করলেই কোটা ফুরাত: একই IP থেকে
+// ১৫ মিনিটে ১০ বার লগইন/রেজিস্টার পেজ *দেখলেই* ফর্মের বদলে "rate limited" বার্তা
+// আসত (শেয়ার্ড অফিস IP বা মোবাইল CGNAT-এ খুবই বাস্তব সমস্যা, আর E2E-তে অ্যাডমিন
+// লগইন পেজ এভাবেই ফাঁকা আসত)। ব্রুট-ফোর্স সুরক্ষা আসে আসল চেষ্টাগুলো (POST) গুনে,
+// তাই GET/HEAD আর গোনা হয় না।
+// max: ১০ অপরিবর্তিত (ঢিলা করা নিষেধ); কী = প্রতি-অ্যাকাউন্ট (identifier), না থাকলে IP
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
+  keyGenerator: loginAccountKey,
   max: 10,
-  // এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
-  // session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
   message: (req) => tr(req, 'common_rate_limited_15m'),
-  // লিমিটারটা /login, /register ও /admin/login — তিন জায়গাতেই একই কী (IP) দিয়ে গোনে।
-  // আগে GET রিকোয়েস্টও গোনা হতো, অর্থাৎ শুধু পেজ লোড করলেই কোটা ফুরাত: একই IP থেকে
-  // ১৫ মিনিটে ১০ বার লগইন/রেজিস্টার পেজ *দেখলেই* ফর্মের বদলে "rate limited" বার্তা
-  // আসত (শেয়ার্ড অফিস IP বা মোবাইল CGNAT-এ খুবই বাস্তব সমস্যা, আর E2E-তে অ্যাডমিন
-  // লগইন পেজ এভাবেই ফাঁকা আসত)। ব্রুট-ফোর্স সুরক্ষা আসে আসল চেষ্টাগুলো (POST) গুনে,
-  // তাই GET/HEAD আর গোনা হয় না।
   skip: (req) => req.method === 'GET' || req.method === 'HEAD',
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:login:')
+  store: new RedisRateLimitStore('rl:login:acct:')
 });
 
-const generalLimiter = rateLimit({
+// Step 3 A2: প্রতি-IP ছাদ — শেয়ার্ড মোবাইল/CGNAT IP-তে অনেক ইউজার একসাথে লগইন করলে একে অপরকে আটকাবে না।
+// একক অ্যাকাউন্টের ১০/১৫মি সীমা ওপরের loginLimiter-এ অপরিবর্তিত; এটা শুধু অ্যাকাউন্ট-ঘোরানো আক্রমণের ছাদ।
+const loginIpCeilingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 100,
+  keyGenerator: ipKey,
+  message: (req) => tr(req, 'common_rate_limited_15m'),
+  skip: (req) => req.method === 'GET' || req.method === 'HEAD',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:login:ip:')
+});
+
+// রেজিস্ট্রেশনে বিদ্যমান অ্যাকাউন্ট নেই — আগের কড়া প্রতি-IP ১০/১৫মি-ই থাকল
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: ipKey,
+  message: (req) => tr(req, 'common_rate_limited_15m'),
+  skip: (req) => req.method === 'GET' || req.method === 'HEAD',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:register:')
+});
+
+// সাধারণ লিমিট: লগইন করা ইউজার → ইউজার ID দিয়ে (u:<id>), অ্যানোনিমাস → IP দিয়ে। session middleware
+// এর আগে মাউন্ট হয়েছে (উপরে), তাই req.session.user এখানে পাওয়া যায়। (আগে: ৩০০/১৫মি প্রতি IP — CGNAT-এ অপর্যাপ্ত)
+const generalLimiter = rateLimit({
+  windowMs: RL.general.windowMs,
+  limit: generalMax, // লগইন করা → LIMITS.general.userMax, অ্যানোনিমাস → LIMITS.general.anonIpMax
+  keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:general:')
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
+// কী: ইউজার ID (এই রুটগুলো লগইন-আবশ্যক), নইলে IP। সীমা অপরিবর্তিত: প্রতি অ্যাকাউন্টে ২০/১৫মি।
 const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  keyGenerator: userOrIpKey,
   message: (req) => tr(req, 'common_rate_limited'),
   standardHeaders: true,
   legacyHeaders: false,
@@ -591,9 +624,9 @@ Sitemap: ${base}/sitemap.xml
 `);
 });
 
-app.use('/login', loginLimiter);
-app.use('/register', loginLimiter);
-app.use('/admin/login', loginLimiter);
+app.use('/login', loginIpCeilingLimiter, loginLimiter);
+app.use('/register', registerLimiter);
+app.use('/admin/login', loginIpCeilingLimiter, loginLimiter);
 app.use('/payment/deposit', financialLimiter);
 app.use('/payment/withdraw', financialLimiter);
 app.use('/profile/add-bank-card', financialLimiter);

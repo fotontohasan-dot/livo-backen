@@ -121,7 +121,7 @@
   setInterval(load, 30000);
   if (typeof io === 'function') {
     try {
-      var s = io(), t = null;
+      var s = window.livoSocket(), t = null;
       s.on('connect', function () { s.emit('join_matches'); });
       s.on('matches_update', function () { clearTimeout(t); t = setTimeout(load, 1500); });
     } catch (e) { /* polling still works */ }

@@ -55,6 +55,10 @@ const LIMITERS = collectLimiters();
 const CEILINGS = {
   adminLoginLimiter:        { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   strict2FALimiter:         { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  loginLimiter:             { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  registerLimiter:          { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
+  loginIpCeilingLimiter:    { maxAtMost: 100, windowAtLeast: 15 * 60 * 1000 },
+  resetIpCeilingLimiter:    { maxAtMost: 50,  windowAtLeast: 15 * 60 * 1000 },
   resetLimiter:             { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   verifyResendLimiter:      { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
   accountSecurityLimiter:   { maxAtMost: 10,  windowAtLeast: 15 * 60 * 1000 },
@@ -64,8 +68,9 @@ const CEILINGS = {
   adminFinancialLimiter:    { maxAtMost: 60,  windowAtLeast: 15 * 60 * 1000 },
   googleAuthLimiter:        { maxAtMost: 30,  windowAtLeast: 15 * 60 * 1000 },
   claimLimiter:             { maxAtMost: 20,  windowAtLeast: 60 * 1000 },
-  helpChatLimiter:          { maxAtMost: 20,  windowAtLeast: 60 * 1000 },
-  generalLimiter:           { maxAtMost: 500, windowAtLeast: 15 * 60 * 1000 }
+  helpChatLimiter:          { maxAtMost: 20,  windowAtLeast: 60 * 1000 }
+  // generalLimiter এখানে নেই: তার সীমা এখন ফাংশন (ইউজার ID বনাম অ্যানোনিমাস IP) — নিচে
+  // 'generalLimiter নীতি' ব্লকে middleware/rateLimitPolicy.js-এর LIMITS.general দিয়ে পাহারা দেওয়া হয়।
 };
 
 describe('রেট-লিমিট অডিট — সংবেদনশীল limiter গুলো আছে', () => {
@@ -94,6 +99,33 @@ describe('রেট-লিমিট অডিট — সীমা ঢিলা �
   });
 });
 
+describe('রেট-লিমিট অডিট — generalLimiter নীতি (ইউজার-কী + CGNAT-সহনশীল IP সীমা)', () => {
+  const { LIMITS, userOrIpKey, generalMax } = require('../../middleware/rateLimitPolicy');
+
+  test('ছাদ: ইউজার-সীমা ও অ্যানোনিমাস IP-সীমা সীমিত থাকে, জানালা ≥ ১৫ মিনিট', () => {
+    expect(LIMITS.general.userMax).toBeLessThanOrEqual(1000);
+    expect(LIMITS.general.anonIpMax).toBeLessThanOrEqual(5000);
+    expect(LIMITS.general.anonIpMax).toBeGreaterThanOrEqual(LIMITS.general.userMax);
+    expect(LIMITS.general.windowMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+  });
+
+  test('app.js generalLimiter নীতি-ফাংশন ব্যবহার করে', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+    expect(src).toMatch(/const generalLimiter = rateLimit\(\{[\s\S]*?limit: generalMax[\s\S]*?keyGenerator: userOrIpKey/);
+  });
+
+  test('একই IP-র দুই ইউজারের কী আলাদা; অ্যানোনিমাস IP-কী; max ইউজার/অ্যানোনিমাস ভেদে', () => {
+    const a = { ip: '10.0.0.1', session: { user: { id: 1 } } };
+    const b = { ip: '10.0.0.1', session: { user: { id: 2 } } };
+    const anon = { ip: '10.0.0.1', session: {} };
+    expect(userOrIpKey(a)).not.toBe(userOrIpKey(b));
+    expect(userOrIpKey(a)).toBe('u:1');
+    expect(userOrIpKey(anon)).toMatch(/^ip:/);
+    expect(generalMax(a)).toBe(LIMITS.general.userMax);
+    expect(generalMax(anon)).toBe(LIMITS.general.anonIpMax);
+  });
+});
+
 describe('রেট-লিমিট অডিট — গ্লোবাল প্রয়োগ', () => {
   const appSource = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
@@ -102,9 +134,9 @@ describe('রেট-লিমিট অডিট — গ্লোবাল প�
   });
 
   test('লগইন ও রেজিস্ট্রেশন পথে আলাদা কড়া limiter', () => {
-    expect(appSource).toMatch(/app\.use\(\s*'\/login',\s*loginLimiter\s*\)/);
-    expect(appSource).toMatch(/app\.use\(\s*'\/register',\s*loginLimiter\s*\)/);
-    expect(appSource).toMatch(/app\.use\(\s*'\/admin\/login',\s*loginLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/login',\s*loginIpCeilingLimiter,\s*loginLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/register',\s*registerLimiter\s*\)/);
+    expect(appSource).toMatch(/app\.use\(\s*'\/admin\/login',\s*loginIpCeilingLimiter,\s*loginLimiter\s*\)/);
   });
 
   test('আর্থিক পথগুলোতে financialLimiter', () => {
@@ -131,9 +163,19 @@ describe('রেট-লিমিট অডিট — রানটাইমে �
     for (let i = 0; i < 40; i++) {
       const res = await agent.post('/login')
         .type('form')
-        .send({ identifier: 'no-such-user-' + i, password: 'wrong-password' });
+        .send({ identifier: 'no-such-user-same', password: 'wrong-password' });
       if (res.status === 429) { sawLimit = true; break; }
     }
     expect(sawLimit).toBe(true);
+  });
+
+  test('একই IP-র ভিন্ন অ্যাকাউন্ট একে অপরকে আটকায় না (A2), কিন্তু একক অ্যাকাউন্ট ১০-এ আটকায়', async () => {
+    const agent = request(app);
+    const statuses = [];
+    for (let i = 0; i < 15; i++) {
+      const res = await agent.post('/login').type('form').send({ identifier: 'distinct-user-' + i, password: 'wrong-password' });
+      statuses.push(res.status);
+    }
+    expect(statuses).not.toContain(429);
   });
 });

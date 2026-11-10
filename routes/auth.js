@@ -28,18 +28,34 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
 
+const { resetAccountKey, userOrIpKey, ipKey, IP_CEILINGS } = require('../middleware/rateLimitPolicy');
+
+// প্রতি-অ্যাকাউন্ট (ইমেইল/টোকেন) ৫/১৫মি — অপরিবর্তিত; কী না থাকলে IP-কী
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  keyGenerator: resetAccountKey,
   message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:reset:')
+  store: new RedisRateLimitStore('rl:reset:acct:')
+});
+
+// Step 3 A2: প্রতি-IP ছাদ (শেয়ার্ড মোবাইল IP) — একক অ্যাকাউন্টের ৫-সীমা ঢিলা হয়নি
+const resetIpCeilingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  keyGenerator: ipKey,
+  message: (req) => req.t('common_rate_limited_15m'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:reset:ip:')
 });
 
 const verifyResendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  keyGenerator: userOrIpKey, // লগইন করা ইউজার → ইউজার-কী (শেয়ার্ড IP-তে অন্যকে আটকায় না)
   message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
@@ -822,7 +838,7 @@ router.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { sent: false, captcha, formRenderedAt: Date.now() });
 });
 
-router.post('/forgot-password', resetLimiter, async (req, res) => {
+router.post('/forgot-password', resetIpCeilingLimiter, resetLimiter, async (req, res) => {
   const { email: rawResetEmail, website, form_rendered_at, captcha_answer } = req.body;
   const email = normalizeEmail(rawResetEmail);
   const reqIp = getReqIp(req);
@@ -912,7 +928,7 @@ router.get('/reset-password/:token', async (req, res) => {
   }
 });
 
-router.post('/reset-password/:token', resetLimiter, async (req, res) => {
+router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async (req, res) => {
   const { password, confirmPassword } = req.body;
   const { token } = req.params;
   try {

@@ -233,7 +233,7 @@
   }
 
   // ========== Socket.io ==========
-  const socket = io();
+  const socket = window.livoSocket();
 
   socket.on('connect', () => {
     updateStatus(cfg.statusOk, '#10b981');
