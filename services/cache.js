@@ -400,6 +400,24 @@ async function incrWithExpiry(key, ttlSeconds) {
   }
 }
 
+
+/**
+ * Rate-limit কাউন্টার ১ কমায় (০-এর নিচে নামে না)। Redis অনুপলব্ধ/এরর হলে null — কখনো throw করে না।
+ * services/redisRateLimitStore.js-এর decrement() ব্যবহার করে: সফল লগইন যেন ব্যর্থ-চেষ্টার বাজেট খরচ না করে।
+ */
+async function decrFloor(key) {
+  if (!isAvailable()) return null;
+  try {
+    const fullKey = prefixed(key);
+    const n = await state.client.decr(fullKey);
+    if (n < 0) { await state.client.set(fullKey, 0, 'KEEPTTL'); return 0; }
+    return n;
+  } catch (err) {
+    logError('decrFloor', err);
+    return null;
+  }
+}
+
 /** নির্দিষ্ট rate-limit key রিসেট করে (services/redisRateLimitStore.js ব্যবহার করে)। Redis অনুপলব্ধ হলে/এরর হলে silently ignore করে — কখনো throw করে না। */
 async function resetKey(key) {
   if (!isAvailable()) return false;
@@ -421,4 +439,4 @@ async function close() {
   try { await c.quit(); } catch (_) { c.disconnect(); }
 }
 
-module.exports = { close, computeBackoffMs, get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey, getDetailedStats, flushAll, prefixKey };
+module.exports = { close, computeBackoffMs, get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, decrFloor, getRawClient, resetKey, getDetailedStats, flushAll, prefixKey };

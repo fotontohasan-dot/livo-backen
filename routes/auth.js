@@ -17,7 +17,7 @@ const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendQueuedEmail } = require('../services/email');
-const { scanRegistration, scanFailedLogin, scanLogin, isAccountThrottled } = require('../services/fraudDetection');
+const { scanRegistration, scanFailedLogin, scanLogin } = require('../services/fraudDetection');
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
@@ -28,12 +28,25 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
 
-const { resetAccountKey, userOrIpKey, ipKey, IP_CEILINGS } = require('../middleware/rateLimitPolicy');
+const { resetAccountIpKey, resetAccountKey, userOrIpKey, ipKey, IP_CEILINGS, markLoginSuccess } = require('../middleware/rateLimitPolicy');
+const { softLoginDelayMs } = require('../middleware/loginLimiters');
 
-// প্রতি-অ্যাকাউন্ট (ইমেইল/টোকেন) ৫/১৫মি — অপরিবর্তিত; কী না থাকলে IP-কী
+// A2: অ্যাকাউন্ট+IP কী, ৫/১৫মি (সংখ্যা অপরিবর্তিত)। আগে কী ছিল শুধু ইমেইল — যে কেউ ভিকটিমের ইমেইলে ৫ বার
+// রিকোয়েস্ট পাঠিয়ে আসল মালিকের রিসেট আটকে দিতে পারত। কী শুধু ইনপুট থেকে গণনা, অ্যাকাউন্ট আছে কি না দেখে না।
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  keyGenerator: resetAccountIpKey,
+  message: (req) => req.t('common_rate_limited_15m'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:reset:acctip:')
+});
+
+// প্রতি-অ্যাকাউন্ট (সব IP) উচ্চতর ছাদ — মেইল-বোমা ঠেকায়; ৫/IP × কয়েক IP ছাড়া ছোঁয়া যায় না। প্রতিক্রিয়া অস্তিত্ব-নিরপেক্ষ।
+const resetAccountCeilingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   keyGenerator: resetAccountKey,
   message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
@@ -541,10 +554,11 @@ router.get('/auth/google/callback', googleAuthLimiter, async (req, res) => {
 router.get('/login', (req, res) => {
   const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login', req });
   let captcha = null;
-  if (botCheck.requiresCaptcha) {
+  // A2: অ্যাকাউন্ট-ব্যাপী নরম থ্রটলে লগইন POST সেশনে loginCaptchaRequired বসায় — পরের GET-এ CAPTCHA দেখানো হয়
+  if (botCheck.requiresCaptcha || req.session.loginCaptchaRequired) {
     captcha = generateCaptcha();
     req.session.botCaptcha = captcha;
-    logBotEvent({ ip: getReqIp(req), endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
+    if (botCheck.requiresCaptcha) logBotEvent({ ip: getReqIp(req), endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
       .catch(e => console.error('logBotEvent error:', e.message));
   } else {
     req.session.botCaptcha = null;
@@ -572,15 +586,24 @@ router.post('/login', async (req, res) => {
     formRenderedAt: form_rendered_at,
     req
   });
-  if (botCheck.requiresCaptcha) {
+  // A2: অ্যাকাউন্ট-ব্যাপী নরম থ্রটল (middleware/loginLimiters.js) — রিজেক্ট নয়: CAPTCHA + ছোট দেরি। পতাকাটা
+  // identifier-এর হ্যাশ-কাউন্টার থেকে আসে, অ্যাকাউন্ট আছে কি না তার ওপর নির্ভর করে না। সঠিক পাসওয়ার্ডওয়ালা
+  // মালিক CAPTCHA সমাধান করে ঢুকতে পারে — আক্রমণকারী তাকে লক-আউট করতে পারে না।
+  const softThrottled = !!req.loginSoftThrottle;
+  if (softThrottled) {
+    const delayMs = softLoginDelayMs(req);
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+  }
+  if (botCheck.requiresCaptcha || softThrottled) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
+      if (softThrottled) req.session.loginCaptchaRequired = true;
+      if (botCheck.requiresCaptcha) logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', req.t('error_suspicious_activity_captcha'));
       return res.redirect('/login');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
+    if (botCheck.requiresCaptcha) logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 
@@ -603,17 +626,10 @@ router.post('/login', async (req, res) => {
     const user = result.rows[0];
     const loginIp = reqIp;
 
-    // অ্যাকাউন্ট-ভিত্তিক থ্রটল — একই অ্যাকাউন্টে অল্প সময়ে অনেক ব্যর্থ চেষ্টা হলে (IP নির্বিশেষে)
-    // সংক্ষিপ্ত সময়ের জন্য নতুন চেষ্টা আটকানো হয়। রেসপন্স ইচ্ছাকৃতভাবে ভুল পাসওয়ার্ডের মতোই —
-    // আলাদা মেসেজ দিলে সেটা "এই অ্যাকাউন্ট আসলেই বিদ্যমান" ফাঁস করে দিত।
-    if (user) {
-      const throttle = await isAccountThrottled(user.id).catch(() => ({ throttled: false }));
-      if (throttle.throttled) {
-        req.flash('error', req.t('auth_invalid_credentials'));
-        return res.redirect('/login');
-      }
-    }
-
+    // A2: আগে এখানে isAccountThrottled(user.id) ছিল — (ক) ৮টা ব্যর্থ চেষ্টার পর সঠিক পাসওয়ার্ডও ৬০ সেকেন্ড রিজেক্ট
+    // করত, অর্থাৎ যে কেউ ভিকটিমকে ইচ্ছেমতো লক-আউট করতে পারত; (খ) bcrypt.compare-এর *আগে* ফিরে আসত, তাই
+    // অ্যাকাউন্ট থাকলে দ্রুত/না থাকলে ধীর — টাইমিং-এ অস্তিত্ব ফাঁস। এখন নরম থ্রটল ওপরে (CAPTCHA+দেরি) এবং
+    // bcrypt.compare সবসময় চলে।
     const passwordMatches = await bcrypt.compare(password, user ? user.password : DUMMY_BCRYPT_HASH);
     if (!user || !passwordMatches) {
       scanFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
@@ -621,6 +637,9 @@ router.post('/login', async (req, res) => {
       req.flash('error', req.t('auth_invalid_credentials'));
       return res.redirect('/login');
     }
+    // A2: ক্রেডেনশিয়াল সঠিক — এটা ব্যর্থ চেষ্টা নয়, তাই লিমিটার ব্যর্থ-বাজেট থেকে কাউন্ট ফেরত দেবে
+    markLoginSuccess(res);
+    if (req.session) req.session.loginCaptchaRequired = false;
     if (user.is_banned) {
       req.flash('error', req.t('auth_account_banned'));
       return res.redirect('/login');
@@ -838,7 +857,7 @@ router.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { sent: false, captcha, formRenderedAt: Date.now() });
 });
 
-router.post('/forgot-password', resetIpCeilingLimiter, resetLimiter, async (req, res) => {
+router.post('/forgot-password', resetIpCeilingLimiter, resetAccountCeilingLimiter, resetLimiter, async (req, res) => {
   const { email: rawResetEmail, website, form_rendered_at, captcha_answer } = req.body;
   const email = normalizeEmail(rawResetEmail);
   const reqIp = getReqIp(req);
@@ -880,21 +899,23 @@ router.post('/forgot-password', resetIpCeilingLimiter, resetLimiter, async (req,
     const result = await pool.query('SELECT id, email FROM users WHERE LOWER(email) = $1', [email]);
     const user = result.rows[0];
 
-    // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ দেখানো হয় (ইমেইল enumeration ঠেকাতে)
+    // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ (ইমেইল enumeration ঠেকাতে)।
+    // A2: আগে অস্তিত্বশীল ইউজারের জন্য রেসপন্সের *আগে* DB UPDATE + cache + কিউ হতো — ফলে রেসপন্স-টাইম ধরে অ্যাকাউন্ট
+    // আছে কি না বোঝা যেত। এখন টোকেন-ইস্যুর কাজ রেসপন্স-পথের বাইরে (fire-and-forget); দুই ক্ষেত্রেই রেসপন্স-পথ
+    // একই (একটা SELECT + render)। ব্যর্থ হলে শুধু সার্ভার-লগ — ইউজার-মুখী আচরণ বদলায় না।
     if (user) {
-      const { token, tokenHash } = issueToken();
-      const expiry = new Date(Date.now() + 60 * 60 * 1000); // ১ ঘণ্টা
-      await pool.query(
-        'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
-        [tokenHash, expiry, user.id]
-      );
-      // Redis-এ token → userId ক্যাশ করা হচ্ছে (TTL = DB expiry-এর সমান), যাতে verify-এর সময়
-      // বেশিরভাগ ক্ষেত্রে DB না ছুঁয়েই কাজ চলে। ব্যর্থ হলেও সমস্যা নেই — DB fallback তো থাকছেই।
-      cache.set(`reset_token:${tokenHash}`, user.id, 60 * 60).catch(() => {});
-
-      const resetUrl = buildUrl(req, `/reset-password/${token}`);
-      sendQueuedEmail('password_reset', user.email, { resetUrl })
-        .catch(e => console.error('forgot-password email error:', e.message));
+      const resetUrlBuilder = (token) => buildUrl(req, `/reset-password/${token}`);
+      Promise.resolve().then(async () => {
+        const { token, tokenHash } = issueToken();
+        const expiry = new Date(Date.now() + 60 * 60 * 1000); // ১ ঘণ্টা
+        await pool.query(
+          'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
+          [tokenHash, expiry, user.id]
+        );
+        // Redis-এ token → userId ক্যাশ (TTL = DB expiry); ব্যর্থ হলে DB fallback আছে
+        cache.set(`reset_token:${tokenHash}`, user.id, 60 * 60).catch(() => {});
+        await sendQueuedEmail('password_reset', user.email, { resetUrl: resetUrlBuilder(token) });
+      }).catch((e) => console.error('forgot-password background issue error:', e.message));
     }
 
     res.render('forgot-password', { sent: true });
