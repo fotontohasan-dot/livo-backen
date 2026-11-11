@@ -3,6 +3,14 @@ const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '';
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
 const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 
+// Step 4 C2: লোড টেস্টে পেইড API (cricapi/RapidAPI কোটা) যাতে কখনো না লাগে, তাই staging-এ বেস URL মক সার্ভারে
+// ঘোরানো যায়। ⚠️ শুধু ALLOW_PROVIDER_BASE_URL_OVERRIDE=true থাকলেই কাজ করে — production env-এ এটা সেট করা হয় না,
+// তাই সেখানে এই দুটো env থাকলেও উপেক্ষিত হয় এবং আসল হোস্টই ব্যবহার হয়।
+const BASE_OVERRIDE_ON = process.env.ALLOW_PROVIDER_BASE_URL_OVERRIDE === 'true';
+const stripSlash = (u) => String(u).replace(/\/+$/, '');
+const CRICKET_BASE = (BASE_OVERRIDE_ON && process.env.CRICKET_API_BASE_URL) ? stripSlash(process.env.CRICKET_API_BASE_URL) : 'https://api.cricapi.com';
+const FOOTBALL_BASE = (BASE_OVERRIDE_ON && process.env.FOOTBALL_API_BASE_URL) ? stripSlash(process.env.FOOTBALL_API_BASE_URL) : `https://${FOOTBALL_HOST}`;
+
 // ==================== টাইমআউটসহ fetch ====================
 // External sports API (cricapi, RapidAPI) ঝুলে গেলে fetch() নিজে থেকে
 // কখনো ফেরে না — Node-এর fetch-এ ডিফল্ট টাইমআউট নেই। ফলে একটা ধীর
@@ -64,7 +72,7 @@ async function getCricketCurrentMatches() {
       console.error('Cricket: CRICKET_API_KEY নেই!');
       return [];
     }
-    const url = `https://api.cricapi.com/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`;
+    const url = `${CRICKET_BASE}/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`;
     const res = await cricFetch(url);
     const json = await res.json();
 
@@ -101,7 +109,7 @@ async function getCricketUpcoming() {
   if (cached) return cached;
   try {
     if (!CRICKET_API_KEY) return [];
-    const url = `https://api.cricapi.com/v1/matches?apikey=${CRICKET_API_KEY}&offset=0`;
+    const url = `${CRICKET_BASE}/v1/matches?apikey=${CRICKET_API_KEY}&offset=0`;
     const res = await cricFetch(url);
     const json = await res.json();
     const matches = (json.data || []).map(m => ({
@@ -125,7 +133,7 @@ async function getCricketMatchInfo(matchId) {
   const cached = getCached(`cricket:match:${matchId}`);
   if (cached) return cached;
   try {
-    const url = `https://api.cricapi.com/v1/match_info?apikey=${CRICKET_API_KEY}&id=${matchId}`;
+    const url = `${CRICKET_BASE}/v1/match_info?apikey=${CRICKET_API_KEY}&id=${matchId}`;
     const res = await cricFetch(url);
     const json = await res.json();
     setCache(`cricket:match:${matchId}`, json.data);
@@ -152,7 +160,7 @@ async function getFootballLiveScores() {
   }
 
   try {
-    const url = `https://${FOOTBALL_HOST}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`;
+    const url = `${FOOTBALL_BASE}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`;
     const res = await footballFetch(url, {
       headers: {
         'x-rapidapi-host': FOOTBALL_HOST,
