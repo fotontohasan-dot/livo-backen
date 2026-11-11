@@ -62,6 +62,9 @@
   <a href="/tickets" class="menu-item"><i class="fas fa-ticket"></i> <%= t.menu_tickets %></a>
   <% } %>
   <a href="/matches" class="menu-item"><i class="fas fa-futbol"></i> <%= t.menu_sports %></a>
+  <% if (locals.user) { %>
+  <a href="/my-bets" class="menu-item"><i class="fas fa-receipt"></i> <%= t.my_bets %></a>
+  <% } %>
   <a href="/tournaments" class="menu-item"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></a>
   <a href="/payment/deposit" class="menu-item"><i class="fas fa-wallet"></i> <%= t.menu_deposit %></a>
   <a href="/payment/withdraw" class="menu-item"><i class="fas fa-money-bill-wave"></i> <%= t.menu_withdraw %></a>
