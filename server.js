@@ -83,6 +83,7 @@ async function gracefulShutdown(signal) {
   if (activeRole === 'worker') {
     try { if (workerRuntime) await workerRuntime.stop(); } catch (e) {}
   } else if (activeRole === 'all') {
+    stopBackgroundBoot(); // ৩s boot-timer এখনো বাকি থাকলে বাতিল
     try { require('./services/scheduler').stop(); } catch (e) {}
     try { require('./services/queue').stopWorker(); } catch (e) {}
     // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা (ক্লেইম করা batch মাঝপথে ফেলা হয় না)
@@ -139,6 +140,13 @@ const queueService = require('./services/queue');
 
 const PORT = process.env.PORT || 3000;
 
+// `all` role-এর ৩ সেকেন্ডের boot-timer হ্যান্ডল। শাটডাউন শুরু হলে এটা বাতিল করা হয়, নইলে
+// server.close() অপেক্ষা করার সময় timer ফায়ার করে queue/BullMQ consumer চালু করে ফেলতে পারে।
+let bootTimer = null;
+function stopBackgroundBoot() {
+  if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
+}
+
 // listen() হওয়ার পরেই কেবল ব্যাকগ্রাউন্ড কাজ শুরু হয়। আগে এগুলো একটা
 // অনির্দিষ্ট `setTimeout(..., 3000)`-এর ভেতরে ছিল; সেটা রাখা হয়েছে শুধু
 // বুট-টাইম DB চাপ কমানোর জন্য, তবে টেস্ট পথে এই কোড আর কখনো চলে না।
@@ -152,13 +160,16 @@ function startBackgroundWork() {
     return;
   }
 
-  setTimeout(() => {
+  bootTimer = setTimeout(() => {
+    bootTimer = null;
+    if (shuttingDown) return; // শাটডাউন শুরু হয়ে গেলে নতুন consumer চালু নয়
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
     require('./services/casinoGameSync').syncNewProvidersOnBoot()
       .catch(err => console.error('Initial casino game sync failed:', err.message));
     try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
     require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
-  }, 3000).unref();
+  }, 3000);
+  bootTimer.unref();
 
   scheduleDailyBackup();
   scheduleAutoBackup();
@@ -251,5 +262,6 @@ module.exports = {
   get app() { return loadApp(); },
   get server() { return loadApp().httpServer; },
   startServer,
-  startBackgroundWork
+  startBackgroundWork,
+  stopBackgroundBoot
 };
