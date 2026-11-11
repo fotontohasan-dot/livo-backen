@@ -36,7 +36,9 @@ process.on('uncaughtException', (err) => {
 
 // ==================== গ্রেসফুল শাটডাউন ====================
 let shuttingDown = false;
-const SHUTDOWN_TIMEOUT_MS = 10000;
+// চলমান queue batch drain হতে সময় লাগে (QUEUE_DRAIN_TIMEOUT_MS ডিফল্ট ২০s), তাই server.js-এর
+// PROCESS_ROLE=worker পথের সাথে মিলিয়ে ২৫s; বদলানো যায় WORKER_SHUTDOWN_TIMEOUT_MS দিয়ে।
+const SHUTDOWN_TIMEOUT_MS = parseInt(process.env.WORKER_SHUTDOWN_TIMEOUT_MS || '25000', 10);
 
 async function gracefulShutdown(signal) {
   if (shuttingDown) return;
@@ -49,12 +51,16 @@ async function gracefulShutdown(signal) {
   }, SHUTDOWN_TIMEOUT_MS);
   if (forceExit.unref) forceExit.unref();
 
-  // ১. শিডিউলার ও কিউ থামানো
+  // ১. নতুন কাজ নেওয়া বন্ধ: সব টাইমার/শিডিউলার (ক্রম server.js worker-runtime-এর সাথে সামঞ্জস্যপূর্ণ)
+  try { require('./services/backupManager').stopAutoBackup(); } catch (e) {}
+  try { require('./services/backup').stopDailyBackup(); } catch (e) {}
+  try { require('./services/matchUpdater').stopMatchSync(); } catch (e) {}
   try { require('./services/scheduler').stop(); } catch (e) {}
-  try { require('./services/queue').stopWorker(); } catch (e) {}
+  // ২. চলমান Postgres-queue batch গুছিয়ে শেষ করা — ক্লেইম করা জব মাঝপথে ফেলা হয় না
+  try { await require('./services/queue').stopWorkerAndDrain(); } catch (e) {}
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
 
-  // ২. Redis ও DB কানেকশন বন্ধ
+  // ৩. Redis ও DB কানেকশন বন্ধ
   try {
     const cache = require('./services/cache');
     const client = cache.getRawClient && cache.getRawClient();
@@ -125,4 +131,4 @@ if (require.main === module) {
   startWorker();
 }
 
-module.exports = { startWorker };
+module.exports = { startWorker, gracefulShutdown };

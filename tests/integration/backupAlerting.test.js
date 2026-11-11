@@ -100,6 +100,7 @@ describe('শিডিউলড ব্যাকআপ ব্যর্থতা�
   test('scheduleAutoBackup রানার কখনো unhandled rejection ছড়ায় না', () => {
     // রানার নিজে .catch() দিয়ে মোড়ানো — টাইমার কলব্যাকে reject হলে প্রসেস ক্র্যাশ করত
     const src = fs.readFileSync(path.join(ROOT, 'services', 'backupManager.js'), 'utf8');
-    expect(src).toMatch(/runScheduledBackups\(\)\.catch\(/);
+    // Task 2.1: runner এখন runScheduledBackupsOnce (cross-instance guard) — .catch() আগের মতোই বাধ্যতামূলক
+    expect(src).toMatch(/runScheduledBackups(Once)?\([^)]*\)\s*\.catch\(/);
   });
 });

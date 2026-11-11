@@ -1,6 +1,51 @@
-const { pool } = require('./db');
+const { pool: appPool } = require('./db');
 
-async function runMigrationsUnlocked() {
+// ---------------------------------------------------------------------------
+// মাইগ্রেশন মিউচুয়াল-এক্সক্লুশন (Task 2.4)
+//
+// web x2 + worker একসাথে ডিপ্লয় হলে একাধিক প্রসেস একই সময়ে DDL চালাত
+// (খালি DB-তে ৩টি একসাথে চালালে `pg_type_typname_nsp_index` duplicate key দিয়ে ব্যর্থ হতো)।
+// এখন একটা dedicated কানেকশনে SESSION-স্কোপড advisory lock নেওয়া হয়, এবং মাইগ্রেশনের সব
+// কুয়েরি (merchants backfill-এর BEGIN/COMMIT সহ) সেই একই কানেকশনেই চলে — তাই লক আর
+// কুয়েরি কখনো আলাদা pooled কানেকশনে ভাগ হয় না। `finally`-তে unlock + কানেকশন ফেরত।
+//
+// সীমাবদ্ধতা: session লক শুধু direct/session-mode PostgreSQL কানেকশনে নিরাপদ।
+// PgBouncer transaction-mode চালু করলে এই পদ্ধতি বদলাতে হবে (pg_advisory_xact_lock + একক ট্রানজেকশন)।
+// কী-টা scheduler-এর 32-bit cron লক-আইডির (services/scheduler.js) রেঞ্জের বাইরে রাখা হয়েছে।
+// ---------------------------------------------------------------------------
+const MIGRATION_LOCK_KEY = '4200420420420'; // bigint, text হিসেবে পাঠানো হয়
+const MIGRATION_LOCK_POLL_MS = 250;
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+async function acquireMigrationLock(client, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let announced = false;
+  for (;;) {
+    const r = await client.query('SELECT pg_try_advisory_lock($1::bigint) AS locked', [MIGRATION_LOCK_KEY]);
+    if (r.rows[0] && r.rows[0].locked === true) return;
+    if (!announced) {
+      console.log('⏳ অন্য একটি প্রসেস মাইগ্রেশন চালাচ্ছে — লকের জন্য অপেক্ষা...');
+      announced = true;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`migration lock পাওয়া যায়নি (${timeoutMs}ms) — অন্য প্রসেস এখনো মাইগ্রেশন চালাচ্ছে`);
+    }
+    await sleep(MIGRATION_LOCK_POLL_MS);
+  }
+}
+
+// `pool`-এর মতো দেখতে একটা অ্যাডাপ্টার যা সবকিছু একটাই কানেকশনে পাঠায়। connect() একই
+// ক্লায়েন্ট ফেরত দেয় (release no-op) — backfill ক্রমানুসারে চলে, তাই BEGIN/COMMIT নিরাপদ।
+function singleConnectionPool(client) {
+  const q = (...args) => client.query(...args);
+  return {
+    query: q,
+    connect: async () => ({ query: q, release() {} }),
+  };
+}
+
+async function applyMigrations(pool) {
   try {
     console.log("🚀 Running database migrations...");
 
@@ -2603,22 +2648,37 @@ async function runMigrationsUnlocked() {
   try { require('./services/startupState').markMigrationsCompleted(); } catch (e) { /* non-blocking */ }
 }
 
-// একাধিক প্রসেস (web ×২ + worker) একসাথে উঠলে DDL রেস এড়াতে Postgres advisory lock।
-// session-level লক একটা dedicated কানেকশনে ধরা হয়; অন্যরা সেটা ছাড়া পর্যন্ত অপেক্ষা করে,
-// তারপর চালায় (সব migration idempotent, তাই দ্বিতীয়জনের জন্য প্রায় no-op)। কানেকশন
-// কেটে গেলে Postgres নিজেই লক ছেড়ে দেয়, তাই ক্র্যাশে ডেডলক হয় না।
-const MIGRATION_LOCK_KEY = 74210099; // adminMerchants-এর TREE_LOCK_KEY (74210001) থেকে আলাদা
-
 async function runMigrations() {
-  const lockClient = await pool.connect();
+  const timeoutMs = parseInt(process.env.MIGRATION_LOCK_TIMEOUT_MS || '120000', 10);
+  let client = null;
+  let locked = false;
   try {
-    console.log('🔒 Migration advisory lock নেওয়া হচ্ছে (অন্য ইনস্ট্যান্স চালালে অপেক্ষা করবে)...');
-    await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
-    return await runMigrationsUnlocked();
+    client = await appPool.connect();
+    await acquireMigrationLock(client, timeoutMs);
+    locked = true;
+    await applyMigrations(singleConnectionPool(client));
+  } catch (err) {
+    if (!locked) {
+      // applyMigrations নিজের ব্যর্থতা নিজেই রেকর্ড করে; এখানে শুধু লক/কানেকশন ব্যর্থতা
+      console.error('❌ Migration error:', err.message);
+      try { require('./services/startupState').markMigrationsFailed(err); } catch (e) { /* non-blocking */ }
+    }
+    throw err;
   } finally {
-    try { await lockClient.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]); } catch (_) { /* কানেকশন গেলে লক নিজেই ছাড়ে */ }
-    lockClient.release();
+    if (client) {
+      let discard = false;
+      if (locked) {
+        try {
+          const r = await client.query('SELECT pg_advisory_unlock($1::bigint) AS unlocked', [MIGRATION_LOCK_KEY]);
+          if (!r.rows[0] || r.rows[0].unlocked !== true) discard = true;
+        } catch (e) {
+          discard = true; // কানেকশন নষ্ট — destroy করলে সার্ভার সেশন লক নিজেই ছেড়ে দেয়
+        }
+      }
+      client.release(discard ? new Error('migration lock release failed') : undefined);
+    }
   }
 }
 
 module.exports = runMigrations;
+module.exports.MIGRATION_LOCK_KEY = MIGRATION_LOCK_KEY;
