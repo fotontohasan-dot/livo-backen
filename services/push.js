@@ -4,8 +4,18 @@
 // অ্যাডমিন একবার সাবস্ক্রাইব করলে ব্রাউজার/সিস্টেম নিজেই এই push ডেলিভার করে,
 // পেজ খোলা থাকা লাগে না।
 
-const webpush = require('web-push');
 const { pool } = require('../db');
+
+// web-push v4 শুধু ESM (package.json "type": "module"), তাই CommonJS থেকে
+// require('web-push') করলে Jest ও Node 22 (< 22.12) এ ERR_REQUIRE_ESM হয়।
+// dynamic import() CJS ও ESM দুই জায়গাতেই কাজ করে; প্রথম ব্যবহারে একবারই লোড হয়।
+let webpushPromise = null;
+function loadWebPush() {
+  if (!webpushPromise) {
+    webpushPromise = import('web-push').then((m) => m.default || m);
+  }
+  return webpushPromise;
+}
 
 const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY || '').trim();
 const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY || '').trim();
@@ -24,18 +34,29 @@ function isValidUrlSafeBase64(str, expectedBytes) {
   }
 }
 
+// pushConfigured = key ফরম্যাট সঠিক কি না (সিঙ্ক্রোনাস যাচাই)। আসল setVapidDetails
+// প্রথম পাঠানোর সময় লেজি-ভাবে হয় (নিচের getConfiguredWebPush)।
 let pushConfigured = false;
 if (isValidUrlSafeBase64(VAPID_PUBLIC_KEY, 65) && isValidUrlSafeBase64(VAPID_PRIVATE_KEY, 32)) {
-  try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    pushConfigured = true;
-  } catch (err) {
-    console.error('⚠️ VAPID key সেট করতে গিয়ে সমস্যা হয়েছে — Web Push বন্ধ থাকবে:', err.message);
-  }
+  pushConfigured = true;
 } else if (VAPID_PUBLIC_KEY || VAPID_PRIVATE_KEY) {
   console.warn('⚠️ VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY ফরম্যাট সঠিক নয় (Render Environment Variables চেক করুন) — Web Push বন্ধ থাকবে।');
 } else {
   console.warn('⚠️ VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY সেট নেই — Web Push বন্ধ থাকবে।');
+}
+
+let configuredWebPush = null;
+async function getConfiguredWebPush() {
+  if (configuredWebPush) return configuredWebPush;
+  const webpush = await loadWebPush();
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (err) {
+    console.error('⚠️ VAPID key সেট করতে গিয়ে সমস্যা হয়েছে — Web Push বন্ধ থাকবে:', err.message);
+    return null;
+  }
+  configuredWebPush = webpush;
+  return webpush;
 }
 
 // ===== সাবস্ক্রিপশন সেভ করা (অ্যাডমিন প্রথমবার পারমিশন দিলে) =====
@@ -63,6 +84,8 @@ async function removeSubscription(endpoint) {
 async function sendPushToAdmins(type, title, message) {
   if (!pushConfigured) return;
   try {
+    const webpush = await getConfiguredWebPush();
+    if (!webpush) return;
     const subs = await pool.query(
       `SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
        FROM push_subscriptions ps

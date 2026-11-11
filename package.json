@@ -54,7 +54,7 @@
     "speakeasy": "^2.0.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
-    "web-push": "^3.6.7"
+    "web-push": "^4.0.0"
   },
   "overrides": {
     "postcss": "$postcss",
