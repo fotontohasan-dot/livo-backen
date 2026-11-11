@@ -155,6 +155,21 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
+// My Bets tab filters -> fixed SQL fragments (values are never taken from the request).
+const MY_BETS_STATUS_SQL = {
+  open: "AND b.status = 'pending'",
+  won: "AND b.status = 'won'",
+  lost: "AND b.status = 'lost'",
+  void: "AND b.status IN ('void','cancelled','canceled','refunded')"
+};
+function myBetsStatusGroup(status) {
+  const st = String(status || 'pending').toLowerCase();
+  if (st === 'pending') return 'open';
+  if (st === 'won' || st === 'lost') return st;
+  if (st === 'void' || st === 'cancelled' || st === 'canceled' || st === 'refunded') return 'void';
+  return 'open';
+}
+
 // "My Bets" প্যানেলের ডেটা: লগইন করা ইউজারের নিজের সাম্প্রতিক বাজি (স্টেক, অডস, সম্ভাব্য রিটার্ন, স্ট্যাটাস)।
 // শুধু নিজের বাজিই ফেরে (user_id সেশন থেকে); ম্যাচ বা মার্কেট মুছে গেলেও LEFT JOIN-এ সারি হারায় না।
 router.get('/api/my-bets', isAuth, async (req, res) => {
@@ -165,17 +180,21 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
     const params = [req.session.user.id, limit + 1];
     let cursorSql = '';
     if (Number.isSafeInteger(before) && before > 0) { params.push(before); cursorSql = `AND b.id < $${params.length}`; }
+    // Optional tab filter (?status=open|won|lost|void). Whitelisted and mapped to fixed SQL — never
+    // interpolated from the request. Unknown values fall back to "all" instead of erroring.
+    const statusSql = MY_BETS_STATUS_SQL[String(req.query.status || '').toLowerCase()] || '';
     const r = await pool.query(
       `SELECT b.id, b.match_id, b.runner, b.odd, b.stake, b.status, b.created_at,
               b.bet_type, b.liability, b.potential_payout,
               COALESCE(b.is_demo, false) AS is_demo, mk.name AS market_name,
               mk.type AS market_type, mk.odds AS market_odds, mk.depth AS market_depth,
               mk.runner_status AS market_runner_status, m.team_a, m.team_b,
+              m.start_time AS match_start_time, m.league AS match_league, m.sport AS match_sport,
               COALESCE(NULLIF(m.title, ''), m.team_a || ' vs ' || m.team_b) AS match_name
          FROM bets b
          LEFT JOIN matches m ON m.id = b.match_id
          LEFT JOIN markets mk ON mk.id = b.market_id
-        WHERE b.user_id = $1 ${cursorSql}
+        WHERE b.user_id = $1 ${cursorSql} ${statusSql}
         ORDER BY b.id DESC
         LIMIT $2`,
       params
@@ -210,12 +229,40 @@ router.get('/api/my-bets', isAuth, async (req, res) => {
         // বসানোর সময় সার্ভার যে potential_payout হিসাব করেছিল সেটাই; পুরনো সারিতে (০/NULL) Back-এর সূত্র।
         potentialReturn: Number.isFinite(stored) && stored > 0 ? stored : Math.round(stake * odd * 100) / 100,
         status: b.status || 'pending',
+        statusGroup: myBetsStatusGroup(b.status),
+        // Final amount credited back: won -> the stored potential payout, void -> the reserved amount
+        // (Back stake / Lay liability, same rule as services/settlement.js refundAmount), lost -> 0.
+        // Pending bets have no final result yet (null).
+        payout: (() => {
+          const g = myBetsStatusGroup(b.status);
+          if (g === 'won') return Number.isFinite(stored) && stored > 0 ? stored : Math.round(stake * odd * 100) / 100;
+          if (g === 'lost') return 0;
+          if (g === 'void') return betType === 'lay' ? (Number(b.liability) || 0) : stake;
+          return null;
+        })(),
+        teamA: b.team_a || '',
+        teamB: b.team_b || '',
+        league: b.match_league || '',
+        sport: b.match_sport || '',
+        startTime: b.match_start_time || null,
         demo: !!b.is_demo,
         createdAt: b.created_at
       };
     });
     const nextBefore = hasMore && bets.length ? bets[bets.length - 1].id : null;
-    res.json({ success: true, bets, hasMore, nextBefore });
+    const body = { success: true, bets, hasMore, nextBefore };
+    // Tab badge counts, only on the first page (no cursor): one grouped query on idx_bets_user_status.
+    if (!(Number.isSafeInteger(before) && before > 0)) {
+      const c = await pool.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'pending')::int AS open,
+                COUNT(*) FILTER (WHERE status = 'won')::int AS won,
+                COUNT(*) FILTER (WHERE status = 'lost')::int AS lost,
+                COUNT(*) FILTER (WHERE status IN ('void','cancelled','canceled','refunded'))::int AS void
+           FROM bets WHERE user_id = $1`, [req.session.user.id]);
+      body.counts = c.rows[0];
+    }
+    res.json(body);
   } catch (err) {
     console.error('matches/api/my-bets error:', err.message);
     res.status(500).json({ success: false, bets: [] });

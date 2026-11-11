@@ -1079,6 +1079,7 @@ app.use(maintenanceMiddleware);
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
+app.use('/my-bets', require('./routes/myBets'));
 app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));
 app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
