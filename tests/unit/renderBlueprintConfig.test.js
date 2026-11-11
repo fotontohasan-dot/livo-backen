@@ -39,9 +39,9 @@ describe('Redis ভাগ', () => {
 describe('Migration advisory lock', () => {
   const src = read('migrations.js');
   test('pg_advisory_lock নেয় ও ছাড়ে, dedicated কানেকশনে', () => {
-    expect(src).toMatch(/pg_advisory_lock\(\$1\)/);
-    expect(src).toMatch(/pg_advisory_unlock\(\$1\)/);
-    expect(src).toMatch(/lockClient\.release\(\)/);
+    expect(src).toMatch(/pg_try_advisory_lock\(\$1/);
+    expect(src).toMatch(/pg_advisory_unlock\(\$1/);
+    expect(src).toMatch(/client\.release\(discard/);
   });
   test('ফেল-ক্লোজড আচরণ অক্ষুণ্ণ: শেষ catch-এ throw err', () => {
     const tail = src.slice(src.lastIndexOf('} catch (err) {'));
