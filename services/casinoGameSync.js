@@ -55,12 +55,12 @@ async function uploadThumbnail(sourceUrl, publicId) {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
-    const res = await cloudinary.uploader.upload(sourceUrl, {
+    const res = await require('../utils/integrationHttp').integrationCall('cloudinary', () => cloudinary.uploader.upload(sourceUrl, {
       folder: 'bet420/games',
       public_id: publicId,
       overwrite: false,
       resource_type: 'image'
-    });
+    }), { breaker: false });
     return res.secure_url || sourceUrl;
   } catch (e) {
     console.error(`[casinoSync] থাম্বনেইল আপলোড ব্যর্থ (${publicId}):`, e.message);

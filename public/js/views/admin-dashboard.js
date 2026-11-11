@@ -13,7 +13,7 @@
 
     // ডেমো কারেন্সি উইজেট — রিয়েল-টাইম আপডেট
     (function() {
-        const socket = io();
+        const socket = window.livoSocket();
         socket.emit('join_admin');
         socket.on('demo_stats_update', function(stats) {
             const map = { 'demo-total': stats.totalDemo, 'demo-held': stats.userHeldDemo, 'demo-casino': stats.casinoDemoWagered, 'demo-sports': stats.sportsDemoWagered };

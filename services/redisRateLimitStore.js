@@ -21,6 +21,10 @@ class RedisRateLimitStore {
 
   _memoryIncr(key) {
     const now = Date.now();
+    // Redis দীর্ঘ সময় ডাউন থাকতে পারে (রিট্রাই বন্ধ হয় না) — মেয়াদোত্তীর্ণ এন্ট্রি সরিয়ে Map-কে সীমাবদ্ধ রাখা হয়
+    if (this.memory.size > 10000) {
+      for (const [k, v] of this.memory) if (v.resetAt <= now) this.memory.delete(k);
+    }
     const rec = this.memory.get(key);
     if (!rec || rec.resetAt <= now) {
       const fresh = { count: 1, resetAt: now + this.windowMs };

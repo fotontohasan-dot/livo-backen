@@ -26,9 +26,11 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 // ডিপোজিট/উইথড্র/গেটওয়ে endpoint-গুলোর জন্য rate limit। bd8b1b2-এর rewrite-এ এটা
 // হারিয়ে গিয়েছিল, ফলে পেমেন্ট রুটগুলো সম্পূর্ণ unthrottled ছিল।
+const { userOrIpKey } = require('../middleware/rateLimitPolicy');
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 15, // অপরিবর্তিত (১৫/১৫মি); কী এখন ইউজার ID (লগইন থাকলে), নইলে IP
+  keyGenerator: userOrIpKey,
   message: (req) => req.t('common_rate_limited'),
   standardHeaders: true,
   legacyHeaders: false,

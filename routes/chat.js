@@ -162,7 +162,7 @@ router.post('/upload', isAuth, requireFeature('live_chat'), upload.single('file'
       // ছোট করা হলো, SSLCommerz/Google OAuth-এর সাথে সামঞ্জস্যপূর্ণ bounded ওয়েট রাখতে।
       const stream = cloudinary.uploader.upload_stream(
         { folder: 'bet420/chat', resource_type: isVideo ? 'video' : 'image', timeout: 20000 },
-        (error, result) => error ? reject(error) : resolve(result)
+        (error, result) => { require('../services/integrationStatus').recordIntegrationResult('cloudinary', !error, error && error.message); return error ? reject(error) : resolve(result); }
       );
       stream.end(req.file.buffer);
     });

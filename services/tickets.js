@@ -323,9 +323,9 @@ async function makeQrUrl(code) {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
-    const up = await cloudinary.uploader.upload(dataUrl, {
+    const up = await require('../utils/integrationHttp').integrationCall('cloudinary', () => cloudinary.uploader.upload(dataUrl, {
       folder: 'bet420/tickets', public_id: code, overwrite: false
-    });
+    }), { breaker: false });
     return up.secure_url || dataUrl;
   } catch (e) {
     console.error('[tickets] QR আপলোড ব্যর্থ:', e.message);

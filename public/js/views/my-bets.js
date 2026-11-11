@@ -175,8 +175,8 @@
     refreshTimer = setTimeout(function () { load(true); }, 400);
   }
   try {
-    if (window.io) {
-      var sock = window.io();
+    if (window.livoSocket) {
+      var sock = window.livoSocket();
       sock.on('myBetsChanged', scheduleRefresh);
     }
   } catch (e) { /* realtime is optional */ }

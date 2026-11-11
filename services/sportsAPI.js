@@ -11,17 +11,17 @@ const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 //
 // টাইমআউট হলে AbortError ছোঁড়ে, যা প্রতিটা কলারের বিদ্যমান catch ধরে
 // এবং নিরাপদ ফলব্যাক (খালি অ্যারে / null / cache) ফেরত দেয়।
-const API_TIMEOUT_MS = Number(process.env.SPORTS_API_TIMEOUT_MS) || 10000;
+// ডিফল্ট ৫s (আগে ১০s)। SPORTS_API_TIMEOUT_MS বা BREAKER_SPORTS_*_TIMEOUT_MS দিয়ে বদলানো যায়।
+const API_TIMEOUT_MS = Number(process.env.SPORTS_API_TIMEOUT_MS) || undefined;
+const { integrationFetch } = require('../utils/integrationHttp');
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+// প্রতিটা কল circuit breaker + timeout + স্ট্যাটাস রেকর্ডের ভেতর দিয়ে যায়। breaker OPEN বা timeout হলে
+// ফাংশনগুলোর বিদ্যমান catch শেষ ভালো (stale) ডেটা ফেরত দেয় — অপেক্ষা করে না।
+function fetchFor(integration) {
+  return (url, options = {}) => integrationFetch(integration, url, options, { timeoutMs: API_TIMEOUT_MS });
 }
+const cricFetch = fetchFor('sports:cricapi');
+const footballFetch = fetchFor('sports:rapidapi');
 
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
@@ -36,8 +36,22 @@ function getCached(key) {
   return entry.data;
 }
 
+// শেষ সফল ডেটা (মেয়াদ নেই) — upstream ডাউন/breaker OPEN থাকলে এটাই stale হিসেবে ফেরত যায়।
+const lastGood = new Map();
+
 function setCache(key, data) {
   cache.set(key, { time: Date.now(), data });
+  if (data !== undefined && data !== null) lastGood.set(key, { time: Date.now(), data });
+}
+
+/** ব্যর্থতায় শেষ ভালো ডেটা (থাকলে) — অ্যারে/অবজেক্টে non-enumerable `stale`/`staleSince` চিহ্ন; নইলে fallback। */
+function staleOr(key, fallback) {
+  const hit = lastGood.get(key);
+  if (!hit || typeof hit.data !== 'object') return hit ? hit.data : fallback;
+  const copy = Array.isArray(hit.data) ? hit.data.slice() : { ...hit.data };
+  Object.defineProperty(copy, 'stale', { value: true, enumerable: false });
+  Object.defineProperty(copy, 'staleSince', { value: new Date(hit.time).toISOString(), enumerable: false });
+  return copy;
 }
 
 // ================== CRICKET ==================
@@ -51,7 +65,7 @@ async function getCricketCurrentMatches() {
       return [];
     }
     const url = `https://api.cricapi.com/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`;
-    const res = await fetchWithTimeout(url);
+    const res = await cricFetch(url);
     const json = await res.json();
 
     // ডিবাগ: API কী বলছে লগে দেখাও
@@ -78,7 +92,7 @@ async function getCricketCurrentMatches() {
     return matches;
   } catch (err) {
     console.error('Cricket API error:', err.message);
-    return [];
+    return staleOr('cricket:current', []);
   }
 }
 
@@ -88,7 +102,7 @@ async function getCricketUpcoming() {
   try {
     if (!CRICKET_API_KEY) return [];
     const url = `https://api.cricapi.com/v1/matches?apikey=${CRICKET_API_KEY}&offset=0`;
-    const res = await fetchWithTimeout(url);
+    const res = await cricFetch(url);
     const json = await res.json();
     const matches = (json.data || []).map(m => ({
       id: m.id,
@@ -103,7 +117,7 @@ async function getCricketUpcoming() {
     return matches;
   } catch (err) {
     console.error('Cricket upcoming error:', err.message);
-    return [];
+    return staleOr('cricket:upcoming', []);
   }
 }
 
@@ -112,13 +126,13 @@ async function getCricketMatchInfo(matchId) {
   if (cached) return cached;
   try {
     const url = `https://api.cricapi.com/v1/match_info?apikey=${CRICKET_API_KEY}&id=${matchId}`;
-    const res = await fetchWithTimeout(url);
+    const res = await cricFetch(url);
     const json = await res.json();
     setCache(`cricket:match:${matchId}`, json.data);
     return json.data;
   } catch (err) {
     console.error('Cricket match info error:', err.message);
-    return null;
+    return staleOr(`cricket:match:${matchId}`, null);
   }
 }
 
@@ -139,7 +153,7 @@ async function getFootballLiveScores() {
 
   try {
     const url = `https://${FOOTBALL_HOST}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`;
-    const res = await fetchWithTimeout(url, {
+    const res = await footballFetch(url, {
       headers: {
         'x-rapidapi-host': FOOTBALL_HOST,
         'x-rapidapi-key': RAPIDAPI_KEY,
@@ -170,7 +184,7 @@ async function getFootballLiveScores() {
     return matches;
   } catch (err) {
     console.error('Football live error:', err.message);
-    return [];
+    return staleOr('football:live', []);
   }
 }
 

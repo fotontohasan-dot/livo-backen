@@ -44,14 +44,14 @@ async function allowChatMessage(userId) {
 
 // ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
 const notifyUserSeen = (userId) => {
-  if (!io || !userId) return;
-  try { io.to(`user:${userId}`).emit('messages_seen', { by: 'admin' }); }
+  const bus = emitBus(); if (!bus || !userId) return;
+  try { bus.to(`user:${userId}`).emit('messages_seen', { by: 'admin' }); }
   catch (err) { console.error('notifyUserSeen error:', err.message); }
 };
 
 const notifyAdminsSeen = (userId) => {
-  if (!io || !userId) return;
-  try { io.to('admins').emit('messages_seen', { by: Number(userId) }); }
+  const bus = emitBus(); if (!bus || !userId) return;
+  try { bus.to('admins').emit('messages_seen', { by: Number(userId) }); }
   catch (err) { console.error('notifyAdminsSeen error:', err.message); }
 };
 
@@ -59,14 +59,57 @@ const notifyAdminsSeen = (userId) => {
 // বিদ্যমান user:<id> room-এ ইউজারকে, ও বিদ্যমান admins room-এ সব admin-কে পাঠানো হয় —
 // নতুন কোনো রুম/চ্যানেল তৈরি করা হয়নি।
 const notifySupportStatus = (userId, status) => {
-  if (!io || !userId) return;
+  const bus = emitBus(); if (!bus || !userId) return;
   try {
-    io.to(`user:${userId}`).emit('support_status', { status });
-    io.to('admins').emit('support_status', { userId: Number(userId), status });
+    bus.to(`user:${userId}`).emit('support_status', { status });
+    bus.to('admins').emit('support_status', { userId: Number(userId), status });
   } catch (err) { console.error('notifySupportStatus error:', err.message); }
 };
 
 let io;
+
+// ==================== Worker → Socket: Redis emitter ====================
+// worker.js কোনো Socket.IO সার্ভার চালায় না (io == null), তাই আগে স্কোর/অডস/সেটেলমেন্ট ইভেন্ট
+// worker থেকে সংযুক্ত ক্লায়েন্টদের কাছে কখনো পৌঁছাত না। এখন io না থাকলে @socket.io/redis-emitter দিয়ে
+// একই Redis Pub/Sub-এ publish করা হয়, যেখান থেকে web ইনস্ট্যান্সের redis-adapter তুলে নিয়ে নিজ নিজ
+// ক্লায়েন্টদের পাঠায়। অ্যাডাপ্টার ও এমিটার *একই* Redis (REDIS_URL = noeviction স্টোর) ও একই key prefix
+// (ডিফল্ট "socket.io") ব্যবহার করে — CACHE_REDIS_URL (allkeys-lru) নয়: Pub/Sub মেসেজ evict হয় না, তবু
+// কাজের ধরন ও সংযোগ-সংখ্যা সেশন/কিউ স্টোরের সাথেই মেলানো।
+let emitter = null;
+let emitterInitTried = false;
+
+function getEmitter() {
+  if (emitter || emitterInitTried) return emitter;
+  emitterInitTried = true;
+  const enabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+  const url = process.env.REDIS_URL;
+  if (!enabled || !url) return null;
+  try {
+    const { Emitter } = require('@socket.io/redis-emitter');
+    const Redis = require('ioredis');
+    // offline queue চালু (ডিফল্ট): প্রথম কানেকশন সম্পন্ন হওয়ার আগের publish সারিতে থেকে কানেক্ট হলে যায়;
+    // Redis ডাউন থাকলে maxRetriesPerRequest:1 দিয়ে দ্রুত reject হয় (নিচের র‍্যাপার সেটা গিলে ফেলে)।
+    const client = new Redis(url, { maxRetriesPerRequest: 1 });
+    client.on('error', (err) => console.warn('[socket-emitter] redis error:', err.message));
+    // Emitter publish() ফলাফল await করে না — Redis ডাউন থাকলে rejected promise unhandledRejection হতো।
+    // তাই পাতলা র‍্যাপার: ব্যর্থ publish নিঃশব্দে (লগ সহ) গিলে ফেলা হয়, ইভেন্ট হারায় কিন্তু প্রসেস নয়।
+    const safeClient = {
+      publish: (channel, msg) => client.publish(channel, msg).catch((err) => {
+        console.warn('[socket-emitter] publish failed (event dropped):', err.message);
+        return 0;
+      })
+    };
+    emitter = new Emitter(safeClient);
+    console.log('✅ Socket.io Redis emitter ready (worker → clients via adapter)');
+  } catch (err) {
+    console.warn('⚠️ Socket.io Redis emitter init failed:', err.message);
+    emitter = null;
+  }
+  return emitter;
+}
+
+// ইভেন্ট পাঠানোর টার্গেট: web প্রসেসে সরাসরি io, worker-এ Redis emitter (দুটোরই .to(room).emit / .emit একই আকৃতি)।
+const emitBus = () => io || getEmitter();
 
 // Redis adapter clients (pub/sub)
 let pubClient = null;
@@ -75,9 +118,9 @@ let subClient = null;
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
 // type: 'deposit' | 'withdraw' | 'chat'
 const emitAdminAlert = (type, data = {}) => {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
-    io.to('admins').emit('admin_alert', {
+    bus.to('admins').emit('admin_alert', {
       type,
       title: data.title || '',
       message: data.message || '',
@@ -153,6 +196,9 @@ const initSocket = (server, sessionMiddleware) => {
   // `user:<id>` রুমের প্রাইভেট ইভেন্ট পড়তে পারত। এখন utils/allowedOrigins.js-এর একই
   // allow-list দুই লেয়ারেই প্রযোজ্য, আর fail-closed — তালিকায় না থাকলে সংযোগ প্রত্যাখ্যাত।
   io = new Server(server, {
+    // শুধু WebSocket: একাধিক web ইনস্ট্যান্সে HTTP long-polling "Session ID unknown" ঘটায় (sticky session নেই)।
+    // ক্লায়েন্টের তালিকা public/js/socket-client.js-এ — দুটো একসাথে বদলাতে হবে।
+    transports: ['websocket'],
     // মেসেজ সাইজ লিমিট: ডিফল্ট 1MB-ও একটা সকেট থেকে বড় পে-লোড স্প্যাম করার সুযোগ দেয়;
     // চ্যাট মেসেজ/ইভেন্ট পে-লোডের জন্য 64KB যথেষ্ট (ফাইল আপলোড আলাদা HTTP রুটে হয়)।
     maxHttpBufferSize: 64 * 1024,
@@ -378,18 +424,18 @@ const getIo = () => io;
 // Push a feed update to everyone watching the match / the match list.
 // match: { id, status, score_a, score_b, overs }  markets: [{ id, type, name, status, odds, depth }]
 const emitFeedUpdate = (match, markets = []) => {
-  if (!io || !match || !match.id) return;
+  const bus = emitBus(); if (!bus || !match || !match.id) return;
   try {
-    io.to(`match:${match.id}`).emit('scoreUpdate', {
+    bus.to(`match:${match.id}`).emit('scoreUpdate', {
       matchId: match.id, score_a: match.score_a, score_b: match.score_b,
       overs: match.overs, status: match.status, timestamp: new Date()
     });
-    if (match.live) io.to(`match:${match.id}`).emit('liveUpdate', { matchId: match.id, live: match.live, timestamp: Date.now() });
+    if (match.live) bus.to(`match:${match.id}`).emit('liveUpdate', { matchId: match.id, live: match.live, timestamp: Date.now() });
     if (markets.length) {
-      io.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
+      bus.to(`match:${match.id}`).emit('marketUpdate', { matchId: match.id, markets });
       emitOddsAndStatus(match.id, markets);
     }
-    io.to('matches').emit('matchListUpdate', {
+    bus.to('matches').emit('matchListUpdate', {
       matchId: match.id, status: match.status, score_a: match.score_a, score_b: match.score_b, overs: match.overs
     });
   } catch (err) { console.error('emitFeedUpdate error:', err.message); }
@@ -423,22 +469,22 @@ function runnersOf(m) {
 }
 
 function emitOddsAndStatus(matchId, markets) {
-  if (!io || !matchId || !Array.isArray(markets) || !markets.length) return;
+  const bus = emitBus(); if (!bus || !matchId || !Array.isArray(markets) || !markets.length) return;
   try {
     const room = `match:${matchId}`;
     const payload = markets.map((m) => ({ marketId: m.id, status: m.status, runners: runnersOf(m) }));
-    io.to(room).emit('oddsUpdate', { matchId, markets: payload, timestamp: Date.now() });
+    bus.to(room).emit('oddsUpdate', { matchId, markets: payload, timestamp: Date.now() });
 
     for (const m of payload) {
       const prev = lastStatus.get(m.marketId);
       if (!prev || prev.status !== m.status) {
-        io.to(room).emit('marketStatusChange', { matchId, marketId: m.marketId, status: m.status });
+        bus.to(room).emit('marketStatusChange', { matchId, marketId: m.marketId, status: m.status });
       }
       const cur = {};
       for (const r of m.runners) {
         cur[r.key] = r.status;
         if (!prev || (prev.runners[r.key] || 'open') !== r.status) {
-          io.to(room).emit('runnerStatusChange', { matchId, marketId: m.marketId, runner: r.key, status: r.status });
+          bus.to(room).emit('runnerStatusChange', { matchId, marketId: m.marketId, runner: r.key, status: r.status });
         }
       }
       lastStatus.set(m.marketId, { status: m.status, runners: cur });
@@ -449,17 +495,17 @@ function emitOddsAndStatus(matchId, markets) {
 
 // For admin actions (suspend/open a whole market, suspend a single runner).
 function emitMarketStatusChange(matchId, marketId, status) {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
-    io.to(`match:${matchId}`).emit('marketStatusChange', { matchId, marketId, status });
+    bus.to(`match:${matchId}`).emit('marketStatusChange', { matchId, marketId, status });
     const prev = lastStatus.get(marketId) || { runners: {} };
     lastStatus.set(marketId, { status, runners: prev.runners });
   } catch (err) { console.error('emitMarketStatusChange error:', err.message); }
 }
 function emitRunnerStatusChange(matchId, marketId, runner, status) {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
-    io.to(`match:${matchId}`).emit('runnerStatusChange', { matchId, marketId, runner, status });
+    bus.to(`match:${matchId}`).emit('runnerStatusChange', { matchId, marketId, runner, status });
     const prev = lastStatus.get(marketId) || { status: 'open', runners: {} };
     lastStatus.set(marketId, { status: prev.status, runners: { ...prev.runners, [runner]: status } });
   } catch (err) { console.error('emitRunnerStatusChange error:', err.message); }
@@ -467,7 +513,7 @@ function emitRunnerStatusChange(matchId, marketId, runner, status) {
 
 // ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
 const updateLiveScore = async (matchId, scoreData) => {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
     await pool.query(
       `UPDATE matches
@@ -476,7 +522,7 @@ const updateLiveScore = async (matchId, scoreData) => {
       [scoreData.score_a, scoreData.score_b, scoreData.overs, matchId]
     );
 
-    io.to(`match:${matchId}`).emit("scoreUpdate", {
+    bus.to(`match:${matchId}`).emit("scoreUpdate", {
       matchId,
       ...scoreData,
       timestamp: new Date()
@@ -519,19 +565,19 @@ const getDemoStats = async () => {
 // তালিকা নিজে fetch করে। অর্থাৎ socket পে-লোড কখনো সত্যের উৎস নয়, ডেটাবেসই।
 // updatedAt ক্লায়েন্টকে স্টেল ইভেন্ট (পুরনো ইভেন্ট দেরিতে পৌঁছানো) উপেক্ষা করতে দেয়।
 const emitPaymentMethodsUpdated = () => {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
-    io.emit('payment-methods:updated', { updatedAt: Date.now() });
+    bus.emit('payment-methods:updated', { updatedAt: Date.now() });
   } catch (err) {
     console.error('emitPaymentMethodsUpdated error:', err.message);
   }
 };
 
 const broadcastDemoStats = async () => {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
     const stats = await getDemoStats();
-    io.to("admins").emit("demo_stats_update", stats);
+    bus.to("admins").emit("demo_stats_update", stats);
   } catch (err) {
     console.error("Demo stats broadcast error:", err.message);
   }
@@ -542,12 +588,12 @@ const broadcastDemoStats = async () => {
 // পে-লোডে বার্তার কন্টেন্ট নেই ইচ্ছাকৃতভাবে — ক্লায়েন্ট GET /api/ticker/active
 // থেকেই sanitized তালিকা আনে, socket শুধু "রিফ্রেশ করো" সংকেত দেয়।
 const emitTickerUpdate = (payload = {}) => {
-  if (!io) return;
+  const bus = emitBus(); if (!bus) return;
   try {
-    io.emit('new_notice', { updatedAt: Date.now(), ...payload });
+    bus.emit('new_notice', { updatedAt: Date.now(), ...payload });
   } catch (err) {
     console.error('emitTickerUpdate error:', err.message);
   }
 };
 
-module.exports = { initSocket, getIo, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, getIo, getEmitter, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

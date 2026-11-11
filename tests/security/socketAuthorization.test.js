@@ -110,7 +110,7 @@ describe('Socket.IO authorization (PHASE 8)', () => {
     test('admin alert শুধু admins room-এ যায়', () => {
       const idx = SRC.indexOf('const emitAdminAlert');
       const block = SRC.slice(idx, idx + 400);
-      expect(block).toMatch(/io\.to\('admins'\)/);
+      expect(block).toMatch(/(io|bus)\.to\('admins'\)/); // bus = io || redis-emitter (worker থেকেও)
     });
   });
 

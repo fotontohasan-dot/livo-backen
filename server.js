@@ -223,6 +223,8 @@ async function startServer(opts = {}) {
         server.listen(PORT, resolve);
       });
       console.log(`✅ Server running on port ${PORT}`);
+      // Step 3: heartbeat (env ফ্ল্যাগ + breaker অবস্থা) — Integrations পেজে web কলামের উৎস
+      try { require('./services/integrationStatus').startHeartbeat(role === 'all' ? 'all' : 'web'); } catch (e) { console.warn('heartbeat start failed:', e.message); }
 
       assertPublicUrlOrExit();
 
@@ -245,6 +247,7 @@ async function startServer(opts = {}) {
       heartbeatMs: parseInt(process.env.WORKER_HEARTBEAT_MS || '60000', 10)
     });
     await workerRuntime.start();
+    try { require('./services/integrationStatus').startHeartbeat('worker'); } catch (e) { console.warn('heartbeat start failed:', e.message); }
     console.log('✅ Worker process running (HTTP listener নেই)');
     return null;
   } catch (err) {

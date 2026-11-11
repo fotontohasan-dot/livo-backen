@@ -11,14 +11,27 @@ try {
 }
 
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
-const REDIS_URL = process.env.REDIS_URL || '';
+// ক্যাশ + রেট-লিমিট আলাদা (allkeys-lru) Redis-এ যায়: CACHE_REDIS_URL, না থাকলে REDIS_URL-এ ফলব্যাক।
+// সেশন ও কিউ (noeviction) আলাদাভাবে শুধু REDIS_URL ব্যবহার করে — app.js, queues/connection.js।
+const REDIS_URL = process.env.CACHE_REDIS_URL || process.env.REDIS_URL || '';
 const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
 const REDIS_DB = parseInt(process.env.REDIS_DB || '0', 10);
 const REDIS_PREFIX = process.env.REDIS_PREFIX || 'bet420:';
 const REDIS_CONNECT_TIMEOUT_MS = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '3000', 10);
-const REDIS_MAX_RETRIES = parseInt(process.env.REDIS_MAX_RETRIES || '5', 10); // এর বেশি চেষ্টার পর থামিয়ে দেওয়া হবে (লগ স্প্যাম আটকাতে)
+// Redis ডাউন হলে কখনো হাল ছাড়া হয় না: exponential backoff (BASE থেকে শুরু, দ্বিগুণ হয়ে CAP পর্যন্ত) + jitter,
+// অনির্দিষ্টকাল রিট্রাই। Redis ফিরলে অ্যাপ রিস্টার্ট ছাড়াই ক্যাশ নিজে থেকে ফিরে আসে।
+const REDIS_RETRY_BASE_MS = parseInt(process.env.REDIS_RETRY_BASE_MS || '500', 10);
+const REDIS_RETRY_CAP_MS = parseInt(process.env.REDIS_RETRY_CAP_MS || '30000', 10);
+// Redis ডাউন থাকলে getOrSet সরাসরি DB-তে পড়ে (fail-open) — DB যাতে ভেসে না যায় সেজন্য এই প্রসেসের ভেতরে ছোট সীমা:
+//   ১) একই key-এর একযোগে কল একটাই DB কোয়েরি ভাগ করে (single-flight)
+//   ২) ছোট in-process ক্যাশ (সর্বোচ্চ LOCAL_TTL সেকেন্ড, LOCAL_MAX এন্ট্রি) — শুধু Redis ডাউন থাকাকালীন
+//   ৩) একসাথে সর্বোচ্চ FALLTHROUGH_CONCURRENCY টা DB কোয়েরি; বাকিরা সারিতে অপেক্ষা করে (সারি ভরলে shed)
+const FALLTHROUGH_CONCURRENCY = Math.max(1, parseInt(process.env.CACHE_FALLTHROUGH_CONCURRENCY || '4', 10));
+const FALLTHROUGH_QUEUE_MAX = Math.max(1, parseInt(process.env.CACHE_FALLTHROUGH_QUEUE_MAX || '1000', 10));
+const LOCAL_TTL_SECONDS = parseInt(process.env.CACHE_LOCAL_FALLBACK_TTL_SECONDS || '5', 10);
+const LOCAL_MAX = parseInt(process.env.CACHE_LOCAL_FALLBACK_MAX || '500', 10);
 
 const state = {
   client: null,
@@ -26,6 +39,9 @@ const state = {
   lastError: null,
   lastErrorAt: null,
   disabledReason: null,
+  disconnectedAt: null,
+  reconnects: 0,
+  fallthroughShed: 0,
   hits: 0,
   misses: 0,
   sets: 0
@@ -58,6 +74,61 @@ function logError(context, err) {
   console.error('[redis-cache] ' + context + ':', state.lastError);
 }
 
+/** attempt (১ থেকে শুরু) → মিলিসেকেন্ড: BASE * 2^(attempt-1), CAP-এ সীমাবদ্ধ, ±২০% jitter (সব ইনস্ট্যান্স একসাথে ঝাঁপিয়ে পড়া এড়াতে)। */
+function computeBackoffMs(attempt, base = REDIS_RETRY_BASE_MS, cap = REDIS_RETRY_CAP_MS, rand = Math.random) {
+  const exp = Math.min(cap, base * Math.pow(2, Math.max(0, attempt - 1)));
+  const jitter = exp * 0.2 * (rand() * 2 - 1);
+  return Math.max(base, Math.min(cap, Math.round(exp + jitter)));
+}
+
+// ---- Redis ডাউন থাকাকালীন DB-সুরক্ষা (single-flight + ছোট লোকাল ক্যাশ + কনকারেন্সি সীমা) ----
+const localFallback = new Map(); // key -> { value, expires }
+const inflight = new Map();      // key -> Promise
+let fallthroughActive = 0;
+const fallthroughWaiters = [];
+
+function acquireFallthroughSlot() {
+  if (fallthroughActive < FALLTHROUGH_CONCURRENCY) {
+    fallthroughActive++;
+    return Promise.resolve();
+  }
+  if (fallthroughWaiters.length >= FALLTHROUGH_QUEUE_MAX) {
+    state.fallthroughShed++;
+    return Promise.reject(new Error('cache fallthrough overloaded (Redis down) — request shed'));
+  }
+  return new Promise((resolve) => fallthroughWaiters.push(resolve));
+}
+
+function releaseFallthroughSlot() {
+  const next = fallthroughWaiters.shift();
+  if (next) next(); // স্লট সরাসরি পরের অপেক্ষমাণকে হস্তান্তর (active সংখ্যা অপরিবর্তিত)
+  else fallthroughActive--;
+}
+
+async function guardedFallthrough(key, ttlSeconds, fetchFn) {
+  const hit = localFallback.get(key);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  if (hit) localFallback.delete(key);
+
+  if (inflight.has(key)) return inflight.get(key);
+  const p = (async () => {
+    await acquireFallthroughSlot();
+    try {
+      const value = await fetchFn();
+      const ttl = Math.min(LOCAL_TTL_SECONDS, ttlSeconds || LOCAL_TTL_SECONDS);
+      if (ttl > 0 && value !== undefined && value !== null) {
+        if (localFallback.size >= LOCAL_MAX) localFallback.delete(localFallback.keys().next().value);
+        localFallback.set(key, { value, expires: Date.now() + ttl * 1000 });
+      }
+      return value;
+    } finally {
+      releaseFallthroughSlot();
+    }
+  })().finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
 function init() {
   if (!REDIS_ENABLED) {
     state.disabledReason = '.env-এ REDIS_ENABLED=false সেট করা আছে';
@@ -71,18 +142,13 @@ function init() {
   }
 
   try {
-    // times আসে ioredis থেকে (কতবার রিট্রাই হয়েছে) — REDIS_MAX_RETRIES ছাড়িয়ে গেলে null রিটার্ন করলে
-    // ioredis আর রিট্রাই করবে না, এতে Redis একদম না থাকলে (যেমন Render-এ কোনো Redis addon নেই)
-    // প্রতি ৫ সেকেন্ডে অনন্তকাল ধরে "connection error" লগ স্প্যাম হওয়া বন্ধ হয়।
-    const boundedRetryStrategy = (times) => {
-      if (times > REDIS_MAX_RETRIES) {
-        if (!state.disabledReason) {
-          state.disabledReason = `${REDIS_MAX_RETRIES}বার চেষ্টার পরও Redis-এ কানেক্ট করা যায়নি — DB fallback-এ চলছে`;
-          log(`giving up after ${REDIS_MAX_RETRIES} attempts — falling back to direct DB access (no more retries, no more log spam)`);
-        }
-        return null; // retry বন্ধ
+    // times আসে ioredis থেকে (পরপর কতবার রিট্রাই হয়েছে)। কখনো null রিটার্ন করা হয় না — অনির্দিষ্টকাল রিট্রাই।
+    const infiniteRetryStrategy = (times) => {
+      const delay = computeBackoffMs(times);
+      if (times === 1 || times % 10 === 0) {
+        log(`reconnect attempt #${times} in ${delay}ms (cache falls through to DB meanwhile)`);
       }
-      return Math.min(times * 500, 5000);
+      return delay;
     };
 
     const options = REDIS_URL
@@ -94,25 +160,43 @@ function init() {
           db: REDIS_DB,
           connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
           maxRetriesPerRequest: 1,
-          retryStrategy: boundedRetryStrategy,
+          retryStrategy: infiniteRetryStrategy,
           lazyConnect: false
         };
 
     state.client = REDIS_URL
-      ? new Redis(REDIS_URL, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, maxRetriesPerRequest: 1, retryStrategy: boundedRetryStrategy })
+      ? new Redis(REDIS_URL, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, maxRetriesPerRequest: 1, retryStrategy: infiniteRetryStrategy })
       : new Redis(options);
 
     state.client.on('connect', () => {
-      state.connected = true;
-      state.disabledReason = null;
       log('connected');
     });
-    state.client.on('ready', () => { state.connected = true; });
+    state.client.on('ready', () => {
+      if (state.disconnectedAt) {
+        state.reconnects++;
+        log(`reconnected after ${Math.round((Date.now() - state.disconnectedAt) / 1000)}s downtime — cache active again`);
+        state.disconnectedAt = null;
+      }
+      state.connected = true;
+      state.disabledReason = null;
+      localFallback.clear(); // Redis ফিরে এসেছে — আউটেজের সময়কার in-process কপি ফেলে দেওয়া হয়
+    });
+    // ব্যর্থ প্রতিটা রিট্রাইয়ে error ইভেন্ট আসে; শুধু প্রথমটা লগ হয় (ডাউনটাইম শুরু) — পরেরগুলো লগ স্প্যাম করবে না
     state.client.on('error', (err) => {
       state.connected = false;
-      if (!state.disabledReason) logError('connection error', err); // চূড়ান্তভাবে থেমে যাওয়ার পর আর নতুন এরর লগ হবে না
+      if (!state.disconnectedAt) {
+        state.disconnectedAt = Date.now();
+        logError('connection error (will retry forever with backoff)', err);
+      } else {
+        state.lastError = err && err.message ? err.message : String(err);
+        state.lastErrorAt = new Date();
+      }
     });
     state.client.on('close', () => {
+      if (state.connected && !state.disconnectedAt) {
+        state.disconnectedAt = Date.now();
+        log('connection closed — retrying with backoff');
+      }
       state.connected = false;
     });
   } catch (err) {
@@ -172,6 +256,7 @@ async function set(key, value, ttlSeconds) {
 
 /** নির্দিষ্ট key(s) মুছে ফেলে — আপডেটের পর ক্যাশ invalidate করতে ব্যবহার হয়। */
 async function del(...keys) {
+  for (const k of keys) localFallback.delete(k); // আউটেজের সময়কার in-process কপিও বাতিল
   if (!isAvailable() || !keys.length) return false;
   try {
     await state.client.del(...keys.map(prefixed));
@@ -184,6 +269,10 @@ async function del(...keys) {
 
 /** prefix-ভিত্তিক bulk invalidate (যেমন 'profile:*') — SCAN ব্যবহার করে, KEYS ব্যবহার করে না (production-safe, ব্লক করে না)। */
 async function delByPattern(pattern) {
+  if (localFallback.size) {
+    const re = new RegExp('^' + pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+    for (const k of [...localFallback.keys()]) if (re.test(k)) localFallback.delete(k);
+  }
   if (!isAvailable()) return 0;
   try {
     let cursor = '0';
@@ -210,6 +299,9 @@ async function delByPattern(pattern) {
  * অর্থাৎ ফিচারটি কখনো ভাঙে না, শুধু ক্যাশের সুবিধা পাওয়া যায় না।
  */
 async function getOrSet(key, ttlSeconds, fetchFn) {
+  // Redis কনফিগার করা আছে কিন্তু এখন ডাউন: fail-open (DB-তে পড়ো), কিন্তু in-process সীমার ভেতর দিয়ে — DB flood এড়াতে।
+  // Redis বন্ধ/অকনফিগার্ড (state.client নেই) হলে আগের মতোই সরাসরি fetchFn — কোনো ক্যাশিং/থ্রটলিং নয়।
+  if (state.client && !isAvailable()) return guardedFallthrough(key, ttlSeconds, fetchFn);
   const cached = await get(key);
   if (cached !== null) return cached;
   const fresh = await fetchFn();
@@ -221,10 +313,15 @@ function getStatus() {
   return {
     enabled: REDIS_ENABLED && !!Redis,
     connected: isAvailable(),
-    host: REDIS_URL ? '(REDIS_URL)' : `${REDIS_HOST}:${REDIS_PORT}`,
+    host: REDIS_URL ? (process.env.CACHE_REDIS_URL ? '(CACHE_REDIS_URL)' : '(REDIS_URL)') : `${REDIS_HOST}:${REDIS_PORT}`,
     lastError: state.lastError,
     lastErrorAt: state.lastErrorAt,
-    disabledReason: state.disabledReason
+    disabledReason: state.disabledReason,
+    reconnects: state.reconnects,
+    downSince: state.disconnectedAt ? new Date(state.disconnectedAt) : null,
+    fallthroughActive,
+    fallthroughQueued: fallthroughWaiters.length,
+    fallthroughShed: state.fallthroughShed
   };
 }
 
@@ -315,4 +412,13 @@ async function resetKey(key) {
   }
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey, getDetailedStats, flushAll, prefixKey };
+/** গ্রেসফুল শাটডাউন/টেস্টের জন্য: ক্লায়েন্ট বন্ধ করে (রিট্রাই থামে)। */
+async function close() {
+  const c = state.client;
+  state.client = null;
+  state.connected = false;
+  if (!c) return;
+  try { await c.quit(); } catch (_) { c.disconnect(); }
+}
+
+module.exports = { close, computeBackoffMs, get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey, getDetailedStats, flushAll, prefixKey };

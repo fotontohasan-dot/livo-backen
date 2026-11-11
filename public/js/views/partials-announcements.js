@@ -48,7 +48,7 @@ function bet420DismissAnnouncement(id, el) {
       }
 
       if (window.io) {
-        var socket = window.io();
+        var socket = window.livoSocket();
         socket.on('new_notice', loadNotice);
       }
     });

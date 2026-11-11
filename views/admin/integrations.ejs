@@ -1,0 +1,73 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+// ⚠️ এই পেজ কোনো env মান পায়ই না — report-এ শুধু boolean, সময়, sanitize করা error ও breaker অবস্থা আছে।
+const rep = report || { integrations: [], processes: [] };
+const fmt = (d) => d ? escapeHtml(new Date(d).toISOString().replace('T', ' ').slice(0, 19)) + ' UTC' : '<span class="text-slate-300">' + t('aci_never') + '</span>';
+const cfgBadge = (v) => v === null || v === undefined
+  ? '<span class="px-2 py-0.5 rounded-lg text-xs bg-slate-100 text-slate-400">' + t('aci_no_heartbeat') + '</span>'
+  : (v ? '<span class="px-2 py-0.5 rounded-lg text-xs bg-emerald-50 text-emerald-700 font-semibold">' + t('aci_configured') + '</span>'
+       : '<span class="px-2 py-0.5 rounded-lg text-xs bg-red-50 text-red-600 font-semibold">' + t('aci_not_configured') + '</span>');
+const brk = (b) => {
+  if (!b) return t('aci_breaker_none');
+  const cls = b.state === 'open' ? 'bg-red-50 text-red-600' : (b.state === 'half_open' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700');
+  const key = b.state === 'open' ? 'aci_breaker_open' : (b.state === 'half_open' ? 'aci_breaker_half_open' : 'aci_breaker_closed');
+  return '<span class="px-2 py-0.5 rounded-lg text-xs font-semibold ' + cls + '">' + t(key) + '</span>';
+};
+const groups = ['sports', 'casino', 'payment', 'messaging', 'media'];
+const rows = groups.map((g) => {
+  const items = rep.integrations.filter((i) => i.group === g);
+  if (!items.length) return '';
+  return '<tr class="bg-slate-50"><td colspan="7" class="px-6 py-2 text-xs font-semibold text-slate-500 uppercase">' + t('aci_group_' + g) + '</td></tr>' +
+    items.map((i) =>
+      '<tr class="border-b border-slate-100 align-top">' +
+        '<td class="px-6 py-3 text-sm font-medium text-slate-800">' + escapeHtml(i.label) + '<div class="text-xs text-slate-400 font-mono">' + escapeHtml(i.id) + '</div></td>' +
+        '<td class="px-4 py-3">' + cfgBadge(i.configured.web) + '</td>' +
+        '<td class="px-4 py-3">' + cfgBadge(i.configured.worker) + '</td>' +
+        '<td class="px-4 py-3 text-xs text-slate-600">' + fmt(i.lastSuccessAt) + '</td>' +
+        '<td class="px-4 py-3 text-xs text-slate-600">' + fmt(i.lastErrorAt) + '</td>' +
+        '<td class="px-4 py-3 text-xs text-slate-600 max-w-xs break-words">' + (i.lastError ? escapeHtml(i.lastError) : '<span class="text-slate-300">—</span>') + '</td>' +
+        '<td class="px-4 py-3 text-xs">' + brk(i.breaker.web) + ' / ' + brk(i.breaker.worker) + '</td>' +
+      '</tr>').join('');
+}).join('');
+const procRows = (rep.processes || []).map((p) =>
+  '<li class="text-xs text-slate-600"><span class="font-semibold">' + escapeHtml(p.role) + '</span> ' +
+  (p.online ? '<span class="text-emerald-600">' + t('aci_online') + '</span>' : '<span class="text-red-500">' + t('aci_offline') + '</span>') +
+  ' · ' + t('aci_process_booted') + ' ' + fmt(p.bootedAt) + ' · ' + t('aci_process_seen') + ' ' + fmt(p.lastSeen) + '</li>'
+).join('');
+%>
+<%- include('partials/admin-layout', {
+    title: 'Integrations Status',
+    active: 'integrations',
+    body: `
+<div class="max-w-7xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">${t('aci_title')}</h1>
+    <p class="text-slate-500 mt-1 text-sm">${t('aci_subtitle')}</p>
+  </div>
+  <div class="mb-6 px-4 py-3 rounded-2xl bg-amber-50 text-amber-800 text-sm"><i class="fas fa-triangle-exclamation"></i> ${t('aci_restart_note')}</div>
+  ${typeof loadError !== 'undefined' && loadError ? '<div class="mb-6 px-4 py-3 rounded-2xl bg-red-50 text-red-700 text-sm">' + t('aci_load_error') + '</div>' : ''}
+  <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto mb-6">
+    <table class="w-full">
+      <thead class="bg-slate-50"><tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_integration')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_web')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_worker')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_last_ok')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_last_err')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_err_msg')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_breaker')}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-3xl border border-slate-100 p-6">
+    <h2 class="font-semibold text-slate-900 mb-3">${t('aci_processes')}</h2>
+    <ul class="space-y-1">${procRows}</ul>
+  </div>
+</div>
+`
+}) %>

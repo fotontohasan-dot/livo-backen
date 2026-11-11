@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 
 const crypto = require('crypto');
-const { fetchWithTimeout } = require('../../utils/httpClient');
+const { integrationFetch } = require('../../utils/integrationHttp');
 const { normalizeAll } = require('./normalizedGame');
 
 const NAME = 'db-games';
@@ -79,7 +79,7 @@ module.exports = {
   async fetchGames() {
     const params = { merchant: env('AGENT_ID'), timestamp: Date.now() };
     params.sign = sign(params);
-    const res = await fetchWithTimeout(`${env('API_URL')}/game/list`, {
+    const res = await integrationFetch(`casino:${NAME}`, `${env('API_URL')}/game/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params)
