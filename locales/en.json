@@ -1355,6 +1355,7 @@
   "admin_nav_item_backups": "Backups",
   "admin_nav_item_system_health": "System Health",
   "admin_nav_item_diagnostics": "Diagnostics",
+  "admin_nav_item_integrations": "Integrations",
   "admin_nav_item_sentry_status": "Sentry Status",
   "admin_nav_item_telegram": "Telegram",
   "admin_nav_item_api_keys": "API Keys",
