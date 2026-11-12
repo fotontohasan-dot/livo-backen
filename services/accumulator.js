@@ -17,6 +17,9 @@ const { resolveOdd } = require('./oddsResolver');
 const MIN_STAKE = 10;
 const MAX_SELECTIONS = 12;
 
+// routes/matches.js-এর একক বাজির সাথে একই তালিকা: এই স্ট্যাটাসের ম্যাচে নতুন বাজি/লেগ নেওয়া হয় না।
+const BETTING_CLOSED_MATCH_STATUSES = new Set(['finished', 'completed', 'cancelled', 'canceled', 'abandoned']);
+
 // সিলেকশন সংখ্যা অনুযায়ী Boost শতাংশ
 function boostFor(count) {
   if (count >= 5) return 30;
@@ -66,7 +69,12 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
         return { success: false, message: t(lang, 'accumulator_market_closed') };
       }
       // A1: fail-closed — ম্যাচের ডেটা বাসি হলে অ্যাকুমুলেটর নেওয়া হয় না
-      const mm = await client.query('SELECT id, provider, synced_at FROM matches WHERE id = $1', [market.match_id]);
+      const mm = await client.query('SELECT id, status, provider, synced_at FROM matches WHERE id = $1', [market.match_id]);
+      // শেষ/বাতিল ম্যাচের লেগ প্রত্যাখ্যান (একক বাজির মতোই, স্ট্যাটাস case-insensitive)
+      if (mm.rows[0] && BETTING_CLOSED_MATCH_STATUSES.has(String(mm.rows[0].status || '').toLowerCase())) {
+        await client.query('ROLLBACK');
+        return { success: false, code: 'MATCH_CLOSED', message: t(lang, 'accumulator_market_closed') };
+      }
       const fresh = assessMatchFreshness(mm.rows[0]);
       if (fresh.stale) {
         await client.query('ROLLBACK');
