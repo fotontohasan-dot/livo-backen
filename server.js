@@ -228,6 +228,9 @@ async function startServer(opts = {}) {
 
       assertPublicUrlOrExit();
 
+      // Step 4G: কোন ওয়ালেটের callback secret/key সেট নেই (শুধু env-এর নাম লগে, মান নয়)
+      try { require('./services/walletCallback').logBootWarnings(); } catch (e) { console.warn('wallet callback boot check failed:', e.message); }
+
       if (role === 'all') {
         startBackgroundWork();
       } else {
