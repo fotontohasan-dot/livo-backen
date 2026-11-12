@@ -18,7 +18,13 @@
     "test:e2e": "playwright test",
     "scan:secrets": "node scripts/scanSecrets.js",
     "scan:secrets:history": "node scripts/scanSecrets.js --history",
-    "prestart": "node scripts/buildCss.js"
+    "prestart": "node scripts/buildCss.js",
+    "loadtest:mock": "node scripts/loadtest/mockProvider.js",
+    "loadtest:seed": "node scripts/loadtest/seedTestUsers.js",
+    "loadtest:ws": "node scripts/loadtest/ws.js",
+    "loadtest:http": "node scripts/loadtest/http.js",
+    "loadtest:drill": "node scripts/loadtest/drills.js",
+    "loadtest:pgstat": "node scripts/loadtest/pgStatReport.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
