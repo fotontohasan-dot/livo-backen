@@ -4,6 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { annotateStale } = require('../services/dataFreshness');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
 const { pool } = require('../db');
@@ -69,12 +70,13 @@ router.get('/v1/matches', requireApiKey('read:matches'), perKeyLimiter, validate
         // 'result' নামে matches টেবিলে কোনো কলাম নেই (স্কিমা: score_a/score_b) — আগে এই
         // ক্যোয়ারিটাই "column \"result\" does not exist" দিয়ে ব্যর্থ হতো, ফলে এই পাবলিক
         // এন্ডপয়েন্ট সবসময় 500 ফেরত দিত। আসল স্কোর কলাম দুটোই ফলাফল হিসেবে দেওয়া হচ্ছে।
-        `SELECT id, title, team_a, team_b, sport, status, start_time, score_a, score_b
+        `SELECT id, title, team_a, team_b, sport, status, start_time, score_a, score_b, provider, synced_at
          FROM matches ${where}
          ORDER BY start_time DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
         params
       );
-      return result.rows;
+      // A1: additive — data_stale/synced_at; `provider` অভ্যন্তরীণ, বাইরে যায় না
+      return result.rows.map(({ provider, synced_at, ...r }) => ({ ...r, ...annotateStale({ provider, synced_at }) }));
     });
 
     res.json({ data, pagination: { limit, offset, count: data.length } });

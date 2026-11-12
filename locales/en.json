@@ -3407,5 +3407,7 @@
   "aci_breaker_closed": "closed",
   "aci_breaker_open": "OPEN",
   "aci_breaker_half_open": "half-open",
-  "aci_breaker_none": "—"
+  "aci_breaker_none": "—",
+  "matches_data_stale": "Odds are temporarily unavailable because live data is out of date. Please try again shortly.",
+  "matches_stale_badge": "Delayed data"
 }
