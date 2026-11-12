@@ -19,6 +19,7 @@ It shares nothing with production (names, DB, Redis, env group, secrets).
 4. Set `MOCK_CONTROL_KEY` on the mock service (random). Set `TRUST_PROXY_HOPS` as in the file (1).
 5. Wait for the first deploy; confirm `GET /health` and `/ready` return 200 and `/metrics` with the token works.
 6. Enable pg_stat_statements: `psql "<staging external DB url>" -f scripts/loadtest/sql/enable_pg_stat_statements.sql`. First run `SHOW shared_preload_libraries;`; if it does not list `pg_stat_statements` the extension cannot collect data and Render support/plan limits need checking (not verified here). **Never run this on production without owner approval.**
+   **Top-10 report (do not run yet):** after the load test, `LOADTEST_STAGING_URL=<staging url> LOADTEST_DB_URL=<staging external DB url> npm run loadtest:pgstat` prints the 10 slowest queries (total and mean execution time) and the 10 most called, plus connection counts. It is read-only, refuses any host that is not clearly staging (`scripts/loadtest/lib/guard.js`) and exits with an error if the extension is not enabled. Add `-- --watch 5` during the test for peak connections. Do not run it against production; do not commit its `results/` output.
 7. Follow `scripts/loadtest/README.md`.
 8. When done: delete the staging services, or suspend them, to stop billing.
 
