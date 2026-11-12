@@ -3447,5 +3447,7 @@
   "aci_col_last_err": "Last error",
   "aci_col_err_msg": "Error message",
   "aci_col_breaker": "Breaker (web / worker)",
-  "aci_processes": "Processes"
+  "aci_processes": "Processes",
+  "matches_data_stale": "Odds are temporarily unavailable because live data is out of date. Please try again shortly.",
+  "matches_stale_badge": "Delayed data"
 }

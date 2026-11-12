@@ -46,9 +46,11 @@ class RedisRateLimitStore {
     return { totalHits: result.count, resetTime: new Date(Date.now() + result.ttl * 1000) };
   }
 
+  // ব্যর্থ-চেষ্টা-শুধু লিমিটার (skipSuccessfulRequests) সফল রিকোয়েস্টের পর এটা ডাকে — কাউন্ট ১ কমে, ০-এর নিচে যায় না।
   async decrement(key) {
-    // সফল রিকোয়েস্টে কাউন্ট কমানোর দরকার নেই এই অ্যাপের কোনো লিমিটারে (skipSuccessfulRequests ব্যবহার হয় না),
-    // তাই এখানে no-op রাখা হলো — ভবিষ্যতে দরকার হলে cache.client.decr যোগ করা যাবে
+    const rec = this.memory.get(key);
+    if (rec && rec.count > 0) rec.count -= 1;
+    await cache.decrFloor(this.prefix + key);
   }
 
   async resetKey(key) {

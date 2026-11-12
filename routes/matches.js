@@ -6,6 +6,7 @@ const router = express.Router();
 const BETTING_CLOSED_MATCH_STATUSES = new Set(['finished', 'completed', 'cancelled', 'canceled', 'abandoned']);
 
 const { pool } = require('../db');
+const { assessMatchFreshness, annotateStale } = require('../services/dataFreshness');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
 // পুরো রাউটারে `sports` গেট — ম্যাচ ব্রাউজিং স্পোর্টস সেকশনেরই অংশ।
@@ -45,7 +46,9 @@ function formatMatch(row) {
     status: row.status || 'upcoming',
     date: row.start_time || null,
     logoA: row.logo_a || null,
-    logoB: row.logo_b || null
+    logoB: row.logo_b || null,
+    // A1: বাসি-পতাকা — যেখানেই ম্যাচ দেখানো হয় সেখানে এটা দেখাতে হবে (data_stale, synced_at)
+    ...annotateStale(row)
   };
 }
 
@@ -115,7 +118,7 @@ router.get('/api/live', async (req, res) => {
       // ফুটবলের ভরা দিনে ক্রিকেট ট্যাব খালি দেখাত। row_number() দিয়ে
       // প্রতিটা স্পোর্ট নিজের কোটা পায়, তাই একটা অন্যটাকে চাপা দিতে পারে না।
       `SELECT id, title, team_a, team_b, sport, league, status, start_time,
-              score_a, score_b, overs, logo_a, logo_b
+              score_a, score_b, overs, logo_a, logo_b, provider, synced_at
        FROM (
          SELECT *, row_number() OVER (
            PARTITION BY sport
@@ -140,6 +143,7 @@ router.get('/api/live', async (req, res) => {
 
     for (const row of result.rows) {
       const m = formatMatch(row);
+      if (m.data_stale) m.stale_label = req.t('matches_stale_badge');
       if (m.sport === 'football') football.push(m);
       else if (m.sport === 'tennis') tennis.push(m);
       else if (m.sport === 'cricket') cricket.push(m);
@@ -318,6 +322,7 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
       match,
       markets,
       marketView,
+      matchStale: annotateStale(row).data_stale, // A1 (row = DB সারি; `match` ছাঁটা অবজেক্টে provider/synced_at নেই)
       minBet,
       maxBet,
       user: req.session ? req.session.user : null
@@ -337,14 +342,16 @@ router.get('/:id/markets', async (req, res) => {
   const tab = String(req.query.tab || 'all').slice(0, 20);
   try {
     const view = await cache.getOrSet(`match:marketview:${id}`, 2, async () => {
-      const mr = await pool.query('SELECT id, sport, team_a, team_b, status FROM matches WHERE id = $1', [id]);
+      const mr = await pool.query('SELECT id, sport, team_a, team_b, status, provider, synced_at FROM matches WHERE id = $1', [id]);
       if (!mr.rows[0]) return null;
       const mk = await pool.query(
         `SELECT * FROM markets WHERE match_id = $1 AND status IN ('open','suspended') ORDER BY id ASC`, [id]);
-      return buildMarketView(mk.rows, { sport: mr.rows[0].sport, teams: [mr.rows[0].team_a || 'Team A', mr.rows[0].team_b || 'Team B'] });
+      const v = buildMarketView(mk.rows, { sport: mr.rows[0].sport, teams: [mr.rows[0].team_a || 'Team A', mr.rows[0].team_b || 'Team B'] });
+      v.data_stale = annotateStale(mr.rows[0]).data_stale; // A1
+      return v;
     });
     if (!view) return res.status(404).json({ success: false, message: 'Match not found' });
-    res.json({ success: true, tab, tabs: view.tabs, markets: filterMarketView(view, tab) });
+    res.json({ success: true, tab, tabs: view.tabs, markets: filterMarketView(view, tab), data_stale: view.data_stale === true });
   } catch (err) {
     console.error('market tab error:', err.message);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -416,7 +423,7 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
 
     // Lock order is always matches -> markets (same as the feed ingest), FOR SHARE so concurrent
     // bets don't block each other but a feed/admin suspend (FOR UPDATE) waits for in-flight bets.
-    const mt = await client.query('SELECT status FROM matches WHERE id = $1 FOR SHARE', [matchId]);
+    const mt = await client.query('SELECT status, provider, synced_at FROM matches WHERE id = $1 FOR SHARE', [matchId]);
     if (!mt.rows[0]) {
       await client.query('ROLLBACK');
       return res.status(404).json({ success: false, message: req.t('matches_market_not_found') });
@@ -424,6 +431,13 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
     if (BETTING_CLOSED_MATCH_STATUSES.has(String(mt.rows[0].status || '').toLowerCase())) {
       await client.query('ROLLBACK');
       return res.status(409).json({ success: false, code: 'MATCH_CLOSED', message: req.t('matches_market_closed') });
+    }
+    // A1: fail-closed — প্রোভাইডার/ফিড-সিঙ্ক করা ম্যাচের ডেটা বাসি হলে বাজি নেওয়া হয় না (বাসি অডসে বাজি নয়)।
+    const fresh = assessMatchFreshness(mt.rows[0]);
+    if (fresh.stale) {
+      await client.query('ROLLBACK');
+      console.error(`[STALE_DATA] বাজি প্রত্যাখ্যাত: match=${matchId} reason=${fresh.reason} ageMs=${fresh.ageMs}`);
+      return res.status(503).json({ success: false, code: 'STALE_ODDS', message: req.t('matches_data_stale') });
     }
     const m = await client.query(
       `SELECT * FROM markets WHERE id = $1 AND match_id = $2 FOR SHARE`,

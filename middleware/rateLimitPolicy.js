@@ -60,7 +60,28 @@ function resetAccountKey(req) {
   return e ? hashKey('acct', e) : ipKey(req);
 }
 
+/**
+ * A2: লগইন ব্যর্থ-চেষ্টার কী = অ্যাকাউন্ট + IP একসাথে (`acct:<h>|ip:<addr>`)।
+ * ফলে ভিকটিমের ফোন/ইমেইল নিয়ে একটা IP থেকে স্প্যাম করলে শুধু *ঐ IP + ঐ অ্যাকাউন্ট* জোড়ার বাজেট ফুরায় —
+ * আসল মালিক নিজের IP/ডিভাইস থেকে আটকায় না। identifier না থাকলে আগের কড়া IP-কী (ঢিলা হয় না)।
+ */
+function loginAccountIpKey(req) {
+  const acct = loginAccountKey(req);
+  return acct.startsWith('acct:') ? `${acct}|${ipKey(req)}` : acct;
+}
+
+/** সফল লগইন (পাসওয়ার্ড/ক্রেডেনশিয়াল যাচাই পাস) চিহ্নিত করে — লিমিটার এটা দেখে ব্যর্থ-বাজেট থেকে কাউন্ট ফেরত দেয়। */
+function markLoginSuccess(res) { if (res && res.locals) res.locals.loginSucceeded = true; }
+function loginRequestWasSuccessful(req, res) { return !!(res && res.locals && res.locals.loginSucceeded === true); }
+
+/** reset: অ্যাকাউন্ট + IP কী; ইমেইল/টোকেন না থাকলে IP-কী। অস্তিত্ব-নিরপেক্ষ (শুধু ইনপুট থেকে গণনা)। */
+function resetAccountIpKey(req) {
+  const acct = resetAccountKey(req);
+  return acct.startsWith('acct:') ? `${acct}|${ipKey(req)}` : acct;
+}
+
 // প্রতি-IP ছাদ (শেয়ার্ড মোবাইল IP-তে অনেক ইউজার); একক অ্যাকাউন্টের সীমা (১০/৫) আলাদা limiter-এ অপরিবর্তিত
 const IP_CEILINGS = { login: 100, reset: 50 };
 
-module.exports = { LIMITS, userOrIpKey, generalMax, sessionUserId, loginAccountKey, resetAccountKey, ipKey, IP_CEILINGS };
+module.exports = { LIMITS, userOrIpKey, generalMax, sessionUserId, loginAccountKey, resetAccountKey, ipKey, IP_CEILINGS,
+  loginAccountIpKey, resetAccountIpKey, markLoginSuccess, loginRequestWasSuccessful };

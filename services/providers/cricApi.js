@@ -76,6 +76,12 @@ async function fetchMatches() {
   try {
     const raw = await sportsAPI.getCricketCurrentMatches();
     if (!Array.isArray(raw)) return [];
+    // A1: sportsAPI বাসি (last-good) ডেটা `stale` চিহ্নসহ দেয়; `.map()` সেই চিহ্ন মুছে ফেলত এবং matchUpdater
+    // বাসি ডেটাকে `synced_at = NOW()` দিয়ে তাজা বানিয়ে লিখত। এখন বাসি ডেটা সিঙ্কে ব্যবহারই হয় না।
+    if (raw.stale === true) {
+      console.warn(`[provider:${PROVIDER}] upstream ব্যর্থ — বাসি ডেটা (since ${raw.staleSince}) বাদ, DB আপডেট হয়নি`);
+      return [];
+    }
     return raw.map(normalizeOne).filter(Boolean);
   } catch (err) {
     console.error(`[provider:${PROVIDER}] fetch error:`, err.message);

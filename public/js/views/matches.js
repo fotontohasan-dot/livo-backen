@@ -48,6 +48,10 @@
       ? `<div style="font-family:'Teko',sans-serif;font-size:1.4rem;color: var(--text-accent);">${scoreB}</div>`
       : '';
     
+    const staleHTML = m.data_stale
+      ? `<div style="margin-top:6px;font-size:11px;color:#e0a800;font-weight:600;text-align:center;" role="status">⚠ ${esc(m.stale_label || '')}</div>`
+      : '';
+    
     const statusHTML = isLive && m.status
       ? `<div style="margin-top:10px;font-size:12px;color: var(--text-accent);font-weight:600;text-align:center;">${esc(m.status)}</div>`
       : '';
@@ -79,7 +83,7 @@
           ${scoreBHTML}
         </div>
         
-        ${statusHTML}
+        ${statusHTML}${staleHTML}
         ${oversHTML}
         ${btnHTML}
       </div>
