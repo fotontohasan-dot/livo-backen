@@ -8,11 +8,15 @@ const { storeAmountOf } = require('./paymentVerification');
 
 const STORE_ID = process.env.SSLCZ_STORE_ID;
 const STORE_PASSWD = process.env.SSLCZ_STORE_PASSWD;
-const IS_LIVE = process.env.SSLCZ_IS_LIVE === 'true';
-
-const BASE_URL = IS_LIVE
-  ? 'https://securepay.sslcommerz.com'
-  : 'https://sandbox.sslcommerz.com';
+// live URL কেবল SSLCZ_IS_LIVE === 'true' হলে — এবং কখনো staging-এ নয় (APP_ENV/NODE_ENV=staging)।
+// staging-এ env গ্রুপে ভুল করে SSLCZ_IS_LIVE=true বসে গেলেও sandbox ব্যবহার হয় (utils/stagingGuard.js)।
+const { resolveSslczMode } = require('../utils/stagingGuard');
+const MODE = resolveSslczMode(process.env);
+const IS_LIVE = MODE.live;
+const BASE_URL = MODE.baseUrl;
+if (MODE.blockedLiveInStaging) {
+  console.warn('⚠️ staging-এ SSLCZ_IS_LIVE=true উপেক্ষা করা হয়েছে — SSLCommerz sandbox ব্যবহার হচ্ছে।');
+}
 
 // গেটওয়ে ধীর হলে বা সাড়া না দিলে fetch() timeout ছাড়া OS-লেভেল TCP timeout
 // (৬০-১২০+ সেকেন্ড) পর্যন্ত ঝুলে থাকে — যতক্ষণ /success ও /ipn এই কল await করে,
