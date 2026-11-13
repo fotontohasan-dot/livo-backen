@@ -23,6 +23,7 @@ const request = require('supertest');
 // যা সমান্তরাল রিকোয়েস্টে ECONNRESET তৈরি করত (helpers/app.js-এর ব্যাখ্যা দেখো)।
 const { app } = require('./helpers/app');
 const { pool } = require('../db');
+const { uniquePhone } = require('./helpers/app');
 
 function extractCsrfToken(html) {
   const match = /<meta name="csrf-token" content="([^"]*)"/.exec(html || '');
@@ -30,8 +31,9 @@ function extractCsrfToken(html) {
 }
 
 async function makeUserWithPendingStepUp() {
-  const username = 'stepup' + Date.now() + Math.floor(Math.random() * 1000);
-  const phone = '019' + String(Math.floor(Math.random() * 1e8)).padStart(8, '0');
+  // র‍্যান্ডম ফোন/ইউজারনেম বার্থডে-কলিশনে ভাঙতে পারত; অনন্য ফোন থেকেই username/email বানাই।
+  const phone = uniquePhone();
+  const username = 'stepup' + Date.now() + '_' + phone.slice(-5);
   const userRes = await pool.query(
     `INSERT INTO users (username, phone, password, email, email_verified) VALUES ($1, $2, 'x', $3, true) RETURNING id`,
     [username, phone, `${username}@example.com`]

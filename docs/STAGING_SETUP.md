@@ -1,5 +1,59 @@
 # Staging setup (owner steps) — DRAFT, nothing created yet
 
+## 🟢 মালিকের জন্য বাংলা চেকলিস্ট (কোড না জেনে Render ড্যাশবোর্ডে একা অনুসরণ করার জন্য)
+
+> নিচের ইংরেজি ধাপগুলো ডেভেলপারদের জন্য লেখা। শুধু ড্যাশবোর্ড দিয়ে চালু করতে এই চেকলিস্টই যথেষ্ট — **ক্রম বদলাবেন না**।
+> `staging` ব্রাঞ্চ গিটহাবে আগে থেকেই আছে; ইংরেজি ধাপ ১-এর `git branch staging …` আবার চালাতে হবে না।
+
+**নিরাপত্তার নিয়ম:** staging-এ আসল টাকা বা আসল প্রোভাইডার কী কখনো বসাবেন না। production-এর কোনো পাসওয়ার্ড/কী এখানে কপি করবেন না।
+
+### ধাপ ১ — সার্ভিস তৈরি (Blueprint)
+- [ ] Render → **New → Blueprint** → এই রিপো বাছুন → **Branch = `staging`** → Blueprint file path = **`render.staging.yaml`**।
+- [ ] আলাদা Project/Environment-এর নাম দিন **staging** (production-এর সাথে মেশাবেন না)।
+- [ ] Apply চাপুন। ৬টি জিনিস তৈরি হবে: `livo-web-staging`, `livo-worker-staging`, `livo-mock-provider-staging`, দুটি Key Value (`livo-redis-staging`, `livo-redis-cache-staging`), ডাটাবেজ `livo-postgres-staging`, এবং **খালি** env গ্রুপ `livo-shared-staging`।
+- ⚠️ **প্রথম ডিপ্লয় ব্যর্থ হওয়াই স্বাভাবিক** — গ্রুপ খালি, তাই `SESSION_SECRET` নেই বলে অ্যাপ ইচ্ছে করেই বুট হয় না। ঘাবড়াবেন না, ধাপ ২-৩ শেষে আবার ডিপ্লয় করবেন।
+
+### ধাপ ২ — মক সার্ভিসের কী (`livo-mock-provider-staging` → Environment)
+- [ ] `MOCK_CONTROL_KEY` = যেকোনো নতুন এলোমেলো মান (৩২+ অক্ষর; টার্মিনালে `openssl rand -hex 24`, অথবা পাসওয়ার্ড ম্যানেজার)। Save করুন।
+- [ ] মক সার্ভিস **Live** হলে তার ঠিকানা কপি করুন (যেমন `https://livo-mock-provider-staging.onrender.com`) — পরের ধাপে লাগবে।
+
+### ধাপ ৩ — env গ্রুপ `livo-shared-staging` (Dashboard → Environment Groups → গ্রুপ খুলুন)
+নিচের ভেরিয়েবলগুলো ঠিক এই নামে যোগ করুন (নামের বানান হুবহু):
+
+| # | ভেরিয়েবল | মান | বাধ্যতামূলক? |
+|---|---|---|---|
+| 1 | `SESSION_SECRET` | **নতুন** এলোমেলো, ৪৮+ অক্ষর (৩২-এর কম হলে অ্যাপ বুট হবে না)। production-এর মান নয়। | **হ্যাঁ** |
+| 2 | `PUBLIC_APP_URL` | staging ওয়েবের পূর্ণ ঠিকানা, `https://` সহ (`livo-web-staging`-এর পাতায় দেখুন) | প্রস্তাবিত (না দিলে ইমেইলের ভেরিফাই লিংক ভাঙা হবে; বুট আটকায় না) |
+| 3 | `FEED_API_KEY` | নতুন এলোমেলো, ৩২+ অক্ষর (লোড টেস্টের ফিডে লাগে; ফাঁকা রাখলে ফিড বন্ধ থাকে, বুট আটকায় না) | লোড টেস্ট করলে |
+| 4 | `METRICS_TOKEN` | নতুন এলোমেলো মান (না দিলে শুধু সতর্কতা আসে) | প্রস্তাবিত |
+| 5 | `CRICKET_API_KEY` | `mock` | হ্যাঁ (মক ব্যবহারে) |
+| 6 | `RAPIDAPI_KEY` | `mock` | হ্যাঁ (মক ব্যবহারে) |
+| 7 | `CRICKET_API_BASE_URL` | `<মক ঠিকানা>/cricket` | হ্যাঁ |
+| 8 | `FOOTBALL_API_BASE_URL` | `<মক ঠিকানা>/football` | হ্যাঁ |
+| 9 | `SMS_API_URL` | `<মক ঠিকানা>/sms/send` | হ্যাঁ |
+| 10 | `SMS_API_KEY` | `mock` | হ্যাঁ |
+
+- [ ] উপরের ১–১০ বসালেন → **Save Changes**।
+- ⚠️ `CANONICAL_HOST` **বসাবেন না** (ফাঁকা রাখুন)। দিলে শুধু হোস্টনাম (`https://` ছাড়া) হতে হয়, আর একটু ভুল হলে সব পেজ ভুল ঠিকানায় রিডাইরেক্ট করবে।
+- ⚠️ `TRUST_PROXY_HOPS`, `NODE_ENV`, `SSLCZ_IS_LIVE`, `DATABASE_URL`, `REDIS_URL` — এগুলো ফাইলেই বসানো আছে, গ্রুপে যোগ করবেন না।
+
+**এই ভেরিয়েবলগুলো ফাঁকা রাখুন (staging-এ লাগে না):** `CASINO_PROVIDERS`, `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD`, bKash/Nagad/Rocket/Upay-এর সব কী, `EMAIL_USER`, `EMAIL_PASS`, `TELEGRAM_*`, `CLOUDINARY_*`, `GOOGLE_CLIENT_*`, `SENTRY_*`।
+(কোনো একটা জোড়ার শুধু অর্ধেক বসালে অ্যাপ বুটে "আংশিক কনফিগার" সতর্কতা দেখায় — তাই বসালে জোড়া দুটোই, আর নইলে দুটোই ফাঁকা।)
+
+### ধাপ ৪ — আবার ডিপ্লয় ও যাচাই
+- [ ] `livo-web-staging` → **Manual Deploy → Deploy latest commit**। তারপর `livo-worker-staging`-এও একই।
+- [ ] ব্রাউজারে `<staging ঠিকানা>/health` খুলুন → **200 / ok** আসতে হবে। `/ready`-ও একই।
+- [ ] সমস্যা হলে `livo-web-staging` → **Logs** দেখুন: "SESSION_SECRET … আবশ্যক/দুর্বল" লেখা থাকলে ধাপ ৩-এর ১ নম্বর ঠিক করুন।
+- [ ] শেষে (খরচ বাঁচাতে) কাজ শেষ হলে সব staging সার্ভিস **Suspend** বা মুছে দিন।
+
+### নিশ্চিতকরণ: staging-এ আসল পেমেন্ট বা আসল প্রোভাইডার কী লাগে না
+- **পেমেন্ট:** `SSLCZ_IS_LIVE=false` ফাইলেই স্থির (sandbox)। `SSLCZ_*` ফাঁকা রাখলে কোনো গেটওয়েই সক্রিয় হয় না; bKash/Nagad/Rocket/Upay-এর কোনো সিক্রেট লাগে না।
+- **স্পোর্টস ও SMS:** `ALLOW_PROVIDER_BASE_URL_OVERRIDE=true` ফাইলেই আছে, তাই কল যায় `livo-mock-provider-staging`-এ (ফেক কী `mock`)। এই সুইচ production-এ সেট করা হয় না, আর `services/sportsAPI.js` শুধু এটি `true` হলেই বেস-URL বদলায়।
+- **ক্যাসিনো:** `CASINO_PROVIDERS` ফাঁকা = কোনো ক্যাসিনো প্রোভাইডার নেই।
+- **ডাটা/ক্যাশ:** আলাদা `livo-postgres-staging` ও দুটি আলাদা Key Value — production-এর সাথে কিছুই শেয়ার হয় না।
+
+---
+
 `render.staging.yaml` defines a staging copy of production: 2 web instances, worker, Postgres, two Key Value stores
 (session/queue `noeviction`, cache `allkeys-lru`) and an optional mock provider. It deploys from a branch named `staging`.
 It shares nothing with production (names, DB, Redis, env group, secrets).
