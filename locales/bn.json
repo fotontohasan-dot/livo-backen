@@ -3450,5 +3450,12 @@
   "aci_col_breaker": "ব্রেকার (ওয়েব / ওয়ার্কার)",
   "aci_processes": "প্রসেস",
   "matches_data_stale": "লাইভ ডেটা পুরনো হয়ে যাওয়ায় অডস সাময়িকভাবে অনুপলব্ধ। একটু পরে আবার চেষ্টা করুন।",
-  "matches_stale_badge": "ডেটা বিলম্বিত"
+  "matches_stale_badge": "ডেটা বিলম্বিত",
+  "hub_title": "স্পোর্টস",
+  "hub_inplay": "ইন-প্লে",
+  "hub_today": "আজ",
+  "hub_tomorrow": "আগামীকাল",
+  "hub_competitions": "প্রতিযোগিতা",
+  "hub_view_all": "সব ম্যাচ দেখুন",
+  "hub_no_matches": "এই ভিউতে কোনো ম্যাচ নেই"
 }

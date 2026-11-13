@@ -61,6 +61,8 @@
   var errEl = $('bsError');
   var placeBtn = $('bsPlace');
   var current = null; // { marketId, runner, odd, cell, betType, ref }
+  var sheet = overlay ? overlay.querySelector('.bs-sheet') : null;
+  var defaultReturnLabel = $('bsReturnLabel') ? $('bsReturnLabel').textContent : '';
   var inflight = false;
   // One key per slip submission: a retry of the SAME slip is deduplicated by the server, but any
   // change to the stake starts a new key so an edited slip is never mistaken for the old one.
@@ -100,6 +102,16 @@
       $('bsReturn').textContent = money(stakeValue() * current.odd);
     }
   }
+  // Back/Lay অনুযায়ী স্লিপের চেহারা: .is-lay ক্লাস (গোলাপি ট্যাগ, CSS-এ), সাইড ট্যাগ ও রিটার্ন লেবেল।
+  // আগে এই ফাংশনটা কোথাও সংজ্ঞায়িত ছিল না, ফলে openSlip()-এ ReferenceError হতো ও স্লিপ খুলত না।
+  function applySide() {
+    var lay = !!(current && current.betType === 'lay');
+    if (sheet) sheet.classList.toggle('is-lay', lay);
+    var tag = $('bsSideTag');
+    if (tag) tag.textContent = lay ? (cfg.layLabel || 'LAY') : (cfg.backLabel || 'BACK');
+    var lbl = $('bsReturnLabel');
+    if (lbl) lbl.textContent = lay ? (cfg.profitLabel || 'Profit if wins') : (cfg.returnLabel || defaultReturnLabel);
+  }
   function setError(msg) { if (errEl) errEl.textContent = msg || ''; }
 
   function openSlip(btn) {
@@ -116,7 +128,6 @@
     applySide();
     $('bsMarket').textContent = btn.getAttribute('data-market-name') || '';
     $('bsPick').textContent = (btn.getAttribute('data-label') || '') + (current.betType === 'lay' ? ' (Lay)' : '');
-    if ($('bsSideTag')) $('bsSideTag').textContent = current.betType === 'lay' ? 'LAY' : 'BACK';
     $('bsOdd').textContent = String(odd);
     if (!stakeEl.value || stakeValue() < MIN_BET) stakeEl.value = String(Math.max(MIN_BET, 50));
     setError('');
