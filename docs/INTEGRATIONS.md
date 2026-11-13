@@ -6,6 +6,12 @@ Per integration: web/worker **configured** (true/false/unknown — from a 30s he
 env *presence booleans only*), last success, last error (sanitized, ≤200 chars), breaker state per process.
 Never shows any env value, URL or token. Errors are redacted by `services/integrationStatus.js#sanitizeError`.
 Code reports results via `recordIntegrationResult(name, ok, errorMessage)` (fire-and-forget, throttled).
+The page is linked from the admin menu (System group) and shown only to admins with `system_diagnostics_view`.
+
+> **Email caveat:** an email may still be delivered even if our call to the mail server timed out (we stop waiting after
+> `EMAIL_TIMEOUT_MS`, but the server may already have accepted or be about to send the message). The status page can
+> therefore show an error for an email that was actually sent. A timeout error here means "no confirmation received",
+> not "not delivered". Do not retry automatically on this error (it could send duplicates).
 
 ## Circuit breaker (`services/circuitBreaker.js`)
 Wraps sports, casino sync, SMS, email, Telegram. States closed → open → half_open (one probe). Default timeout 5s.
