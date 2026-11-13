@@ -146,6 +146,7 @@ const NAV = [
       { href: '/admin/backups',             label: 'Backups', labelKey: 'admin_nav_item_backups',            icon: 'fa-database',     active: 'backups',             permission: 'backups_manage' },
       { href: '/admin/system-diagnostics',  label: 'System Health', labelKey: 'admin_nav_item_system_health',      icon: 'fa-heart-pulse',  active: 'system-diagnostics',  permission: 'settings_view' },
       { href: '/admin/diagnostics',         label: 'Diagnostics', labelKey: 'admin_nav_item_diagnostics',        icon: 'fa-stethoscope',  active: 'diagnostics',         permission: 'settings_view' },
+      { href: '/admin/integrations',        label: 'Integrations', labelKey: 'admin_nav_item_integrations',       icon: 'fa-plug',         active: 'integrations',        permission: 'system_diagnostics_view' },
       { href: '/admin/sentry-status',       label: 'Sentry Status', labelKey: 'admin_nav_item_sentry_status',      icon: 'fa-bug',          active: 'sentry-status',       permission: 'settings_view' },
       { href: '/admin/telegram',            label: 'Telegram', labelKey: 'admin_nav_item_telegram',           icon: 'fa-paper-plane',  active: 'telegram',            permission: 'settings_edit' },
       { href: '/admin/api-keys',            label: 'API Keys', labelKey: 'admin_nav_item_api_keys',           icon: 'fa-key',          active: 'api-keys',            permission: 'settings_edit' }

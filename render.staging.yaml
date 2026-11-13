@@ -1,0 +1,134 @@
+# render.staging.yaml — STAGING Blueprint (খসড়া; মালিক Render-এ তৈরি না করা পর্যন্ত কিছুই ডিপ্লয় হয় না)।
+#
+# নিয়ম:
+#  • production (render.yaml) থেকে সম্পূর্ণ আলাদা সার্ভিস/DB/Redis/env গ্রুপ — কোনো ডেটা বা secret শেয়ার হয় না।
+#  • `staging` ব্র্যাঞ্চ থেকে ডিপ্লয় হয় (main থেকে নয়)।
+#  • শুধু টেস্ট/স্যান্ডবক্স মান। আসল পেমেন্ট গেটওয়ে, আসল SMS/স্পোর্টস/ক্যাসিনো key, production SESSION_SECRET কখনো নয়।
+#  • env গ্রুপ `livo-shared-staging` ইচ্ছাকৃতভাবে খালি — মালিক ড্যাশবোর্ডে বসাবেন (docs/STAGING_SETUP.md ধাপ ৩)।
+#    SESSION_SECRET অবশ্যই নতুন, এলোমেলো মান (production-এর থেকে ভিন্ন)।
+# প্ল্যান: লোড টেস্টের ফল production-এর সাথে তুলনীয় রাখতে প্রোডাকশনের সমান। সস্তা বিকল্প docs/STAGING_SETUP.md-এ।
+services:
+  - type: web
+    name: livo-web-staging
+    runtime: node
+    plan: 0.5c-512mb
+    numInstances: 2 # মাল্টি-ইনস্ট্যান্স আচরণ (Socket.IO adapter, শেয়ার্ড লিমিটার) যাচাইয়ের জন্য ২টাই দরকার
+    region: singapore
+    branch: staging
+    buildCommand: npm ci && npm run build
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true # staging-এ কমিট হলেই ডিপ্লয় (production-এ নয়: render.yaml-এ autoDeploy: false)
+    envVars:
+      - fromGroup: livo-shared-staging
+      - key: NODE_ENV
+        value: production # production-এর মতো কোড-পাথ পরীক্ষা করতে; ডেটা/key টেস্টের
+      - key: APP_ENV
+        value: staging
+      - key: PORT
+        value: "3000"
+      - key: DB_POOL_MAX
+        value: "10"
+      - key: DB_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: DB_CONNECTION_TIMEOUT_MS
+        value: "5000"
+      - key: DISABLE_BACKGROUND_WORKER
+        value: "true"
+      - key: SESSION_STORE_TYPE
+        value: "redis"
+      - key: TRUST_PROXY_HOPS
+        value: "1" # staging শুধু Render LB-র পেছনে (Cloudflare নেই) — production-এর মান আলাদা হতে পারে
+      - key: ALLOW_PROVIDER_BASE_URL_OVERRIDE
+        value: "true" # শুধু staging: স্পোর্টস প্রোভাইডার মক সার্ভারে ঘোরানো (services/sportsAPI.js)
+      - key: SSLCZ_IS_LIVE
+        value: "false" # SSLCommerz স্যান্ডবক্স
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: livo-redis-staging
+          property: connectionString
+      - key: CACHE_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: livo-redis-cache-staging
+          property: connectionString
+      - key: DATABASE_URL
+        fromDatabase:
+          name: livo-postgres-staging
+          property: connectionString
+
+  - type: worker
+    name: livo-worker-staging
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    branch: staging
+    buildCommand: npm ci
+    startCommand: node worker.js
+    autoDeploy: true
+    envVars:
+      - fromGroup: livo-shared-staging
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: ALLOW_PROVIDER_BASE_URL_OVERRIDE
+        value: "true"
+      - key: SSLCZ_IS_LIVE
+        value: "false"
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: livo-redis-staging
+          property: connectionString
+      - key: CACHE_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: livo-redis-cache-staging
+          property: connectionString
+      - key: DATABASE_URL
+        fromDatabase:
+          name: livo-postgres-staging
+          property: connectionString
+
+  # মক প্রোভাইডার (স্পোর্টস/SMS/ক্যাসিনো) — লোড টেস্টে আসল পেইড API ডাকা বন্ধ রাখে। ঐচ্ছিক: লোড-জেনারেটর মেশিনেও চালানো যায়।
+  - type: web
+    name: livo-mock-provider-staging
+    runtime: node
+    plan: starter
+    region: singapore
+    branch: staging
+    buildCommand: npm ci --omit=dev
+    startCommand: node scripts/loadtest/mockProvider.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: MOCK_CONTROL_KEY
+        sync: false # মালিক বসাবেন (এলোমেলো মান); ড্রিল স্ক্রিপ্টেও লাগে
+
+  - type: keyvalue
+    name: livo-redis-staging
+    plan: 256mb
+    region: singapore
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: keyvalue
+    name: livo-redis-cache-staging
+    plan: 256mb
+    region: singapore
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+envVarGroups:
+  - name: livo-shared-staging
+    envVars: []
+
+databases:
+  - name: livo-postgres-staging
+    plan: 0.5c-1g
+    region: singapore
+    postgresMajorVersion: "16"

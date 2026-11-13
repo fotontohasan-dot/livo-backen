@@ -14,11 +14,12 @@
 // views/admin/backups.ejs-এর confirm বার্তা একসাথে আপডেট করতে হবে।
 const backupManager = require('../../services/backupManager');
 const { pool } = require('../../db');
+const { uniquePhone } = require('../helpers/app');
 
 jest.setTimeout(180000);
 
 const uname = (p) => `${p}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
-const phone = () => `01${Math.floor(100000000 + Math.random() * 800000000)}`;
+const phone = () => uniquePhone();
 
 async function makeUser(username, coins) {
   const r = await pool.query(

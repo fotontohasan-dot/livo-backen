@@ -63,6 +63,7 @@
           '<span class="sp-team away"><span class="sp-team__name">' + esc(m.awayTeam) + '</span>' +
             '<span class="team-crest" data-team="' + esc(m.awayTeam) + '" data-size="22"></span></span>' +
         '</div>' +
+        (m.data_stale ? '<div class="sp-stale" role="status">\u26A0 ' + esc(m.stale_label || '') + '</div>' : '') +
         oddsRow(m) +
       '</a>';
     }

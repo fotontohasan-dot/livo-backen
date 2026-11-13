@@ -301,6 +301,7 @@
     </div>
     <div class="md-overs" id="md-overs"><%= match.overs || '' %></div>
     <% if (isLive && match.status) { %><div class="md-status"><%= match.status %></div><% } %>
+    <% if (typeof matchStale !== 'undefined' && matchStale) { %><div class="md-status md-stale" role="alert"><%= t.matches_stale_badge %></div><% } %>
   </div>
 
   <div class="lb" id="liveBoard"></div>

@@ -472,36 +472,36 @@ app.use(flash());
 app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
 const RedisRateLimitStore = require('./services/redisRateLimitStore');
-const { LIMITS: RL, userOrIpKey, generalMax, loginAccountKey, ipKey, IP_CEILINGS } = require('./middleware/rateLimitPolicy');
+const { LIMITS: RL, userOrIpKey, generalMax, ipKey, IP_CEILINGS, loginAccountIpKey, loginRequestWasSuccessful } = require('./middleware/rateLimitPolicy');
+const { loginSoftChain } = require('./middleware/loginLimiters');
 
-// এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
-// session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
-// লিমিটারটা /login, /register ও /admin/login — তিন জায়গাতেই একই কী (IP) দিয়ে গোনে।
-// আগে GET রিকোয়েস্টও গোনা হতো, অর্থাৎ শুধু পেজ লোড করলেই কোটা ফুরাত: একই IP থেকে
-// ১৫ মিনিটে ১০ বার লগইন/রেজিস্টার পেজ *দেখলেই* ফর্মের বদলে "rate limited" বার্তা
-// আসত (শেয়ার্ড অফিস IP বা মোবাইল CGNAT-এ খুবই বাস্তব সমস্যা, আর E2E-তে অ্যাডমিন
-// লগইন পেজ এভাবেই ফাঁকা আসত)। ব্রুট-ফোর্স সুরক্ষা আসে আসল চেষ্টাগুলো (POST) গুনে,
-// তাই GET/HEAD আর গোনা হয় না।
-// max: ১০ অপরিবর্তিত (ঢিলা করা নিষেধ); কী = প্রতি-অ্যাকাউন্ট (identifier), না থাকলে IP
+// A2: লগইন লিমিটার শুধু *ব্যর্থ* চেষ্টা গোনে (skipSuccessfulRequests + res.locals.loginSucceeded, routes/auth.js ও
+// routes/admin.js সঠিক ক্রেডেনশিয়ালে markLoginSuccess() ডাকে) এবং কী = অ্যাকাউন্ট+IP। আগে প্রতিটা POST গোনা হতো আর
+// কী ছিল শুধু অ্যাকাউন্ট — ভিকটিমের ফোন/ইমেইল নিয়ে স্প্যাম করে আসল মালিককে ১৫ মিনিট আটকানো যেত।
+// max: ১০ (অ্যাকাউন্ট+IP) ও ১০০ (প্রতি-IP) অপরিবর্তিত — ঢিলা করা নিষেধ। GET/HEAD গোনা হয় না (আগের মতো)।
+// অ্যাকাউন্ট-ব্যাপী (সব IP) নরম সীমা: middleware/loginLimiters.js (CAPTCHA+দেরি, কখনো ব্লক নয়)।
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  keyGenerator: loginAccountKey,
+  keyGenerator: loginAccountIpKey,
   max: 10,
   message: (req) => tr(req, 'common_rate_limited_15m'),
   skip: (req) => req.method === 'GET' || req.method === 'HEAD',
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: loginRequestWasSuccessful,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:login:acct:')
+  store: new RedisRateLimitStore('rl:login:acctip:')
 });
 
-// Step 3 A2: প্রতি-IP ছাদ — শেয়ার্ড মোবাইল/CGNAT IP-তে অনেক ইউজার একসাথে লগইন করলে একে অপরকে আটকাবে না।
-// একক অ্যাকাউন্টের ১০/১৫মি সীমা ওপরের loginLimiter-এ অপরিবর্তিত; এটা শুধু অ্যাকাউন্ট-ঘোরানো আক্রমণের ছাদ।
+// Step 3 A2: প্রতি-IP ছাদ — শেয়ার্ড মোবাইল/CGNAT IP-তে অনেক ইউজার একে অপরকে আটকাবে না (শুধু ব্যর্থ চেষ্টা গোনে)।
 const loginIpCeilingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   keyGenerator: ipKey,
   message: (req) => tr(req, 'common_rate_limited_15m'),
   skip: (req) => req.method === 'GET' || req.method === 'HEAD',
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: loginRequestWasSuccessful,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:login:ip:')
@@ -625,8 +625,11 @@ Sitemap: ${base}/sitemap.xml
 });
 
 app.use('/login', loginIpCeilingLimiter, loginLimiter);
+// নরম (ব্লক করে না) — CAPTCHA+দেরি পতাকা বসায়। হার্ড limiter-এর *পরে*, তাই একটা IP অ্যাকাউন্ট-ব্যাপী কাউন্টারে সর্বোচ্চ ১০ যোগ করতে পারে
+app.use('/login', ...loginSoftChain);
 app.use('/register', registerLimiter);
 app.use('/admin/login', loginIpCeilingLimiter, loginLimiter);
+app.use('/admin/login', ...loginSoftChain);
 app.use('/payment/deposit', financialLimiter);
 app.use('/payment/withdraw', financialLimiter);
 app.use('/profile/add-bank-card', financialLimiter);

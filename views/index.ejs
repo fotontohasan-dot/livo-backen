@@ -465,14 +465,22 @@ body.light-mode .promo-banner {
 </section>
 <style nonce="<%= cspNonce %>">
   .home-hub { margin: 4px 12px 14px; padding: 12px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-glass); }
-  .hh-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .hh-head h3 { margin: 0; font-size: 15px; }
-  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; }
-  .hh-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; }
+  .hh-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; }
+  .hh-head h3 { margin: 0; font-size: 15px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .hh-tabs { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 10px; padding-bottom: 2px; }
   .hh-tabs::-webkit-scrollbar { display: none; }
-  .hh-tab, .hh-select { flex: 0 0 auto; padding: 7px 16px; border-radius: 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-weight: 700; font-size: 12px; cursor: pointer; }
-  .hh-tab.active { background: var(--grad-gold); color: #000; border-color: transparent; }
-  .hh-select { max-width: 200px; }
+  /* style.css-এর গ্লোবাল `button { background:#f42a41 !important; color:#fff !important }` এই ট্যাবগুলোকে
+     লাল করে active অবস্থা মুছে দিত; তাই বেশি specificity + !important দিয়ে হাবের নিজস্ব রং ফেরানো হলো। */
+  .home-hub .hh-tab, .home-hub .hh-select { flex: 0 0 auto; box-sizing: border-box; min-height: 34px; padding: 7px 16px; border-radius: 20px; font-family: inherit; font-weight: 700; font-size: 12px; line-height: 1.2; white-space: nowrap; cursor: pointer; background: rgba(255,255,255,.04) !important; border: 1px solid rgba(255,255,255,.08) !important; color: var(--text-muted) !important; }
+  .home-hub .hh-tab:hover { background: rgba(255,255,255,.09) !important; color: var(--text-main, #fff) !important; }
+  .home-hub .hh-tab.active, .home-hub .hh-tab.active:hover { background: var(--grad-gold) !important; color: #000 !important; border-color: transparent !important; }
+  .home-hub .hh-select { max-width: 200px; text-overflow: ellipsis; }
+  @media (max-width: 480px) {
+    .home-hub { margin: 4px 8px 12px; padding: 10px; }
+    .home-hub .hh-tab, .home-hub .hh-select { padding: 7px 12px; }
+    .home-hub .hh-select { max-width: 150px; }
+  }
   .hh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
   .hh-row { display: block; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); text-decoration: none; color: inherit; }
   .hh-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-muted); }

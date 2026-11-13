@@ -149,7 +149,7 @@ describe('3.1 status — কোনো সিক্রেট নয়', () => {
   const SECRETS = {
     SMS_API_KEY: 'SMSKEY-super-secret-9f8e7d6c', SMS_API_URL: 'https://sms.example.com/send?token=abcd1234efgh5678',
     EMAIL_PASS: 'EmailPass!Secret#4567', EMAIL_USER: 'mailer@example.com',
-    TELEGRAM_BOT_TOKEN: ['123456789', 'AAHdq' + 'TcvCH1vGWJxfSeofSAs0K5PALDsaw'].join(':'), // fake value built at runtime so the secret scanner stays clean
+    TELEGRAM_BOT_TOKEN: ['123456789', 'FAKE_TEST_TOKEN_NOT_REAL'].join(':'),
     CLOUDINARY_API_SECRET: 'cloud-secret-zzzzzz-123', CLOUDINARY_API_KEY: '987654321012345', CLOUDINARY_CLOUD_NAME: 'mycloud',
     RAPIDAPI_KEY: 'rapid-secret-key-abcdef', CRICKET_API_KEY: 'cric-secret-key-uvwxyz'
   };

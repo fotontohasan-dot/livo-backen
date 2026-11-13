@@ -1355,6 +1355,7 @@
   "admin_nav_item_backups": "ব্যাকআপ",
   "admin_nav_item_system_health": "সিস্টেম হেলথ",
   "admin_nav_item_diagnostics": "ডায়াগনস্টিকস",
+  "admin_nav_item_integrations": "ইন্টিগ্রেশন",
   "admin_nav_item_sentry_status": "Sentry স্ট্যাটাস",
   "admin_nav_item_telegram": "টেলিগ্রাম",
   "admin_nav_item_api_keys": "API কী",
@@ -3447,5 +3448,14 @@
   "aci_col_last_err": "সর্বশেষ ত্রুটি",
   "aci_col_err_msg": "ত্রুটির বার্তা",
   "aci_col_breaker": "ব্রেকার (ওয়েব / ওয়ার্কার)",
-  "aci_processes": "প্রসেস"
+  "aci_processes": "প্রসেস",
+  "matches_data_stale": "লাইভ ডেটা পুরনো হয়ে যাওয়ায় অডস সাময়িকভাবে অনুপলব্ধ। একটু পরে আবার চেষ্টা করুন।",
+  "matches_stale_badge": "ডেটা বিলম্বিত",
+  "hub_title": "স্পোর্টস",
+  "hub_inplay": "ইন-প্লে",
+  "hub_today": "আজ",
+  "hub_tomorrow": "আগামীকাল",
+  "hub_competitions": "প্রতিযোগিতা",
+  "hub_view_all": "সব ম্যাচ দেখুন",
+  "hub_no_matches": "এই ভিউতে কোনো ম্যাচ নেই"
 }

@@ -1355,6 +1355,7 @@
   "admin_nav_item_backups": "Backups",
   "admin_nav_item_system_health": "System Health",
   "admin_nav_item_diagnostics": "Diagnostics",
+  "admin_nav_item_integrations": "Integrations",
   "admin_nav_item_sentry_status": "Sentry Status",
   "admin_nav_item_telegram": "Telegram",
   "admin_nav_item_api_keys": "API Keys",
@@ -3447,5 +3448,14 @@
   "aci_col_last_err": "Last error",
   "aci_col_err_msg": "Error message",
   "aci_col_breaker": "Breaker (web / worker)",
-  "aci_processes": "Processes"
+  "aci_processes": "Processes",
+  "matches_data_stale": "Odds are temporarily unavailable because live data is out of date. Please try again shortly.",
+  "matches_stale_badge": "Delayed data",
+  "hub_title": "Sports",
+  "hub_inplay": "In-Play",
+  "hub_today": "Today",
+  "hub_tomorrow": "Tomorrow",
+  "hub_competitions": "Competitions",
+  "hub_view_all": "View all matches",
+  "hub_no_matches": "No matches in this view"
 }
