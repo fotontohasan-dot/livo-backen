@@ -44,6 +44,15 @@ function resolveSslConfig() {
   }
 
   if (ca) return { rejectUnauthorized: true, ca };
+
+  // staging (APP_ENV/NODE_ENV=staging): Render-এর DB self-signed সার্টিফিকেট দেয়, তাই
+  // "self-signed certificate" এরর এড়াতে যাচাই বন্ধ। প্রোডাকশন এতে প্রভাবিত নয় (নিচে strict)।
+  // চাইলে DATABASE_CA_CERT দিলে staging-ও যাচাইসহ চলবে (উপরের লাইন)।
+  if (require('./utils/stagingGuard').isStaging()) {
+    console.warn('⚠️ staging: ডাটাবেস TLS সার্টিফিকেট যাচাই বন্ধ (rejectUnauthorized: false) — শুধু staging-এর জন্য।');
+    return { rejectUnauthorized: false };
+  }
+
   if (isProduction) return { rejectUnauthorized: true };
 
   // ডেভেলপমেন্ট: লোকাল/স্টেজিং সার্টিফিকেট প্রায়ই self-signed, তাই যাচাই শিথিল।
