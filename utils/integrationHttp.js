@@ -11,6 +11,7 @@
 
 const { getBreaker, CircuitOpenError } = require('../services/circuitBreaker');
 const { recordIntegrationResult } = require('../services/integrationStatus');
+const autoSuspend = require('../services/autoSuspend');
 
 const isUpstreamFailure = (res) => !!res && (res.status >= 500 || res.status === 429);
 
@@ -29,10 +30,15 @@ async function integrationFetch(name, url, options = {}, cfg = {}) {
       res = await plainTimeoutFetch(url, options, timeoutMs || Number(process.env.HTTP_TIMEOUT_MS) || 5000);
     }
     recordIntegrationResult(name, res.ok, res.ok ? null : `HTTP ${res.status}`);
+    // K10: ৫xx/429 = upstream সমস্যা; 4xx (যেমন 401/404) API-র "ডাউন" সংকেত নয়। payment:*/wallet:* এখানে উপেক্ষিত।
+    autoSuspend.recordOutcome(name, !isUpstreamFailure(res), { rateLimited: res.status === 429 });
     return res;
   } catch (err) {
     // breaker OPEN-এ কোনো কল যায়নি — upstream-এর "ব্যর্থতা" হিসেবে আবার রেকর্ড করার দরকার নেই
-    if (!(err instanceof CircuitOpenError)) recordIntegrationResult(name, false, err && err.message);
+    if (!(err instanceof CircuitOpenError)) {
+      recordIntegrationResult(name, false, err && err.message);
+      autoSuspend.recordOutcome(name, false);
+    }
     throw err;
   }
 }
@@ -64,9 +70,13 @@ async function integrationCall(name, fn, cfg = {}) {
       ? await getBreaker(name).fire(fn, { timeoutMs: cfg.timeoutMs })
       : await fn();
     recordIntegrationResult(name, true);
+    autoSuspend.recordOutcome(name, true);
     return result;
   } catch (err) {
-    if (!(err instanceof CircuitOpenError)) recordIntegrationResult(name, false, err && err.message);
+    if (!(err instanceof CircuitOpenError)) {
+      recordIntegrationResult(name, false, err && err.message);
+      autoSuspend.recordOutcome(name, false);
+    }
     throw err;
   }
 }

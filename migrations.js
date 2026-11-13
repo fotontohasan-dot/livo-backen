@@ -2636,6 +2636,24 @@ async function applyMigrations(pool) {
     `);
     console.log('✅ integration_status ও process_heartbeat ready');
 
+    // K10: অটো-সাসপেন্ড অবস্থা (web ও worker একই দেখে)। শুধু sports:*/casino:*/sms/email; payment:*/wallet:* কখনো নয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS integration_suspend (
+        name TEXT PRIMARY KEY,
+        suspended BOOLEAN NOT NULL DEFAULT false,
+        source TEXT,
+        reason TEXT,
+        detail VARCHAR(255),
+        suspended_at TIMESTAMPTZ,
+        resumed_at TIMESTAMPTZ,
+        success_streak INTEGER NOT NULL DEFAULT 0,
+        suspend_count INTEGER NOT NULL DEFAULT 0,
+        updated_by TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('✅ integration_suspend ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।
