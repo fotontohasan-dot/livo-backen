@@ -3407,5 +3407,7 @@
   "aci_breaker_closed": "closed",
   "aci_breaker_open": "OPEN",
   "aci_breaker_half_open": "half-open",
-  "aci_breaker_none": "—"
+  "aci_breaker_none": "—",
+  "matches_data_stale": "লাইভ ডেটা পুরনো হয়ে যাওয়ায় অডস সাময়িকভাবে অনুপলব্ধ। একটু পরে আবার চেষ্টা করুন।",
+  "matches_stale_badge": "ডেটা বিলম্বিত"
 }

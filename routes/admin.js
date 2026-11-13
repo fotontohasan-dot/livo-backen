@@ -131,6 +131,8 @@ async function withTransaction(fn) {
   }
 }
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const { loginAccountIpKey, loginRequestWasSuccessful, markLoginSuccess } = require('../middleware/rateLimitPolicy');
+const { softLoginDelayMs } = require('../middleware/loginLimiters');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl, clampPage } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
@@ -221,16 +223,23 @@ router.get('/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
+// A2: কী = অ্যাকাউন্ট(username)+IP, শুধু ব্যর্থ চেষ্টা গোনা (সফল লগইন বাজেট খরচ করে না); max ৮ অপরিবর্তিত।
+// আগে কী ছিল শুধু IP আর সব POST গোনা হতো — একই অফিস-IP-র এক অ্যাডমিনের ভুল অন্যজনকে আটকাত।
 const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
+  keyGenerator: loginAccountIpKey,
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: loginRequestWasSuccessful,
   message: (req) => tr(req, 'common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:adminlogin:')
+  store: new RedisRateLimitStore('rl:adminlogin:acctip:')
 });
 
 router.post('/login', adminLoginLimiter, async (req, res) => {
+  // A2: অ্যাকাউন্ট-ব্যাপী নরম থ্রটল (app.js-এর loginSoftChain) হলে ছোট দেরি — ব্লক নয়
+  { const d = softLoginDelayMs(req); if (d > 0) await new Promise((r) => setTimeout(r, d)); }
   // মোবাইল কীবোর্ডের সাজেশন/অটোকারেক্ট প্রায়ই শেষে একটা স্পেস বসিয়ে দেয় — ইমেইল/ইউজারনেমে
   // সেটা থাকলে কোনো অ্যাডমিনই মিলত না, অথচ রিকভারি রুট ইমেইল trim করেই সেভ করে।
   const username = String((req.body && req.body.username) || '').trim();
@@ -281,6 +290,9 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       });
       return res.render('admin/login', { error: req.t('admin_login_invalid_credentials') });
     }
+
+    // A2: পাসওয়ার্ড সঠিক — ব্যর্থ-চেষ্টা বাজেট থেকে কাউন্ট ফেরত (2FA ধাপের নিজস্ব strict2FALimiter আছে)
+    markLoginSuccess(res);
 
     // ==================== 2FA চালু থাকলে সরাসরি লগইন না করিয়ে ভেরিফিকেশন স্টেপে পাঠানো ====================
     if (admin.totp_enabled) {

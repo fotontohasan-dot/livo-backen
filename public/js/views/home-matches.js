@@ -53,6 +53,7 @@
     top.appendChild(el('span', 'hh-league', icon(m.sport) + ' ' + (m.league || m.sport || '')));
     if (isLive(m)) top.appendChild(el('span', 'hh-live', 'LIVE'));
     else if (m.date) top.appendChild(el('span', 'hh-time', new Date(m.date).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })));
+    if (m.data_stale) top.appendChild(el('span', 'hh-time', '\u26A0 ' + (m.stale_label || '')));
     a.appendChild(top);
     var teams = el('div', 'hh-teams');
     [[m.logoA, (m.teams && m.teams[0]) || m.homeTeam, m.homeScore], [m.logoB, (m.teams && m.teams[1]) || m.awayTeam, m.awayScore]].forEach(function (t) {
