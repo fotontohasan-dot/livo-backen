@@ -54,6 +54,10 @@
 
 ---
 
+**Fixed in the file (web and worker both):** `APP_ENV=staging` and `SSLCZ_IS_LIVE=false`. Do not add them to the env group and never override them.
+`APP_ENV=staging` switches on the staging safeguards (SSLCommerz forced to sandbox even if `SSLCZ_IS_LIVE=true` is set by mistake, staging DB SSL handling, provider check).
+If a service looks like staging (Render service name or `PUBLIC_APP_URL` contains "staging") but `APP_ENV` is missing, the web boot logs `STAGING সতর্কতা: APP_ENV সেট নেই …` (it does not block boot).
+
 `render.staging.yaml` defines a staging copy of production: 2 web instances, worker, Postgres, two Key Value stores
 (session/queue `noeviction`, cache `allkeys-lru`) and an optional mock provider. It deploys from a branch named `staging`.
 It shares nothing with production (names, DB, Redis, env group, secrets).

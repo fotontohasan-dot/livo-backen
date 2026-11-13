@@ -1008,6 +1008,7 @@
   "api_key_missing_scope": "This key does not have the \"{value}\" scope.",
   "api_key_verify_failed": "Could not verify the API key.",
   "auth_session_invalid": "Your session is no longer valid. Please log in again.",
+  "auth_password_reset_required": "For security reasons you must change your password now. Other pages are unavailable until you do.",
   "auth_admin_required": "Access denied. Please log in as an administrator.",
   "auth_email_verify_required": "Please verify your email before using this feature.",
   "auth_email_verify_required_detail": "❌ Please verify your email before using this feature. You can resend the verification link from your profile page.",

@@ -135,7 +135,8 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security/login-password');
     }
     const hashed = await bcrypt.hash(np, 12);
-    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW(), must_reset_password=false WHERE id=$2`, [hashed, req.session.user.id]);
+    cache.del(`auth:active:${req.session.user.id}`).catch(() => {});
     // পাসওয়ার্ড বদলের পর অন্য সব ডিভাইসের পুরনো সেশন বাতিল (সেশন হাইজ্যাক ঝুঁকি কমায়);
     // বর্তমান সেশন চালু থাকে। routes/auth.js-এর password-reset-এও একই আচরণ।
     try {
