@@ -1,5 +1,6 @@
 const { pool } = require('../../db');
 const referral = require('../../services/referral');
+const { uniquePhone } = require('../helpers/app');
 
 // ==================== Phase 8: referral signup bonus ====================
 //
@@ -26,7 +27,10 @@ async function makeUser(name) {
     `INSERT INTO users (username, phone, password, coins)
      VALUES ($1, $2, 'x', 0) RETURNING id`,
     [name + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-     '9' + Date.now().toString().slice(-9) + Math.floor(Math.random() * 9)]
+     // আগে '9' + Date.now() + random digit ছিল: referrer ও referred একই
+     // মিলিসেকেন্ডে তৈরি হলে ৯ ভাগের ১ সম্ভাবনায় users_phone_key ভাঙত।
+     // uniquePhone() ফাইল-ব্যাকড sequence ব্যবহার করে, তাই সংঘর্ষ হয় না।
+     uniquePhone()]
   );
   return r.rows[0].id;
 }

@@ -86,7 +86,7 @@ describe('Backup & Restore System', () => {
       const uniqueUsername = `restoretest_${Date.now()}`;
       await pool.query(
         `INSERT INTO users (username, password, phone, role) VALUES ($1, 'hash', $2, 'user')`,
-        [uniqueUsername, `01${Math.floor(100000000 + Math.random() * 800000000)}`]
+        [uniqueUsername, uniquePhone()]
       );
       const beforeRow = await pool.query('SELECT id FROM users WHERE username = $1', [uniqueUsername]);
       expect(beforeRow.rows.length).toBe(1);

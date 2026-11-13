@@ -1,3 +1,8 @@
+// টাইমজোন স্থির: +03 (বা অন্য) মেশিনে তারিখ-নির্ভর টেস্ট (staleSportsData,
+// backupRestoreDrill, playerMarkets) ভাঙত। config main process-এ লোড হয় এবং
+// worker-গুলো এই env উত্তরাধিকারসূত্রে পায়, তাই সব টেস্ট UTC-তে চলে।
+process.env.TZ = 'UTC';
+
 module.exports = {
   testEnvironment: 'node',
   rootDir: '.',

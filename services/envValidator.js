@@ -152,6 +152,18 @@ function runStartupValidation() {
     warnings.forEach(w => console.warn('   - ' + w));
   }
 
+  // staging গার্ড: কোন প্রোভাইডার মক নয় (শুধু নাম, কোনো সিক্রেট নয়) — বুট আটকায় না।
+  const { isStaging, nonMockProviders } = require('../utils/stagingGuard');
+  if (isStaging()) {
+    const real = nonMockProviders();
+    if (real.length) {
+      console.warn('⚠️ STAGING সতর্কতা: নিচের প্রোভাইডার মক নয়, আসল হোস্টে কল যেতে পারে:');
+      real.forEach(r => console.warn('   - ' + r));
+    } else {
+      console.log('✅ staging: সব কনফিগার্ড প্রোভাইডার মক/নিষ্ক্রিয়');
+    }
+  }
+
   if (!ok) {
     console.error('❌ Environment Variable ভ্যালিডেশন ব্যর্থ:');
     errors.forEach(e => console.error('   - ' + e));

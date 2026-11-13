@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 const { pool } = require('../../db');
 const backupManager = require('../../services/backupManager');
+const { uniquePhone } = require('../helpers/app');
 
 jest.setTimeout(120000);
 
@@ -24,7 +25,7 @@ const TAG = 'drill_' + Date.now();
 
 async function makeUser(suffix) {
   const username = `${TAG}_${suffix}`;
-  const phone = '019' + String(Date.now()).slice(-8) + suffix;
+  const phone = uniquePhone();
   const r = await pool.query(
     `INSERT INTO users (username, phone, password, coins, role, created_at)
      VALUES ($1, $2, $3, $4, 'user', NOW()) RETURNING *`,
