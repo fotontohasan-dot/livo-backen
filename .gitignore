@@ -42,3 +42,6 @@ test-results/
 public/images/teams/*
 !public/images/teams/.gitkeep
 dump.rdb
+
+# Step 4: লোড টেস্টের ফলাফল ফাইল — রিপোতে কমিট হবে না
+scripts/loadtest/results/

@@ -55,6 +55,10 @@ const queueFailedGauge = client && new client.Gauge({ name: 'bet420_queue_failed
 const queueCompletedGauge = client && new client.Gauge({ name: 'bet420_queue_completed_jobs', help: 'Job queue-তে completed জব সংখ্যা', registers: [register] });
 const queueWorkerUpGauge = client && new client.Gauge({ name: 'bet420_queue_worker_up', help: 'Background job worker চলছে কিনা (1=running, 0=stopped)', registers: [register] });
 
+// Step 4 D1: Redis মেমরি/কানেকশন, BullMQ ডেপথ, api-log ড্রপ, breaker অবস্থা, DB pool in-use
+const opsMetrics = require('./opsMetrics');
+const opsGauges = opsMetrics.createOpsGauges(client, register);
+
 // ==================== Route path normalize — /users/123 কে /users/:id বানায়, যাতে লেবেল কার্ডিনালিটি না বাড়ে ====================
 function normalizeRoute(req) {
   if (req.route && req.route.path) {
@@ -127,6 +131,8 @@ async function refreshAsyncMetrics() {
   } catch (err) {
     console.error('[metrics] Queue metrics refresh error:', err.message);
   }
+
+  await opsMetrics.refreshOpsMetrics(opsGauges);
 }
 
 module.exports = { register, httpMiddleware, refreshAsyncMetrics, enabled: !!client };
