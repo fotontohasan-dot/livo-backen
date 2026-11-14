@@ -67,6 +67,38 @@ function recordIntegrationResult(name, ok, errorMessage) {
   } catch (_) { /* রেকর্ডিং কখনো মূল কাজ ভাঙবে না */ }
 }
 
+// ---------- অথ ত্রুটি (HTTP 401/403) ----------
+// API key মেয়াদ শেষ বা ভুল হলে প্রোভাইডার 401/403 দেয়। এটা অটো-সাসপেন্ডে গোনা হয় না (autoSuspend শুধু 5xx/429/টাইমআউট ধরে),
+// কিন্তু অ্যাডমিনকে আলাদা করে জানাতে এখানে রেকর্ড হয়। শুধু স্ট্যাটাস কোড ও সময় — বার্তা/বডি/হেডার কিছুই নয় (কোনো গোপন মানের ঝুঁকি নেই)।
+// "সক্রিয়" = শেষ অথ ত্রুটি শেষ সফল কলের পরে; একটা সফল কল এলে নিজে মিটে যায়।
+const AUTH_ERROR_STATUSES = new Set([401, 403]);
+const isAuthErrorStatus = (s) => AUTH_ERROR_STATUSES.has(Number(s));
+const lastAuthWrite = new Map(); // name -> at
+
+/**
+ * recordAuthError('sports:cricapi', 401) — কখনো throw/reject করে না; Promise ফেরত দেয় (টেস্ট await করতে পারে, কলার করে না)।
+ * throttle: একই নামে ব্যর্থ-লেখার মতোই ৫ সেকেন্ডে একবার।
+ */
+function recordAuthError(name, status) {
+  try {
+    if (!name || !isAuthErrorStatus(status)) return Promise.resolve(false);
+    const now = Date.now();
+    const prev = lastAuthWrite.get(name);
+    if (prev && now - prev < ERROR_WRITE_EVERY_MS) return Promise.resolve(false);
+    lastAuthWrite.set(name, now);
+    return dbPool().query(
+      `INSERT INTO integration_status (name, last_auth_error_at, last_auth_error_status, auth_error_count, updated_at)
+       VALUES ($1, NOW(), $2, 1, NOW())
+       ON CONFLICT (name) DO UPDATE SET last_auth_error_at = NOW(), last_auth_error_status = $2,
+         auth_error_count = integration_status.auth_error_count + 1, updated_at = NOW()`,
+      [String(name), Number(status)]
+    ).then(() => true, (e) => {
+      console.warn('[integrationStatus] auth error record failed:', String(e && e.message).slice(0, 120));
+      return false;
+    });
+  } catch (_) { return Promise.resolve(false); /* রেকর্ডিং কখনো মূল কাজ ভাঙবে না */ }
+}
+
 // ---------- heartbeat (web ও worker উভয়ই লেখে) ----------
 const bootedAt = new Date();
 let timer = null;
@@ -99,6 +131,20 @@ function startHeartbeat(role) {
 
 function stopHeartbeat() { if (timer) { clearInterval(timer); timer = null; } }
 
+/** integration_status সারি → { active, status, lastAt, count }। বিশুদ্ধ ফাংশন (টেস্টযোগ্য)। */
+function authErrorState(row) {
+  const r = row || {};
+  const lastAt = r.last_auth_error_at || null;
+  const okAt = r.last_success_at || null;
+  const active = !!lastAt && (!okAt || new Date(lastAt).getTime() > new Date(okAt).getTime());
+  return {
+    active,
+    status: lastAt && isAuthErrorStatus(r.last_auth_error_status) ? Number(r.last_auth_error_status) : null,
+    lastAt,
+    count: Number(r.auth_error_count) || 0
+  };
+}
+
 // ---------- রিপোর্ট (অ্যাডমিন পেজ/JSON) ----------
 /**
  * প্রতিটা ইন্টিগ্রেশনের জন্য: web/worker আলাদা configured (true/false/null=heartbeat নেই), শেষ সফল/ব্যর্থ সময়,
@@ -107,7 +153,7 @@ function stopHeartbeat() { if (timer) { clearInterval(timer); timer = null; } }
 async function buildStatusReport() {
   const pool = dbPool();
   const [statusRes, hbRes] = await Promise.all([
-    pool.query('SELECT name, last_success_at, last_error_at, last_error_message, success_count, error_count FROM integration_status'),
+    pool.query('SELECT name, last_success_at, last_error_at, last_error_message, success_count, error_count, last_auth_error_at, last_auth_error_status, auth_error_count FROM integration_status'),
     pool.query('SELECT instance_id, role, booted_at, last_seen, env_flags, breakers FROM process_heartbeat WHERE last_seen > NOW() - INTERVAL \'24 hours\' ORDER BY last_seen DESC')
   ]);
   const byName = new Map(statusRes.rows.map((r) => [r.name, r]));
@@ -148,6 +194,7 @@ async function buildStatusReport() {
       lastSuccessAt: s.last_success_at || null,
       lastErrorAt: s.last_error_at || null,
       lastError: s.last_error_message ? sanitizeError(s.last_error_message) : null, // সংরক্ষিত মানও আবার পরিষ্কার
+      authError: authErrorState(s),
       breaker: { web: breakerFor(web), worker: breakerFor(worker) },
       suspend: (() => {
         const x = suspendByName.get(def.id);
@@ -174,6 +221,7 @@ async function buildStatusReport() {
 }
 
 module.exports = {
-  sanitizeError, recordIntegrationResult, startHeartbeat, stopHeartbeat, writeHeartbeat,
-  buildStatusReport, MAX_ERR_LEN, _lastWrite: lastWrite
+  sanitizeError, recordIntegrationResult, recordAuthError, isAuthErrorStatus, authErrorState,
+  startHeartbeat, stopHeartbeat, writeHeartbeat,
+  buildStatusReport, MAX_ERR_LEN, _lastWrite: lastWrite, _lastAuthWrite: lastAuthWrite
 };

@@ -121,6 +121,16 @@ function pgStore(pool) {
         `UPDATE integration_suspend SET suspended = false, resumed_at = NOW(), success_streak = 0, updated_by = $2, updated_at = NOW()
          WHERE name = $1 AND suspended ${onlyAuto ? "AND source = 'auto'" : ''} RETURNING *`, [name, by || null]);
       return r.rows[0] || null;
+    },
+    // probe "দাবি": সব প্রসেসের মধ্যে একটাই জিতবে। এক পরমাণু UPDATE — row-লকে দুই প্রসেস একসাথে এলেও একটার rowCount ১, অন্যটার ০।
+    // সময় DB-র ঘড়িতে (NOW()), তাই প্রসেসগুলোর ঘড়ির ফারাক গুরুত্বহীন। ফেরত: true = এই প্রসেস probe চালাবে।
+    async claimProbe(name, intervalMs) {
+      const r = await pool.query(
+        `UPDATE integration_suspend SET last_probe_at = NOW()
+         WHERE name = $1 AND suspended AND source = 'auto'
+           AND (last_probe_at IS NULL OR last_probe_at <= NOW() - ($2::double precision * INTERVAL '1 millisecond'))
+         RETURNING name`, [name, Number(intervalMs)]);
+      return r.rowCount === 1;
     }
   };
 }
@@ -308,6 +318,17 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       const fn = probes.get(row.name);
       if (!fn) continue;
       if (now() - (lastProbeAt.get(row.name) || 0) < c.probeIntervalMs) continue; // রেট-লিমিটেড API-তে ঘন ঘন নয়
+      // একাধিক প্রসেস (web×২ + worker; PROCESS_ROLE সেট না থাকলে প্রতিটাতেই scheduler চলে) মিলে একই API-তে ডবল probe না যাক:
+      // সীমাটা DB-তে শেয়ার্ড। দাবি না পেলে বা দাবি করা ব্যর্থ হলে *এই টিকে probe নয়* (ডুপ্লিকেটের চেয়ে একটা টিক বাদ নিরাপদ;
+      // ফেইল-ওপেন সাসপেন্ডের পথ এতে অপরিবর্তিত)। স্টোরে claimProbe না থাকলে (টেস্টের মেমরি-স্টোর) শুধু লোকাল সীমা।
+      if (typeof store.claimProbe === 'function') {
+        let won = false; let failed = false;
+        try { won = await store.claimProbe(row.name, c.probeIntervalMs); } catch (err) { failed = true; logStoreError(err); }
+        if (!won) {
+          if (!failed) lastProbeAt.set(row.name, now()); // অন্য প্রসেস জিতেছে — এই প্রসেস এই ব্যবধানে আর চেষ্টা করবে না; DB-ত্রুটিতে পরের টিকে আবার চেষ্টা
+          continue;
+        }
+      }
       lastProbeAt.set(row.name, now());
       try { await fn(); ran++; } catch (_) { /* ব্যর্থ probe = breaker/outcome নিজেই ধরেছে */ }
     }
