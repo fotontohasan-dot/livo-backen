@@ -125,7 +125,7 @@ function pgStore(pool) {
   };
 }
 
-function createAutoSuspend({ store, now = Date.now, env = process.env, logger = console, breakers = null, audit = null } = {}) {
+function createAutoSuspend({ store, now = Date.now, env = process.env, logger = console, breakers = null, audit = null, onReadFailure = null } = {}) {
   const trackers = new Map(); // name -> { consecutive, window, rateLimited }
   const cache = new Map();    // name -> { at, state|null }
   const probes = new Map();   // name -> async fn
@@ -135,12 +135,20 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
 
   const cfg = () => resolveConfig(env);
 
+  // warn লগে কোনো মান যায় না: শুধু ধ্রুব বার্তা ও (থাকলে) নিরাপদ ত্রুটি-কোড; err.message/SQL/কানেকশন-তথ্য কখনো নয়।
   function logStoreError(err) {
     const t = now();
     if (t - lastErrLog > 30000) {
       lastErrLog = t;
-      logger.warn('[auto-suspend] স্টোর ত্রুটি (ফেইল-ওপেন, ফিচার বন্ধ হচ্ছে না):', String(err && (err.code || err.message)).slice(0, 80));
+      const code = err && typeof err.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(err.code) ? err.code : 'unknown';
+      logger.warn(`[auto-suspend] স্টোর ত্রুটি (ফেইল-ওপেন, ফিচার বন্ধ হচ্ছে না) code=${code}`);
     }
+  }
+
+  // সাসপেন্ড অবস্থা *পড়া* ব্যর্থ: ফেইল-ওপেন (বাজির পথ চালু) + throttled warn + প্রতিবার মেট্রিক।
+  function readFailure(err) {
+    logStoreError(err);
+    try { if (onReadFailure) onReadFailure(); } catch (_) { /* মেট্রিক ব্যর্থ হলেও বাজির পথ চলে */ }
   }
 
   function sanitize(text) {
@@ -156,7 +164,7 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       cache.set(name, { at: now(), state });
       return state;
     } catch (err) {
-      logStoreError(err);
+      readFailure(err);
       return null; // ফেইল-ওপেন
     }
   }
@@ -272,7 +280,7 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       const rows = await store.list();
       listCache = { at: now(), rows };
       return rows;
-    } catch (err) { logStoreError(err); return []; }
+    } catch (err) { readFailure(err); return []; }
   }
 
   /** সাসপেন্ড থাকা casino প্রোভাইডারের নামের Set (লবির জন্য, এক কোয়েরিতে) */
@@ -320,6 +328,7 @@ function instance() {
   const store = pgStore({ query: (...a) => require('../db').pool.query(...a) });
   singleton = createAutoSuspend({
     store,
+    onReadFailure: () => { try { require('./metrics').incAutoSuspendReadFailure(); } catch (_) { /* metrics না থাকলেও চলে */ } },
     audit: (id, label, action, details) => require('./auditLog').logAdminAction(id, label, action, details, null)
   });
   try { require('./circuitBreaker').onStateChange((ev) => singleton.onBreakerChange(ev)); } catch (_) { /* breaker না থাকলে শুধু নিজস্ব সংকেত */ }

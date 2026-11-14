@@ -135,4 +135,14 @@ async function refreshAsyncMetrics() {
   await opsMetrics.refreshOpsMetrics(opsGauges);
 }
 
-module.exports = { register, httpMiddleware, refreshAsyncMetrics, enabled: !!client };
+// K10 fail-open: integration_suspend (Postgres) পড়তে ব্যর্থ হলে বাজির পথ চালু থাকে; এই কাউন্টার বলে কতবার এমন হলো (কোনো মান/লেবেল নেই)।
+const autoSuspendReadFailuresTotal = client && new client.Counter({
+  name: 'bet420_auto_suspend_read_failures_total',
+  help: 'সাসপেন্ড অবস্থা (integration_suspend) পড়তে ব্যর্থ হওয়ার সংখ্যা — ফেইল-ওপেন (বাজি চালু রেখে)',
+  registers: [register]
+});
+function incAutoSuspendReadFailure() {
+  try { if (autoSuspendReadFailuresTotal) autoSuspendReadFailuresTotal.inc(); } catch (_) { /* মেট্রিক কখনো মূল পথ ভাঙে না */ }
+}
+
+module.exports = { register, httpMiddleware, refreshAsyncMetrics, enabled: !!client, incAutoSuspendReadFailure };
