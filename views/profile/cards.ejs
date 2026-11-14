@@ -169,8 +169,8 @@
       </div>
 
       <div class="sheet-field">
-        <label><%= t.cw_password_label %></label>
-        <input type="password" name="holder_name" placeholder="<%= t.cw_password_placeholder %>" required>
+        <label><%= t.cw_holder_name_label %></label>
+        <input type="text" name="holder_name" autocomplete="name" autocapitalize="words" spellcheck="false" minlength="2" maxlength="60" data-invalid-msg="<%= t.holder_name_invalid %>" placeholder="<%= t.holder_name_placeholder %>" required>
       </div>
 
       <div class="sheet-actions">
@@ -180,6 +180,7 @@
   </div>
 </div>
 
+<script src="/js/holder-name-validate.js"></script>
 <script nonce="<%= cspNonce %>">
   function toggleModal(show) {
     var modal = document.getElementById('bottomSheet');

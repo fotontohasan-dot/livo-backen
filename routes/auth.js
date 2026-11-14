@@ -971,7 +971,7 @@ router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async
     // অর্থাৎ টোকেনটা কার্যত single-use ছিল না। WHERE-এ reset_token রাখার ফলে দ্বিতীয় কলটা
     // rowCount 0 পায় (প্রথমটা ইতিমধ্যে NULL করে দিয়েছে) এবং কিছুই পরিবর্তন করতে পারে না।
     const updated = await pool.query(
-      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL
+      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL, must_reset_password = false
        WHERE reset_token = $2 AND reset_token_expiry > NOW()
        RETURNING id, username`,
       [hashed, hashToken(token)]
@@ -981,6 +981,7 @@ router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async
       return res.redirect('/forgot-password');
     }
     cache.del(`reset_token:${hashToken(token)}`).catch(() => {});
+    cache.del(`auth:active:${updated.rows[0].id}`).catch(() => {});
 
     // PHASE 5/14 fix: password reset একটি security-sensitive account event,
     // কিন্তু এর কোনো audit trail ছিল না। token বা password কখনো log করা হয় না।

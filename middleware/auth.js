@@ -20,7 +20,7 @@ function rowToStatus(row) {
   // নিরপরাধ ব্যবহারকারী লগআউট হয়ে যেত।
   if (!row) return { exists: false, banned: false, selfExcluded: false };
   const selfExcluded = !!(row.self_exclude_until && new Date(row.self_exclude_until) > new Date());
-  return { exists: true, banned: !!row.is_banned, selfExcluded: !!selfExcluded };
+  return { exists: true, banned: !!row.is_banned, selfExcluded: !!selfExcluded, mustResetPassword: !!row.must_reset_password };
 }
 
 // ক্যাশ থেকে আসা অবজেক্ট আসলেই একটা সম্পূর্ণ স্ট্যাটাস কিনা। serialization ভাঙা,
@@ -38,7 +38,7 @@ async function isUserActive(userId) {
   const key = cacheKeys.userActiveStatus(userId);
   try {
     const cached = await cache.getOrSet(key, ACTIVE_STATUS_TTL_SECONDS, async () => {
-      const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
+      const result = await pool.query('SELECT is_banned, self_exclude_until, must_reset_password FROM users WHERE id = $1', [userId]);
       return rowToStatus(result.rows[0]);
     });
     if (!isDefinitiveStatus(cached)) {
@@ -47,7 +47,7 @@ async function isUserActive(userId) {
       // যাতে ব্যানড ইউজার ভুলবশত ঢুকতে না পারে এবং সুস্থ ইউজার ভুলবশত
       // "অস্তিত্বহীন" গণ্য হয়ে লগআউট না হয়।
       if (cached) await cache.del(key).catch(() => {});
-      const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
+      const result = await pool.query('SELECT is_banned, self_exclude_until, must_reset_password FROM users WHERE id = $1', [userId]);
       return rowToStatus(result.rows[0]);
     }
     return cached;
@@ -66,6 +66,13 @@ async function isUserActive(userId) {
     // ধ্বংস করা হয় না — DB ফিরলে ইউজার রিফ্রেশ করলেই আবার ঢুকতে পারবে।
     return { exists: false, banned: false, selfExcluded: false, checkFailed: true };
   }
+}
+
+// must_reset_password থাকা ইউজারের জন্য অনুমোদিত পথ (query string বাদ দিয়ে মেলানো হয়)।
+const PASSWORD_RESET_ALLOWED_PATHS = ['/profile/security/login-password', '/profile/change-password', '/logout'];
+function isPasswordResetAllowedPath(url) {
+  const path = String(url || '').split('?')[0].replace(/\/+$/, '') || '/';
+  return PASSWORD_RESET_ALLOWED_PATHS.includes(path);
 }
 
 const isAuth = async (req, res, next) => {
@@ -116,6 +123,16 @@ const isAuth = async (req, res, next) => {
       return res.status(401).json({ success: false, error: tr(req, 'auth_session_invalid') });
     }
     return res.redirect('/login');
+  }
+
+  // বাধ্যতামূলক পাসওয়ার্ড রিসেট: ফ্ল্যাগ থাকলে শুধু পাসওয়ার্ড বদল ও লগআউট ছাড়া কিছুই চলবে না।
+  // (পুরনো সেশন বাতিলের পরেও কোনো সেশন টিকে গেলে এই গার্ড তাকে আটকায়।)
+  if (status.mustResetPassword && !isPasswordResetAllowedPath(req.originalUrl || req.url)) {
+    if (req.path.includes('/api/') || (req.originalUrl || '').includes('/api/')) {
+      return res.status(403).json({ success: false, error: tr(req, 'auth_password_reset_required') });
+    }
+    if (req.flash) req.flash('error', tr(req, 'auth_password_reset_required'));
+    return res.redirect('/profile/security/login-password');
   }
 
   return next();
