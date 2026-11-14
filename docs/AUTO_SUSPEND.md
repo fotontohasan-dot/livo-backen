@@ -28,9 +28,9 @@
 | `AUTO_SUSPEND_ON_BREAKER_OPEN` (true) | breaker OPEN-কে সংকেত ধরা |
 | `AUTO_SUSPEND_RESUME_SUCCESSES` (3) | নিজে খুলতে টানা সফল কল |
 | `AUTO_SUSPEND_MIN_SUSPEND_MS` (120000) | ন্যূনতম বন্ধ থাকার সময় (flapping ঠেকাতে) |
-| `AUTO_SUSPEND_CACHE_TTL_MS` (5000), `AUTO_SUSPEND_PROBE_INTERVAL_MS` (60000) | ক্যাশ; probe-র ন্যূনতম ব্যবধান |
+| `AUTO_SUSPEND_CACHE_TTL_MS` (5000), `AUTO_SUSPEND_PROBE_INTERVAL_MS` (120000 = ২ মিনিট) | ক্যাশ; probe-র ন্যূনতম ব্যবধান |
 
-HTTP 5xx/429 = ব্যর্থতা; 4xx (401/404) API-র "ডাউন" সংকেত নয়। **K9:** আলাদা রেট-লিমিট "থামার" মডিউল এই রিপোতে পাইনি; তাই 429 সরাসরি গোনা হয়। K9 এলে `autoSuspend.recordOutcome(name, false, { rateLimited: true })` ডাকলেই হবে।
+**ব্যর্থতা গোনা হয় শুধু:** টাইমআউট, নেটওয়ার্ক ত্রুটি, HTTP 5xx ও 429। **4xx গোনা হয় না** — ব্যর্থতাও না, সফলতাও না (আগে 4xx "সফল" ধরে ব্যর্থতার ধারা শূন্য করত ও নিজে-চালুর গণনায় যোগ হতো)। `Retry-After` হেডার মানা হয় না। **K9:** আলাদা রেট-লিমিট "থামার" মডিউল এই রিপোতে পাইনি; তাই 429 সরাসরি গোনা হয়। K9 এলে `autoSuspend.recordOutcome(name, false, { rateLimited: true })` ডাকলেই হবে।
 
 ## ৪. নিজে চালু হওয়া
 auto-সাসপেন্ডের পর: টানা `RESUME_SUCCESSES` সফল কল **এবং** `MIN_SUSPEND_MS` পেরোনো **এবং** ওই প্রসেসের breaker closed (half-open→closed) → চালু; মাঝে ব্যর্থতা এলে ধারা শূন্য। খোলার পর ট্র্যাকার শূন্য থেকে শুরু (১টা ব্যর্থতায় আবার বন্ধ নয়)। হাতে বন্ধ করলে কখনো নিজে খোলে না। সফল কল আসে সাধারণ sync থেকে এবং worker-এর `integration_suspend_probe` জব (১ মিনিট; শুধু অটো-সাসপেন্ড থাকা **ক্যাসিনো** প্রোভাইডারে হালকা `fetchGames`)। স্পোর্টস সফল কল আসে ম্যাচ sync থেকে (ডিফল্ট ~১৫ মিনিট) — দ্রুত চাইলে অ্যাডমিন হাতে রিজিউম করুন।
@@ -48,5 +48,8 @@ auto-সাসপেন্ডের পর: টানা `RESUME_SUCCESSES` স�
 
 ## বাকি / সীমাবদ্ধতা
 - `email`/`sms` গেট নেই (লক-আউট ঝুঁকি); চাইলে শুধু "রিসেন্ড"/নোটিফিকেশন পাথে নরম গেট বসানো যায়।
-- `sports:*` probe নেই (রেট-লিমিটেড/কোটা-ভিত্তিক API); ক্যাসিনো probe `fetchGames` ডকুমেন্টেশন-নিশ্চিত নয় (`TODO(DB-DOC)`)।
+- `sports:*` probe আছে (`sportsAPI.probeCricket/probeFootball`: শুধু-পড়া GET, ক্যাশ-বাইপাস, ক্যাশ/DB-তে লেখে না; শুধু সাসপেন্ড থাকা অবস্থায় প্রতি ২ মিনিটে একবার — কোটা-ভিত্তিক API-তে সাসপেন্ড চলাকালীন সর্বোচ্চ ৩০ কল/ঘণ্টা); ক্যাসিনো probe `fetchGames` ডকুমেন্টেশন-নিশ্চিত নয় (`TODO(DB-DOC)`)।
 - সীমা প্রতি-প্রসেসে গোনা হয় (web/worker আলাদা ট্র্যাকার); অবস্থা শেয়ার্ড। K9 নেই (উপরে)।
+
+## অনুমতি: system_diagnostics_manage
+শুধু `super_admin` রোলে। migration অন্য সব রোল থেকে এটি সরায় (idempotent), আর রোল তৈরি/সম্পাদনা/ক্লোন/bulk/import — সব পথে `rbac.stripSuperAdminOnly` অন্য রোলে বসতে দেয় না। দ্রষ্টব্য: `role_key` NULL থাকা পুরোনো `role='admin'` ইউজার বিদ্যমান নিয়মে super_admin-সমতুল্য (services/rbac.js) — তারাও এটি পায়। রোল ক্যাশ TTL ৩০ সেকেন্ড।
