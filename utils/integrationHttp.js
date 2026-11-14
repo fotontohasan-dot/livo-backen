@@ -30,8 +30,12 @@ async function integrationFetch(name, url, options = {}, cfg = {}) {
       res = await plainTimeoutFetch(url, options, timeoutMs || Number(process.env.HTTP_TIMEOUT_MS) || 5000);
     }
     recordIntegrationResult(name, res.ok, res.ok ? null : `HTTP ${res.status}`);
-    // K10: ৫xx/429 = upstream সমস্যা; 4xx (যেমন 401/404) API-র "ডাউন" সংকেত নয়। payment:*/wallet:* এখানে উপেক্ষিত।
-    autoSuspend.recordOutcome(name, !isUpstreamFailure(res), { rateLimited: res.status === 429 });
+    // K10: শুধু 5xx ও 429 ব্যর্থতা (টাইমআউট/নেটওয়ার্ক ত্রুটি নিচের catch-এ)। 4xx (401/404 ইত্যাদি) গোনা হয় না —
+    // ব্যর্থতাও না, সফলতাও না (আগে 4xx "সফল" ধরে ব্যর্থতার ধারা শূন্য করত ও নিজে-চালুর গণনায় যোগ হতো)।
+    // payment:*/wallet:* এখানে উপেক্ষিত।
+    if (res.ok || isUpstreamFailure(res)) {
+      autoSuspend.recordOutcome(name, !isUpstreamFailure(res), { rateLimited: res.status === 429 });
+    }
     return res;
   } catch (err) {
     // breaker OPEN-এ কোনো কল যায়নি — upstream-এর "ব্যর্থতা" হিসেবে আবার রেকর্ড করার দরকার নেই

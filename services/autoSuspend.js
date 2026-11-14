@@ -48,7 +48,7 @@ function resolveConfig(env = process.env) {
     resumeSuccesses: num(env.AUTO_SUSPEND_RESUME_SUCCESSES, 3),
     minSuspendMs: num(env.AUTO_SUSPEND_MIN_SUSPEND_MS, 120000),
     cacheTtlMs: num(env.AUTO_SUSPEND_CACHE_TTL_MS, 5000),
-    probeIntervalMs: num(env.AUTO_SUSPEND_PROBE_INTERVAL_MS, 60000)
+    probeIntervalMs: num(env.AUTO_SUSPEND_PROBE_INTERVAL_MS, 120000) // সিদ্ধান্ত: প্রতি ২ মিনিটে একবার
   };
 }
 

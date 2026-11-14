@@ -204,6 +204,24 @@ async function searchLeague() {
   return [];
 }
 
+// ==================== K10 probe: শুধু-পড়া, ক্যাশ-বাইপাস ====================
+// অটো-সাসপেন্ড অবস্থায় নতুন বাজি বন্ধ থাকলে স্বাভাবিক ট্রাফিকই থাকে না, ফলে API ঠিক হলেও কেউ জানতে পারত না (ডেডলক)।
+// probe একই GET endpoint-এ একটা হালকা কল করে; ফলাফল integrationFetch দিয়ে নিজেই autoSuspend.recordOutcome-এ যায়।
+// ক্যাশে লেখে না, DB/ইউজার/বাজি/ওয়ালেট ছোঁয় না, কিছু ফেরত দেয় না। ব্যর্থ হলে throw করে (runProbes ধরে)।
+async function probeCricket() {
+  if (!CRICKET_API_KEY) return;
+  const res = await cricFetch(`${CRICKET_BASE}/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`);
+  if (res && res.body && typeof res.body.cancel === 'function') await res.body.cancel().catch(() => {});
+}
+
+async function probeFootball() {
+  if (!RAPIDAPI_KEY) return;
+  const res = await footballFetch(`${FOOTBALL_BASE}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`, {
+    headers: { 'x-rapidapi-host': FOOTBALL_HOST, 'x-rapidapi-key': RAPIDAPI_KEY },
+  });
+  if (res && res.body && typeof res.body.cancel === 'function') await res.body.cancel().catch(() => {});
+}
+
 module.exports = {
   getCricketCurrentMatches,
   getCricketUpcoming,
@@ -211,4 +229,6 @@ module.exports = {
   getFootballLiveScores,
   getWorldCupFixtures,
   searchLeague,
+  probeCricket,
+  probeFootball,
 };
