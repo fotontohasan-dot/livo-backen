@@ -34,6 +34,7 @@ const crypto = require('crypto');
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const casinoProviders = require('../services/casinoProviders');
+const autoSuspend = require('../services/autoSuspend');
 const { checkIp } = require('../services/vpnDetection');
 const { getIpRule, getClientIp } = require('../services/ipRules');
 
@@ -111,7 +112,10 @@ async function fetchLobbyPage(query) {
     params
   );
   const hasMore = r.rows.length > LOBBY_PAGE_SIZE;
-  return { page, hasMore, games: r.rows.slice(0, LOBBY_PAGE_SIZE) };
+  // K10: সাসপেন্ড থাকা প্রোভাইডারের গেমে "সাময়িকভাবে বন্ধ" চিহ্ন (ফেইল-ওপেন: ত্রুটিতে সবই চালু দেখায়)
+  const down = await autoSuspend.suspendedCasinoProviders().catch(() => new Set());
+  const games = r.rows.slice(0, LOBBY_PAGE_SIZE).map((g) => ({ ...g, suspended: down.has(g.provider) }));
+  return { page, hasMore, games };
 }
 
 router.get('/', async (req, res) => {
@@ -185,6 +189,13 @@ router.get('/launch/:provider/:gameId', isAuth, async (req, res) => {
     if (!adapter) {
       // গেম DB-তে আছে কিন্তু প্রোভাইডারের credential সরিয়ে নেওয়া হয়েছে।
       req.flash('error', req.t('games_not_available'));
+      return res.redirect('/games');
+    }
+
+    // K10: প্রোভাইডার সাসপেন্ড (অটো/হাতে) — নতুন গেম শুরু আটকাবে। চলমান রাউন্ডের ওয়ালেট callback
+    // (routes/providerWallet.js) এই গেটের বাইরে — সেগুলো কখনো আটকায় না।
+    if (await autoSuspend.isSuspended(`casino:${provider}`)) {
+      req.flash('error', req.t('auto_suspend_casino_msg'));
       return res.redirect('/games');
     }
 

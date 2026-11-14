@@ -17,11 +17,33 @@ const brk = (b) => {
   const key = b.state === 'open' ? 'aci_breaker_open' : (b.state === 'half_open' ? 'aci_breaker_half_open' : 'aci_breaker_closed');
   return '<span class="px-2 py-0.5 rounded-lg text-xs font-semibold ' + cls + '">' + t(key) + '</span>';
 };
+const REASONS = { breaker_open: 'aci_suspend_reason_breaker_open', consecutive_failures: 'aci_suspend_reason_consecutive_failures', error_rate: 'aci_suspend_reason_error_rate', rate_limited: 'aci_suspend_reason_rate_limited', manual: 'aci_suspend_reason_manual' };
+const csrf = escapeHtml(locals.csrfToken || '');
+const susp = (i) => {
+  const s = i.suspend || {};
+  if (!s.suspendable) return '<span class="text-xs text-slate-300">' + t('aci_not_suspendable') + '</span>';
+  let out;
+  if (s.suspended) {
+    out = '<div><span class="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600">' + t('aci_suspend_on') + '</span> <span class="text-xs text-slate-500">(' + escapeHtml(s.source === 'manual' ? t('aci_suspend_src_manual') : t('aci_suspend_src_auto')) + ')</span></div>' +
+      '<div class="text-xs text-slate-600 mt-1">' + t('aci_suspend_since') + ' ' + fmt(s.since) + '</div>' +
+      '<div class="text-xs text-slate-600">' + t('aci_suspend_why') + ': ' + escapeHtml(REASONS[s.reason] ? t(REASONS[s.reason]) : (s.reason || '')) + '</div>' +
+      (s.detail ? '<div class="text-xs text-slate-400 break-words">' + escapeHtml(s.detail) + '</div>' : '');
+  } else {
+    out = '<span class="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700">' + t('aci_suspend_off') + '</span>';
+  }
+  if (s.suspendCount) out += '<div class="text-xs text-slate-400">' + t('aci_suspend_count') + ': ' + Number(s.suspendCount) + '</div>';
+  if (typeof canManage !== 'undefined' && canManage) {
+    const act = s.suspended ? 'resume' : 'suspend';
+    out += '<form method="POST" action="/admin/integrations/' + encodeURIComponent(i.id) + '/' + act + '" class="mt-1"><input type="hidden" name="_csrf" value="' + csrf + '">' +
+      '<button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold ' + (s.suspended ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white') + '">' + t(s.suspended ? 'aci_btn_resume' : 'aci_btn_suspend') + '</button></form>';
+  }
+  return out;
+};
 const groups = ['sports', 'casino', 'payment', 'messaging', 'media'];
 const rows = groups.map((g) => {
   const items = rep.integrations.filter((i) => i.group === g);
   if (!items.length) return '';
-  return '<tr class="bg-slate-50"><td colspan="7" class="px-6 py-2 text-xs font-semibold text-slate-500 uppercase">' + t('aci_group_' + g) + '</td></tr>' +
+  return '<tr class="bg-slate-50"><td colspan="8" class="px-6 py-2 text-xs font-semibold text-slate-500 uppercase">' + t('aci_group_' + g) + '</td></tr>' +
     items.map((i) =>
       '<tr class="border-b border-slate-100 align-top">' +
         '<td class="px-6 py-3 text-sm font-medium text-slate-800">' + escapeHtml(i.label) + '<div class="text-xs text-slate-400 font-mono">' + escapeHtml(i.id) + '</div></td>' +
@@ -31,6 +53,7 @@ const rows = groups.map((g) => {
         '<td class="px-4 py-3 text-xs text-slate-600">' + fmt(i.lastErrorAt) + '</td>' +
         '<td class="px-4 py-3 text-xs text-slate-600 max-w-xs break-words">' + (i.lastError ? escapeHtml(i.lastError) : '<span class="text-slate-300">—</span>') + '</td>' +
         '<td class="px-4 py-3 text-xs">' + brk(i.breaker.web) + ' / ' + brk(i.breaker.worker) + '</td>' +
+        '<td class="px-4 py-3 text-xs">' + susp(i) + '</td>' +
       '</tr>').join('');
 }).join('');
 const procRows = (rep.processes || []).map((p) =>
@@ -60,6 +83,7 @@ const procRows = (rep.processes || []).map((p) =>
         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_last_err')}</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_err_msg')}</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_breaker')}</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">${t('aci_col_suspend')}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>

@@ -38,12 +38,34 @@ router.get('/system-diagnostics', isAdmin, rbac.requirePermission('system_diagno
 router.get('/integrations', isAdmin, rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const report = await require('../services/integrationStatus').buildStatusReport();
-    res.render('admin/integrations', { report, user: req.session.user });
+    const canManage = await rbac.hasPermission(req.session.user.id, 'system_diagnostics_manage').catch(() => false);
+    res.render('admin/integrations', { report, canManage: !!canManage, user: req.session.user });
   } catch (err) {
     console.error('Integrations page error:', err && err.stack ? err.stack : err);
     res.render('admin/integrations', { report: { integrations: [], processes: [] }, loadError: true, user: req.session.user });
   }
 });
+
+// ==================== K10: হাতে সাসপেন্ড/রিজিউম (system_diagnostics_manage; অডিট লগসহ) ====================
+// payment:* ও wallet:* কখনো সাসপেন্ড করা যায় না (services/autoSuspend.js → NOT_SUSPENDABLE)।
+function suspendAction(kind) {
+  return async (req, res) => {
+    const name = String(req.params.name || '').slice(0, 100);
+    const actor = { by: req.session.user.username || 'admin', byId: req.session.user.id };
+    try {
+      const svc = require('../services/autoSuspend');
+      if (kind === 'suspend') await svc.manualSuspend(name, { ...actor, reason: String(req.body && req.body.reason || '').slice(0, 150) || undefined });
+      else await svc.manualResume(name, actor);
+      if (req.flash) req.flash('success', req.t(kind === 'suspend' ? 'aci_flash_suspended' : 'aci_flash_resumed'));
+    } catch (err) {
+      if (req.flash) req.flash('error', req.t(err && err.code === 'NOT_SUSPENDABLE' ? 'aci_not_suspendable' : 'common_server_error_short'));
+      if (!(err && err.code === 'NOT_SUSPENDABLE')) console.error('integration suspend action error:', err && err.code);
+    }
+    res.redirect('/admin/integrations');
+  };
+}
+router.post('/integrations/:name/suspend', isAdmin, rbac.requirePermission('system_diagnostics_manage'), suspendAction('suspend'));
+router.post('/integrations/:name/resume', isAdmin, rbac.requirePermission('system_diagnostics_manage'), suspendAction('resume'));
 
 router.get('/api/integrations', isAdmin, rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {

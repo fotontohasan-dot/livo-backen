@@ -11,6 +11,7 @@
 
 const { getBreaker, CircuitOpenError } = require('../services/circuitBreaker');
 const { recordIntegrationResult } = require('../services/integrationStatus');
+const autoSuspend = require('../services/autoSuspend');
 
 const isUpstreamFailure = (res) => !!res && (res.status >= 500 || res.status === 429);
 
@@ -29,10 +30,19 @@ async function integrationFetch(name, url, options = {}, cfg = {}) {
       res = await plainTimeoutFetch(url, options, timeoutMs || Number(process.env.HTTP_TIMEOUT_MS) || 5000);
     }
     recordIntegrationResult(name, res.ok, res.ok ? null : `HTTP ${res.status}`);
+    // K10: শুধু 5xx ও 429 ব্যর্থতা (টাইমআউট/নেটওয়ার্ক ত্রুটি নিচের catch-এ)। 4xx (401/404 ইত্যাদি) গোনা হয় না —
+    // ব্যর্থতাও না, সফলতাও না (আগে 4xx "সফল" ধরে ব্যর্থতার ধারা শূন্য করত ও নিজে-চালুর গণনায় যোগ হতো)।
+    // payment:*/wallet:* এখানে উপেক্ষিত।
+    if (res.ok || isUpstreamFailure(res)) {
+      autoSuspend.recordOutcome(name, !isUpstreamFailure(res), { rateLimited: res.status === 429 });
+    }
     return res;
   } catch (err) {
     // breaker OPEN-এ কোনো কল যায়নি — upstream-এর "ব্যর্থতা" হিসেবে আবার রেকর্ড করার দরকার নেই
-    if (!(err instanceof CircuitOpenError)) recordIntegrationResult(name, false, err && err.message);
+    if (!(err instanceof CircuitOpenError)) {
+      recordIntegrationResult(name, false, err && err.message);
+      autoSuspend.recordOutcome(name, false);
+    }
     throw err;
   }
 }
@@ -64,9 +74,13 @@ async function integrationCall(name, fn, cfg = {}) {
       ? await getBreaker(name).fire(fn, { timeoutMs: cfg.timeoutMs })
       : await fn();
     recordIntegrationResult(name, true);
+    autoSuspend.recordOutcome(name, true);
     return result;
   } catch (err) {
-    if (!(err instanceof CircuitOpenError)) recordIntegrationResult(name, false, err && err.message);
+    if (!(err instanceof CircuitOpenError)) {
+      recordIntegrationResult(name, false, err && err.message);
+      autoSuspend.recordOutcome(name, false);
+    }
     throw err;
   }
 }

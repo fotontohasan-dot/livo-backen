@@ -2001,6 +2001,18 @@ async function applyMigrations(pool) {
 
     console.log("✅ RBAC (Role & Permission) tables ready");
 
+    // K10: system_diagnostics_manage (Integration হাতে সাসপেন্ড/রিজিউম) শুধু super_admin রোলে। অন্য কোনো রোলের permissions-এ
+    // থাকলে (যেমন ভুলে কাস্টম রোলে বসানো) সরানো হয়; super_admin-এ স্পষ্ট true। idempotent — বারবার চালালে একই ফল।
+    // দ্রষ্টব্য: roles ক্যাশ (role:<key>) TTL শেষে বা রিস্টার্টে নতুন মান পায়।
+    await pool.query(`
+      UPDATE roles SET permissions = permissions - 'system_diagnostics_manage', updated_at = NOW()
+      WHERE key <> 'super_admin' AND permissions ? 'system_diagnostics_manage'
+    `);
+    await pool.query(`
+      UPDATE roles SET permissions = jsonb_set(permissions, '{system_diagnostics_manage}', 'true'::jsonb, true)
+      WHERE key = 'super_admin' AND COALESCE(permissions->>'system_diagnostics_manage','') <> 'true'
+    `);
+
     // ==================== Telegram Integration Settings ====================
     // এক-সারির কনফিগ টেবিল (id সবসময় 1)। bot_token_enc-এ টোকেন AES-256-GCM দিয়ে
     // এনক্রিপ্ট করে রাখা হয় (services/telegramConfig.js) — plaintext কখনো লেখা হয় না।
@@ -2635,6 +2647,24 @@ async function applyMigrations(pool) {
       );
     `);
     console.log('✅ integration_status ও process_heartbeat ready');
+
+    // K10: অটো-সাসপেন্ড অবস্থা (web ও worker একই দেখে)। শুধু sports:*/casino:*/sms/email; payment:*/wallet:* কখনো নয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS integration_suspend (
+        name TEXT PRIMARY KEY,
+        suspended BOOLEAN NOT NULL DEFAULT false,
+        source TEXT,
+        reason TEXT,
+        detail VARCHAR(255),
+        suspended_at TIMESTAMPTZ,
+        resumed_at TIMESTAMPTZ,
+        success_streak INTEGER NOT NULL DEFAULT 0,
+        suspend_count INTEGER NOT NULL DEFAULT 0,
+        updated_by TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('✅ integration_suspend ready');
 
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration

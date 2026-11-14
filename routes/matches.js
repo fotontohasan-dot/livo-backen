@@ -7,6 +7,7 @@ const BETTING_CLOSED_MATCH_STATUSES = new Set(['finished', 'completed', 'cancell
 
 const { pool } = require('../db');
 const { assessMatchFreshness, annotateStale } = require('../services/dataFreshness');
+const autoSuspend = require('../services/autoSuspend');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
 // পুরো রাউটারে `sports` গেট — ম্যাচ ব্রাউজিং স্পোর্টস সেকশনেরই অংশ।
@@ -438,6 +439,13 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
       await client.query('ROLLBACK');
       console.error(`[STALE_DATA] বাজি প্রত্যাখ্যাত: match=${matchId} reason=${fresh.reason} ageMs=${fresh.ageMs}`);
       return res.status(503).json({ success: false, code: 'STALE_ODDS', message: req.t('matches_data_stale') });
+    }
+    // K10: স্পোর্টস ডেটা-প্রোভাইডার অটো/ম্যানুয়াল সাসপেন্ড থাকলে শুধু *নতুন* বাজি 503 (STALE_ODDS পথের মতোই)।
+    // চলমান বাজি, সেটলমেন্ট ও পেআউট এই পথ ব্যবহার করে না — সেগুলো কখনো আটকায় না। ফেইল-ওপেন।
+    if (await autoSuspend.getMatchProviderSuspension(mt.rows[0].provider)) {
+      await client.query('ROLLBACK');
+      console.warn(`[AUTO_SUSPEND] বাজি প্রত্যাখ্যাত (প্রোভাইডার সাসপেন্ড): match=${matchId}`);
+      return res.status(503).json({ success: false, code: 'STALE_ODDS', suspended: true, message: req.t('auto_suspend_sports_msg') });
     }
     const m = await client.query(
       `SELECT * FROM markets WHERE id = $1 AND match_id = $2 FOR SHARE`,
