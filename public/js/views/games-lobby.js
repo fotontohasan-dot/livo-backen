@@ -38,6 +38,15 @@
     var thumb = g.thumbnail_url
       ? '<img src="' + esc(g.thumbnail_url) + '" alt="" aria-hidden="true" loading="lazy" decoding="async">'
       : '<div class="game-thumb-fallback">\uD83C\uDFB2</div>';
+    // K10: সাসপেন্ড প্রোভাইডারের গেম — লিংক নয়, "সাময়িকভাবে বন্ধ" চিহ্ন
+    if (g.suspended) {
+      return '<div class="game-card game-suspended" aria-disabled="true">'
+        + thumb
+        + '<div class="game-meta">'
+        + '<div class="game-name">' + esc(g.name) + '</div>'
+        + '<div class="game-provider">' + esc(g.provider) + ' \u00b7 <strong>' + esc(cfg.suspendedLabel || '') + '</strong></div>'
+        + '</div></div>';
+    }
     return '<a class="game-card" href="/games/launch/'
       + encodeURIComponent(g.provider) + '/' + encodeURIComponent(g.provider_game_id) + '">'
       + thumb

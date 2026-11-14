@@ -4,6 +4,7 @@
 
 const { pool } = require('../db');
 const { assessMatchFreshness } = require('./dataFreshness');
+const autoSuspend = require('./autoSuspend');
 const { addTurnover } = require('./turnover');
 const { distributeCommission } = require('./referral');
 const { addBet } = require('./cashback');
@@ -80,6 +81,11 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
         await client.query('ROLLBACK');
         console.error(`[STALE_DATA] অ্যাকুমুলেটর প্রত্যাখ্যাত: match=${market.match_id} reason=${fresh.reason} ageMs=${fresh.ageMs}`);
         return { success: false, code: 'STALE_ODDS', message: t(lang, 'matches_data_stale') };
+      }
+      // K10: ডেটা-প্রোভাইডার সাসপেন্ড থাকলে নতুন অ্যাকুমুলেটর নয় (শুধু বাজি নেওয়া; সেটলমেন্ট অপরিবর্তিত)
+      if (await autoSuspend.getMatchProviderSuspension(mm.rows[0] && mm.rows[0].provider)) {
+        await client.query('ROLLBACK');
+        return { success: false, code: 'STALE_ODDS', suspended: true, message: t(lang, 'auto_suspend_sports_msg') };
       }
       // অডস পুরোপুরি সার্ভার থেকে। আগে market.odds-এ রানার না থাকলে ক্লায়েন্টের
       // পাঠানো sel.odd fallback হিসেবে ব্যবহৃত হতো — potential_win সেখান থেকেই
