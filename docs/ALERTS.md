@@ -34,6 +34,7 @@ Free options: UptimeRobot / Better Stack / Render's own notifications. Alert cha
 | 16 | Worker down | `bet420_queue_worker_up == 0` | — | 2 min | page |
 | 17 | API অটো-সাসপেন্ড (K10) | `bet420_integration_suspended == 1` | যেকোনো `name` | 2 min | warn (casino/sports), info (email/sms) |
 | 18 | সাসপেন্ড flapping | `increase(bet420_integration_suspend_count[1h]) >= 3` | যেকোনো `name` | — | warn |
+| 19 | আটকে থাকা ক্যাসিনো রাউন্ড | `bet420_casino_stuck_rounds > 0` (এবং `== -1` = গণনা ব্যর্থ, আলাদা অ্যালার্ট) | সংখ্যা > 0 | 10 min | page (আসল টাকা আটকে) — রানবুক: `docs/STUCK_ROUNDS.md` |
 
 Notes
 - `bet420_apilog_dropped` and `_failed` are per-process counters that reset on restart; alert on `increase()`, not the absolute value.

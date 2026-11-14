@@ -85,6 +85,7 @@ function createOpsGauges(client, register) {
     apiLogFailed: g('apilog_failed', 'api-log এনকিউ ব্যর্থ মোট (এই প্রসেসে)'),
     apiLogPending: g('apilog_pending', 'api-log এনকিউ অপেক্ষমাণ (এই মুহূর্তে)'),
     breakerState: g('circuit_breaker_state', 'Circuit breaker অবস্থা: 0=closed, 1=half_open, 2=open', ['name']),
+    casinoStuckRounds: g('casino_stuck_rounds', 'আটকে থাকা ক্যাসিনো রাউন্ড: bet ডেবিট হয়েছে, STUCK_ROUND_HOURS (ডিফল্ট ৬) ঘণ্টা পরেও win/rollback নেই; -1 = গণনা ব্যর্থ'),
     integrationSuspended: g('integration_suspended', 'অটো-সাসপেন্ড: 1 = সাসপেন্ড, 0 = চালু (sports:*/casino:*/sms/email)', ['name', 'source']),
     integrationSuspendedSeconds: g('integration_suspended_seconds', 'সাসপেন্ড কতক্ষণ ধরে (সেকেন্ড); চালু থাকলে 0', ['name']),
     integrationSuspendCount: g('integration_suspend_count', 'মোট কতবার সাসপেন্ড হয়েছে (মনোটোনিক; flapping অ্যালার্টে increase() ব্যবহার করুন)', ['name']),
@@ -147,6 +148,12 @@ async function refreshOpsMetrics(gauges, deps = {}) {
       gauges.breakerWindowErrorRate.set({ name: b.name }, b.windowErrorRate || 0);
     }
   } catch (_) { /* non-fatal */ }
+
+  // আটকে থাকা ক্যাসিনো রাউন্ড (শুধু-পড়া কোয়েরি, services/stuckCasinoRounds.js)। ব্যর্থ হলে -1 (০ নয়)।
+  try {
+    const n = await (deps.stuckRounds || require('./stuckCasinoRounds')).countStuckRounds(deps.pool || require('../db').pool);
+    gauges.casinoStuckRounds.set(n === null || n === undefined ? -1 : n);
+  } catch (_) { try { gauges.casinoStuckRounds.set(-1); } catch (__) { /* non-fatal */ } }
 
   // K10: অটো-সাসপেন্ড অবস্থা (DB থেকে; web ও worker উভয়ের সিদ্ধান্ত একই দেখায়)
   try {
