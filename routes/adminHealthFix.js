@@ -67,6 +67,23 @@ function suspendAction(kind) {
 router.post('/integrations/:name/suspend', isAdmin, rbac.requirePermission('system_diagnostics_manage'), suspendAction('suspend'));
 router.post('/integrations/:name/resume', isAdmin, rbac.requirePermission('system_diagnostics_manage'), suspendAction('resume'));
 
+// ==================== আটকে থাকা ক্যাসিনো রাউন্ড (শুধু-পড়া; শুধু system_diagnostics_manage) ====================
+// bet ডেবিট হয়েছে কিন্তু STUCK_ROUND_HOURS (ডিফল্ট ৬) ঘণ্টা পরেও win/rollback নেই। কোনো লেখা/রিফান্ড/ব্যালেন্স বদল নেই।
+router.get('/stuck-rounds', isAdmin, rbac.requirePermission('system_diagnostics_manage'), async (req, res) => {
+  const svc = require('../services/stuckCasinoRounds');
+  const client = await require('../db').pool.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    const result = await svc.findStuckRounds(client, { hours: svc.thresholdHours(), limit: 200 });
+    await client.query('ROLLBACK');
+    res.render('admin/stuck-rounds', { result, user: req.session.user });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* উপেক্ষা */ }
+    console.error('Stuck rounds page error:', err && err.code);
+    res.render('admin/stuck-rounds', { result: null, loadError: true, user: req.session.user });
+  } finally { client.release(); }
+});
+
 router.get('/api/integrations', isAdmin, rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     res.json({ success: true, report: await require('../services/integrationStatus').buildStatusReport() });
