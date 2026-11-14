@@ -49,3 +49,17 @@ describe('isAuth + must_reset_password', () => {
     expect(res.redirect).toHaveBeenCalled();
   });
 });
+
+describe('isAuth: বাড়তি DB কোয়েরি নেই', () => {
+  test.each([[false], [true]])('mustReset=%s: প্রতি রিকোয়েস্টে ঠিক একটা কোয়েরি (বিদ্যমান স্ট্যাটাস কোয়েরিতেই কলাম), আলাদা must_reset_password কোয়েরি নয়', async (mustReset) => {
+    pool.query.mockClear();
+    await call('/profile/cards', { mustReset });
+    expect(pool.query).toHaveBeenCalledTimes(1);
+    expect(String(pool.query.mock.calls[0][0])).toMatch(/SELECT is_banned, self_exclude_until, must_reset_password FROM users WHERE id = \$1/);
+  });
+  test('অনুমোদিত পথে ফ্ল্যাগধারীর জন্যও একই — এক কোয়েরি', async () => {
+    pool.query.mockClear();
+    await call('/profile/change-password', { mustReset: true });
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+});

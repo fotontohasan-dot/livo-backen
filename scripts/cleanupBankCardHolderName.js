@@ -22,7 +22,8 @@
 // গোপনীয়তা: holder_name-এর কোনো মান, ইউজারের নাম/আইডি বা DB URL কোথাও ছাপা হয় না —
 // শুধু সংখ্যা। ত্রুটিতে শুধু ত্রুটির কোড ছাপা হয়, বার্তা নয় (বার্তায় ডেটা থাকতে পারে)।
 //
-// exit 0 → সফল | exit 1 → ব্যর্থ (--apply ব্যর্থ হলে ট্রানজ্যাকশন rollback হয়)
+// ব্যাকআপ টেবিল আগে থেকে থাকলে --apply থেমে যায় (exit 1, কিছু বদলায় না)।
+// exit 0 → সফল | exit 1 → ব্যর্থ/থামানো (--apply ব্যর্থ হলে ট্রানজ্যাকশন rollback হয়)
 // ---------------------------------------------------------------------------
 
 const BACKUP_TABLE = 'bank_cards_holder_name_backup';
@@ -47,6 +48,12 @@ function usesRedisSessions(env) {
   return !!(useRedis && env.REDIS_URL);
 }
 
+/** ব্যাকআপ টেবিল আগে থেকে আছে কি না (শুধু-পড়া)। */
+async function backupTableExists(db) {
+  const { rows } = await db.query(`SELECT to_regclass($1) AS t`, [`public.${BACKUP_TABLE}`]);
+  return !!(rows && rows[0] && rows[0].t);
+}
+
 async function countAffected(db) {
   const { rows } = await db.query(
     `SELECT COUNT(*)::int AS rows_count, COUNT(DISTINCT user_id)::int AS users_count
@@ -60,8 +67,9 @@ async function applyInTransaction(client) {
   await client.query('BEGIN');
   try {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT false`);
+    // আগে থেকে থাকলে ইচ্ছাকৃতভাবে ব্যর্থ (42P07) → ROLLBACK; কখনো ওভাররাইট/ড্রপ/মার্জ নয় (আগের ব্যাকআপ হারাবে না)।
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${BACKUP_TABLE} (
+      CREATE TABLE ${BACKUP_TABLE} (
         id SERIAL PRIMARY KEY,
         bank_card_id INTEGER NOT NULL,
         user_id INTEGER,
@@ -135,6 +143,11 @@ async function run({ argv, env, out, deps }) {
       out('DRY-RUN: কিছুই বদলানো হয়নি। সত্যিই চালাতে --apply দিন।');
       return 0;
     }
+    // ব্যাকআপ টেবিল আগে থাকলে থামি — কিছু বদলাই না, সেশনও বাতিল করি না।
+    if (await backupTableExists(pool)) {
+      out(`থামানো হলো: ব্যাকআপ টেবিল ${BACKUP_TABLE} আগে থেকেই আছে। কিছু বদলানো হয়নি (ওভাররাইট/ড্রপ করা হয়নি)। আগে docs/BANK_CARD_HOLDER_NAME_CLEANUP.md অনুযায়ী পুরনো ব্যাকআপ যাচাই করে মালিকের সিদ্ধান্তে সরান।`);
+      return 1;
+    }
     if (before.rows === 0) {
       out('করার মতো কিছু নেই।');
       return 0;
@@ -177,12 +190,16 @@ async function run({ argv, env, out, deps }) {
     if (sessionErrors) out('⚠️ কিছু সেশন-বাতিল ধাপ ব্যর্থ — তবু রিসেট ফ্ল্যাগ থাকায় ওই ইউজাররা পাসওয়ার্ড না বদলে কিছু করতে পারবেন না।');
     return 0;
   } catch (err) {
+    if (err && err.code === '42P07') {
+      out(`থামানো হলো: ব্যাকআপ টেবিল ${BACKUP_TABLE} আগে থেকেই আছে। ট্রানজ্যাকশন rollback হয়েছে, কিছু বদলানো হয়নি।`);
+      return 1;
+    }
     out(`ব্যর্থ (কোড: ${err && err.code ? err.code : 'unknown'}) — --apply হলে ট্রানজ্যাকশন rollback হয়েছে।`);
     return 1;
   }
 }
 
-module.exports = { run, parseArgs, usesRedisSessions, countAffected, applyInTransaction, revokeRedisSessions, BACKUP_TABLE, AFFECTED_WHERE };
+module.exports = { run, parseArgs, usesRedisSessions, backupTableExists, countAffected, applyInTransaction, revokeRedisSessions, BACKUP_TABLE, AFFECTED_WHERE };
 
 if (require.main === module) {
   require('dotenv').config();

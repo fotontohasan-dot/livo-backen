@@ -240,7 +240,7 @@
             <option class="ix71-16" value="Bank Account">Local Bank</option>
           </select>
           <input class="dz71-5" type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required>
-          <input class="dz71-5" type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required>
+          <input class="dz71-5" type="text" name="holder_name" autocomplete="name" autocapitalize="words" spellcheck="false" minlength="2" maxlength="60" data-invalid-msg="<%= t.holder_name_invalid %>" placeholder="<%= t.holder_name_placeholder %>" required>
           <button type="submit" class="btn btn-secondary dz71-12"><%= t.add_card_btn %></button>
         </form>
       </div>
@@ -600,5 +600,6 @@
 </style>
 
 <script src="/js/profile-security.js"></script>
+<script src="/js/holder-name-validate.js"></script>
 
 <%- include('../partials/navbar') %>

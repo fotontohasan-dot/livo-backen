@@ -1,6 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
+const { validateHolderName } = require('../utils/holderName');
 const router = express.Router();
 const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
@@ -92,9 +93,12 @@ router.post('/update-personal', isAuth, async (req, res) => {
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    // K2: সার্ভারই আসল গার্ড — শুধু অক্ষর/স্পেস/ডট/হাইফেন/অ্যাপোস্ট্রফি; মান লগ/ফেরত হয় না
+    const hn = validateHolderName(holder_name);
+    if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/security/bank'); }
     await pool.query(
       `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
-      [req.session.user.id, bank_name, account_number, holder_name]
+      [req.session.user.id, bank_name, account_number, hn.value]
     );
     req.flash('success', req.t('profile_msg_08'));
   } catch (err) {
@@ -673,9 +677,12 @@ router.get('/cards', isAuth, async (req, res) => {
 router.post('/cards/add', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    // K2: একই সার্ভার-ভ্যালিডেটর (utils/holderName.js)
+    const hn = validateHolderName(holder_name);
+    if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/cards'); }
     await pool.query(
       'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,$2,$3,$4)',
-      [req.session.user.id, bank_name, account_number, holder_name]
+      [req.session.user.id, bank_name, account_number, hn.value]
     );
     req.flash('success', req.t('profile_msg_32'));
   } catch (err) {
