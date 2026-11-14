@@ -85,6 +85,9 @@ function createOpsGauges(client, register) {
     apiLogFailed: g('apilog_failed', 'api-log এনকিউ ব্যর্থ মোট (এই প্রসেসে)'),
     apiLogPending: g('apilog_pending', 'api-log এনকিউ অপেক্ষমাণ (এই মুহূর্তে)'),
     breakerState: g('circuit_breaker_state', 'Circuit breaker অবস্থা: 0=closed, 1=half_open, 2=open', ['name']),
+    integrationSuspended: g('integration_suspended', 'অটো-সাসপেন্ড: 1 = সাসপেন্ড, 0 = চালু (sports:*/casino:*/sms/email)', ['name', 'source']),
+    integrationSuspendedSeconds: g('integration_suspended_seconds', 'সাসপেন্ড কতক্ষণ ধরে (সেকেন্ড); চালু থাকলে 0', ['name']),
+    integrationSuspendCount: g('integration_suspend_count', 'মোট কতবার সাসপেন্ড হয়েছে (মনোটোনিক; flapping অ্যালার্টে increase() ব্যবহার করুন)', ['name']),
     breakerWindowErrorRate: g('circuit_breaker_window_error_rate', 'Breaker-এর স্লাইডিং উইন্ডোতে ব্যর্থতার হার (0..1)', ['name'])
   };
 }
@@ -142,6 +145,16 @@ async function refreshOpsMetrics(gauges, deps = {}) {
     for (const b of getAllBreakerSnapshots()) {
       gauges.breakerState.set({ name: b.name }, breakerStateValue(b.state));
       gauges.breakerWindowErrorRate.set({ name: b.name }, b.windowErrorRate || 0);
+    }
+  } catch (_) { /* non-fatal */ }
+
+  // K10: অটো-সাসপেন্ড অবস্থা (DB থেকে; web ও worker উভয়ের সিদ্ধান্ত একই দেখায়)
+  try {
+    const rows = await (deps.suspend || require('./autoSuspend')).listStates();
+    for (const r of rows) {
+      gauges.integrationSuspended.set({ name: r.name, source: r.source || 'none' }, r.suspended ? 1 : 0);
+      gauges.integrationSuspendedSeconds.set({ name: r.name }, r.suspended && r.suspended_at ? Math.max(0, Math.round((Date.now() - new Date(r.suspended_at).getTime()) / 1000)) : 0);
+      gauges.integrationSuspendCount.set({ name: r.name }, Number(r.suspend_count) || 0);
     }
   } catch (_) { /* non-fatal */ }
 }

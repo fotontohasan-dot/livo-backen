@@ -44,6 +44,7 @@ const PERMISSIONS = {
   activity_log_view: { label: 'অ্যাক্টিভিটি লগ দেখা', group: 'Security' },
   bot_monitoring_manage: { label: 'Bot Monitoring ও IP Block/Whitelist', group: 'Security' },
   system_diagnostics_view: { label: 'System Diagnostics, Cache ও Sentry status দেখা', group: 'System' },
+  system_diagnostics_manage: { label: 'Integration হাতে সাসপেন্ড/রিজিউম (Auto-Suspend)', group: 'System' },
   backups_manage: { label: 'Backup তৈরি/রিস্টোর/ডিলিট', group: 'System' },
   cron_jobs_manage: { label: 'Cron Jobs enable/disable/run', group: 'System' },
   reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },

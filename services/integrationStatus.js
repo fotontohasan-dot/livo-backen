@@ -111,6 +111,12 @@ async function buildStatusReport() {
     pool.query('SELECT instance_id, role, booted_at, last_seen, env_flags, breakers FROM process_heartbeat WHERE last_seen > NOW() - INTERVAL \'24 hours\' ORDER BY last_seen DESC')
   ]);
   const byName = new Map(statusRes.rows.map((r) => [r.name, r]));
+  // K10: সাসপেন্ড অবস্থা (টেবিল না থাকলে/ত্রুটিতে খালি — রিপোর্ট ভাঙে না)
+  const suspendByName = new Map();
+  try {
+    for (const r of await require('./autoSuspend').listStates()) suspendByName.set(r.name, r);
+  } catch (_) { /* ফেইল-ওপেন */ }
+  const { isSuspendable } = require('./autoSuspend');
   const now = Date.now();
   const processes = hbRes.rows.map((r) => ({
     instanceId: r.instance_id, role: r.role, bootedAt: r.booted_at, lastSeen: r.last_seen,
@@ -142,7 +148,19 @@ async function buildStatusReport() {
       lastSuccessAt: s.last_success_at || null,
       lastErrorAt: s.last_error_at || null,
       lastError: s.last_error_message ? sanitizeError(s.last_error_message) : null, // সংরক্ষিত মানও আবার পরিষ্কার
-      breaker: { web: breakerFor(web), worker: breakerFor(worker) }
+      breaker: { web: breakerFor(web), worker: breakerFor(worker) },
+      suspend: (() => {
+        const x = suspendByName.get(def.id);
+        return {
+          suspendable: isSuspendable(def.id),
+          suspended: !!(x && x.suspended),
+          source: x && x.suspended ? x.source : null,
+          reason: x && x.suspended ? x.reason : null,
+          detail: x && x.suspended && x.detail ? sanitizeError(x.detail) : null,
+          since: x && x.suspended ? x.suspended_at : null,
+          suspendCount: x ? Number(x.suspend_count) || 0 : 0
+        };
+      })()
     };
   });
 

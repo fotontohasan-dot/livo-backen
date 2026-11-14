@@ -32,6 +32,8 @@ Free options: UptimeRobot / Better Stack / Render's own notifications. Alert cha
 | 14 | p95 latency | `histogram_quantile(0.95, sum(rate(bet420_http_request_duration_seconds_bucket[5m])) by (le))` | target agreed with owner | 10 min | warn |
 | 15 | 429 spike | `rate(bet420_http_requests_total{status_code="429"}[5m]) / total` | > 5% | 10 min | warn (possible CGNAT blocking real users) |
 | 16 | Worker down | `bet420_queue_worker_up == 0` | — | 2 min | page |
+| 17 | API অটো-সাসপেন্ড (K10) | `bet420_integration_suspended == 1` | যেকোনো `name` | 2 min | warn (casino/sports), info (email/sms) |
+| 18 | সাসপেন্ড flapping | `increase(bet420_integration_suspend_count[1h]) >= 3` | যেকোনো `name` | — | warn |
 
 Notes
 - `bet420_apilog_dropped` and `_failed` are per-process counters that reset on restart; alert on `increase()`, not the absolute value.
