@@ -437,6 +437,16 @@ async function completeLogin(req, user, vpnInfo) {
   // ফলাফল: লগইন সফল হলেও ইউজার সঙ্গে সঙ্গে লগইন পেজে ফেরত যায়।
   await saveSession(req);
 
+  // বাধ্যতামূলক পাসওয়ার্ড রিসেট ফ্ল্যাগ থাকলে সরাসরি পাসওয়ার্ড-বদল পাতায় (বার্তাসহ) — অন্য পাতায় গিয়ে ধাক্কা খাওয়ার আগেই।
+  // লগইন-সারির আকার পথভেদে আলাদা, তাই ফ্ল্যাগ DB থেকে আলাদা করে পড়া হয়। ব্যর্থ হলে সাধারণ গন্তব্য (isAuth তখনও আটকাবে)।
+  try {
+    const f = await pool.query('SELECT must_reset_password FROM users WHERE id = $1', [user.id]);
+    if (f.rows[0] && f.rows[0].must_reset_password) {
+      if (req.flash) req.flash('error', req.t('auth_password_reset_required'));
+      await saveSession(req);
+      return '/profile/security/login-password';
+    }
+  } catch (e) { console.error('must_reset_password check error:', e.message); }
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
 

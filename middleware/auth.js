@@ -69,7 +69,8 @@ async function isUserActive(userId) {
 }
 
 // must_reset_password থাকা ইউজারের জন্য অনুমোদিত পথ (query string বাদ দিয়ে মেলানো হয়)।
-const PASSWORD_RESET_ALLOWED_PATHS = ['/profile/security/login-password', '/profile/change-password', '/logout'];
+const PASSWORD_RESET_PATH = '/profile/security/login-password';
+const PASSWORD_RESET_ALLOWED_PATHS = [PASSWORD_RESET_PATH, '/profile/change-password', '/logout'];
 function isPasswordResetAllowedPath(url) {
   const path = String(url || '').split('?')[0].replace(/\/+$/, '') || '/';
   return PASSWORD_RESET_ALLOWED_PATHS.includes(path);
@@ -129,10 +130,10 @@ const isAuth = async (req, res, next) => {
   // (পুরনো সেশন বাতিলের পরেও কোনো সেশন টিকে গেলে এই গার্ড তাকে আটকায়।)
   if (status.mustResetPassword && !isPasswordResetAllowedPath(req.originalUrl || req.url)) {
     if (req.path.includes('/api/') || (req.originalUrl || '').includes('/api/')) {
-      return res.status(403).json({ success: false, error: tr(req, 'auth_password_reset_required') });
+      return res.status(403).json({ success: false, code: 'MUST_RESET_PASSWORD', error: tr(req, 'auth_password_reset_required'), redirect: PASSWORD_RESET_PATH });
     }
     if (req.flash) req.flash('error', tr(req, 'auth_password_reset_required'));
-    return res.redirect('/profile/security/login-password');
+    return res.redirect(PASSWORD_RESET_PATH);
   }
 
   return next();
