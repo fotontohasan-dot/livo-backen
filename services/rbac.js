@@ -44,6 +44,7 @@ const PERMISSIONS = {
   activity_log_view: { label: 'অ্যাক্টিভিটি লগ দেখা', group: 'Security' },
   bot_monitoring_manage: { label: 'Bot Monitoring ও IP Block/Whitelist', group: 'Security' },
   system_diagnostics_view: { label: 'System Diagnostics, Cache ও Sentry status দেখা', group: 'System' },
+  system_diagnostics_manage: { label: 'Integration হাতে সাসপেন্ড/রিজিউম (Auto-Suspend)', group: 'System' },
   backups_manage: { label: 'Backup তৈরি/রিস্টোর/ডিলিট', group: 'System' },
   cron_jobs_manage: { label: 'Cron Jobs enable/disable/run', group: 'System' },
   reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },
@@ -185,6 +186,15 @@ function sanitizeKey(name) {
   return String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50);
 }
 
+// K10: এই permission শুধু super_admin রোলের — অন্য কোনো রোলে (তৈরি/সম্পাদনা/ক্লোন/bulk/import) বসতে পারে না।
+const SUPER_ADMIN_ONLY_PERMISSIONS = ['system_diagnostics_manage'];
+function stripSuperAdminOnly(permissions, roleKey) {
+  if (roleKey === 'super_admin') return permissions || {};
+  const out = { ...(permissions || {}) };
+  for (const k of SUPER_ADMIN_ONLY_PERMISSIONS) delete out[k];
+  return out;
+}
+
 async function createRole({ name, description, permissions }) {
   const key = sanitizeKey(name);
   if (!key) throw new PublicError('সঠিক Role নাম দিন।');
@@ -192,7 +202,7 @@ async function createRole({ name, description, permissions }) {
   if (existing.rows.length) throw new PublicError('এই নামে ইতিমধ্যে একটা Role আছে।');
   const r = await pool.query(
     `INSERT INTO roles (key, name, description, is_system, permissions) VALUES ($1,$2,$3,false,$4) RETURNING *`,
-    [key, name.trim(), description || null, JSON.stringify(permissions || {})]
+    [key, name.trim(), description || null, JSON.stringify(stripSuperAdminOnly(permissions, key))]
   );
   return r.rows[0];
 }
@@ -200,9 +210,15 @@ async function createRole({ name, description, permissions }) {
 async function updateRole(id, { name, description, permissions }) {
   const role = await getRole(id);
   if (!role) throw new PublicError('Role পাওয়া যায়নি।');
+  // K10: super_admin-এর permission JSON সম্পাদনা করা যায় না — সবসময় সব true। আচরণ এতে বদলায় না (getUserPermissions() এই
+  // JSON পড়েই না, role.key দেখে), কিন্তু রোল ম্যাট্রিক্স (roles-matrix.ejs) JSON থেকেই আঁকে, তাই আংশিক JSON বসলে ভুল "—" দেখাত।
+  // অ্যাডমিন রুট আগে থেকেই সব true পাঠায়; এটা সার্ভিস-স্তরের গার্ড (সরাসরি কল/ভবিষ্যৎ রুটের জন্য)।
+  const effectivePermissions = role.key === 'super_admin'
+    ? Object.fromEntries(Object.keys(PERMISSIONS).map((k) => [k, true]))
+    : stripSuperAdminOnly(permissions, role.key);
   const r = await pool.query(
     `UPDATE roles SET name=$2, description=$3, permissions=$4, updated_at=NOW() WHERE id=$1 RETURNING *`,
-    [role.id, name || role.name, description ?? role.description, JSON.stringify(permissions || {})]
+    [role.id, name || role.name, description ?? role.description, JSON.stringify(effectivePermissions)]
   );
   await cache.del(`role:${role.key}`);
   return r.rows[0];
@@ -230,6 +246,7 @@ async function bulkUpdatePermission(roleIds, permKey, value) {
     const role = await getRole(id);
     if (!role) continue;
     if (role.key === 'super_admin') continue; // Super Admin সবসময় সব permission = true, override করা যাবে না
+    if (SUPER_ADMIN_ONLY_PERMISSIONS.includes(permKey)) continue; // শুধু super_admin
     const permissions = { ...(role.permissions || {}), [permKey]: value };
     await pool.query('UPDATE roles SET permissions=$2, updated_at=NOW() WHERE id=$1', [role.id, JSON.stringify(permissions)]);
     await cache.del(`role:${role.key}`);
@@ -259,12 +276,12 @@ async function importRoles(data) {
     if (existing.rows.length) {
       if (existing.rows[0].is_system) { skipped++; continue; } // সিস্টেম Role import দিয়ে ওভাররাইট করা যাবে না
       await pool.query('UPDATE roles SET name=$2, description=$3, permissions=$4, updated_at=NOW() WHERE key=$1',
-        [item.key, item.name, item.description || null, JSON.stringify(item.permissions || {})]);
+        [item.key, item.name, item.description || null, JSON.stringify(stripSuperAdminOnly(item.permissions, item.key))]);
       await cache.del(`role:${item.key}`);
       updated++;
     } else {
       await pool.query('INSERT INTO roles (key, name, description, is_system, permissions) VALUES ($1,$2,$3,false,$4)',
-        [item.key, item.name, item.description || null, JSON.stringify(item.permissions || {})]);
+        [item.key, item.name, item.description || null, JSON.stringify(stripSuperAdminOnly(item.permissions, item.key))]);
       created++;
     }
   }
@@ -296,6 +313,7 @@ function permissionsBeyondCaller(callerPermissions, requestedPermissions) {
 }
 
 module.exports = {
+  SUPER_ADMIN_ONLY_PERMISSIONS, stripSuperAdminOnly,
   PERMISSIONS, permissionGroups,
   getUserPermissions, hasPermission, requirePermission, requireSuperAdmin,
   listRoles, getRole, createRole, updateRole, deleteRole, cloneRole,

@@ -1277,6 +1277,15 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
   }
 
+  // হেডার আগেই চলে গেলে (যেমন route res.redirect() করার পর express-session end()-এ হেডার ফ্লাশ করে PG-তে সেশন সেভ শুরু করে,
+  // সেভ ব্যর্থ হলে — DB কানেকশন ফুরালে/ব্যর্থ হলে — next(err) আসে) আর কোনো রেসপন্স পাঠানো যায় না: res.status().render() এখানে
+  // async render-callback-এ "Cannot set headers after they are sent" ছুড়ত → uncaughtException (server.js-এ প্রসেস বন্ধ হয়)।
+  // ত্রুটিটা উপরে ইতিমধ্যে লগ (ও 5xx হলে error_logs/Sentry) হয়েছে। রেসপন্স শেষ না হয়ে থাকলে Express-এর ডিফল্ট হ্যান্ডলারে
+  // ছাড়ি (সে সংযোগ বন্ধ করে, ঝুলে থাকে না); শেষ হয়ে গেলে আর কিছু করার নেই।
+  if (res.headersSent) {
+    return res.writableEnded ? undefined : next(err);
+  }
+
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
 
   // fetch/AJAX/API কলে HTML পেজ ফেরত পাঠালে client-side JSON.parse ভেঙে যায়,
