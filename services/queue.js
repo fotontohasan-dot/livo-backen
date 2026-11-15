@@ -323,6 +323,12 @@ async function getThroughput(hours = 24) {
 }
 
 
+/** web প্রসেসে consumer ইচ্ছাকৃতভাবে বন্ধ কিনা: PROCESS_ROLE=web অথবা DISABLE_BACKGROUND_WORKER=true/1 */
+function consumerIntentionallyOff() {
+  const d = String(process.env.DISABLE_BACKGROUND_WORKER || '').toLowerCase();
+  return process.env.PROCESS_ROLE === 'web' || d === 'true' || d === '1';
+}
+
 /** কিউ হেলথ স্ট্যাটাস — Healthy/Warning/Error, System Diagnostics পেজেও ব্যবহৃত হয় */
 async function getHealthStatus() {
   const issues = [];
@@ -331,8 +337,9 @@ async function getHealthStatus() {
   if (!QUEUE_ENABLED) {
     level = 'error';
     issues.push('কিউ ওয়ার্কার .env-এ ডিসেবল করা আছে (QUEUE_ENABLED=false)');
-  } else if (!state.running && process.env.PROCESS_ROLE !== 'web') {
-    // PROCESS_ROLE=web-এ consumer ইচ্ছাকৃতভাবে চলে না (আলাদা worker প্রসেস চালায়)।
+  } else if (!state.running && !consumerIntentionallyOff()) {
+    // PROCESS_ROLE=web বা DISABLE_BACKGROUND_WORKER=true/1 (render.yaml-এর web)-এ consumer
+    // ইচ্ছাকৃতভাবে চলে না (আলাদা worker প্রসেস চালায়)।
     // সেখানে worker মরেছে কি না নিচের DB-ভিত্তিক চেক (stalled / oldest pending) ধরবে।
     level = 'error';
     issues.push('কিউ ওয়ার্কার চালু নেই');
