@@ -416,6 +416,8 @@ if (!sessionStore) {
   }
 }
 
+require('./services/sessionStore').setActiveSessionStore(sessionStore); // সেশন বাতিলের সময় সক্রিয় স্টোর থেকেও মোছার জন্য
+
 const isProd = process.env.NODE_ENV === 'production';
 
 // store না থাকলে express-session নীরবে MemoryStore ব্যবহার করে — একাধিক ইনস্ট্যান্স

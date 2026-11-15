@@ -39,4 +39,16 @@ function createRedisSessionStore(url, { prefix = 'livo:sess:', ttl } = {}) {
   return { store: new RedisStore(opts), client };
 }
 
-module.exports = { createRedisSessionStore, adaptIoredis };
+// সক্রিয় স্টোরের রেজিস্ট্রি: সেশন বাতিলের কোড (deviceTracking) আগে শুধু Postgres user_sessions থেকে
+// মুছত; Redis স্টোর সক্রিয় থাকলে বাতিল-করা সেশন বৈধ থেকে যেত। এখন সক্রিয় স্টোর থেকেও মোছা হয়।
+let activeStore = null;
+function setActiveSessionStore(store) { activeStore = store || null; }
+function getActiveSessionStore() { return activeStore; }
+function destroySessionById(sid) {
+  return new Promise((resolve) => {
+    if (!activeStore || typeof activeStore.destroy !== 'function' || !sid) return resolve(false);
+    try { activeStore.destroy(sid, (err) => resolve(!err)); } catch (e) { resolve(false); }
+  });
+}
+
+module.exports = { createRedisSessionStore, adaptIoredis, setActiveSessionStore, getActiveSessionStore, destroySessionById };

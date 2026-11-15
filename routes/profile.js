@@ -6,6 +6,7 @@ const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const { getBaseUrl } = require('../utils/publicUrl');
 const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 const { listActiveSessions, revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { logAdminAction } = require('../services/fraudDetection');
@@ -401,6 +402,8 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
+    // isAuth-এর ৩০ সেকেন্ডের active-status ক্যাশ মুছে দেওয়া — নাহলে অন্য ডিভাইসের সেশন ৩০ সেকেন্ড পর্যন্ত চলত
+    await cache.del(cacheKeys.userActiveStatus(req.session.user.id)).catch(() => {});
     req.flash('success', req.t('profile_msg_self_exclude_set').replace('{value}', days));
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
