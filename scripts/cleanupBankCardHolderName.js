@@ -4,7 +4,14 @@
 // bank_cards.holder_name ক্লিনআপ।
 //
 // কেন: কার্ড-যোগ ফর্ম (views/profile/cards.ejs) "পাসওয়ার্ড" ইনপুটের মান holder_name কলামে
-// সাধারণ টেক্সটে সংরক্ষণ করত। তাই ওই কলামের যেকোনো অ-ফাঁকা মান সংবেদনশীল ধরা হচ্ছে।
+// সাধারণ টেক্সটে সংরক্ষণ করত।
+//
+// "আক্রান্ত row" = holder_name অ-ফাঁকা এবং নিচের *যেকোনো একটি* সত্য:
+//   ক) utils/holderName.js-এর validateHolderName সেটা প্রত্যাখ্যান করে (অঙ্ক, চিহ্ন, দৈর্ঘ্য ২–৬০-এর বাইরে ইত্যাদি) —
+//      ক্লিনআপ ও লেখার-পথের ভ্যালিডেটর হুবহু একই ফাংশন, তাই নিয়ম কখনো আলাদা হতে পারে না;
+//   খ) মান বৈধ নামের মতো দেখালেও সেই row-এর ইউজারের নিজের লগইন পাসওয়ার্ডের সঙ্গে bcrypt-এ মেলে।
+// বৈধ নাম (বাংলা স্বরচিহ্ন/হসন্ত/ZWJ/ZWNJ সহ) যেটা ইউজারের পাসওয়ার্ড নয়, সেটা কখনো ছোঁয়া হয় না।
+// সীমা: অন্য কোনো (নিজের নয়) শুধু-অক্ষরের পাসওয়ার্ড নাম থেকে আলাদা করা অসম্ভব — সেটা ধরা পড়ে না।
 //
 // ডিফল্ট = DRY-RUN: শুধু গোনে (SELECT COUNT), কিছুই বদলায় না।
 //   node scripts/cleanupBankCardHolderName.js
@@ -27,7 +34,9 @@
 // ---------------------------------------------------------------------------
 
 const BACKUP_TABLE = 'bank_cards_holder_name_backup';
-const AFFECTED_WHERE = `holder_name IS NOT NULL AND BTRIM(holder_name) <> ''`;
+// শুধু প্রাথমিক ছাঁকনি (অ-ফাঁকা)। আসল "আক্রান্ত" সিদ্ধান্ত scanAffected()-এ — validateHolderName + নিজের-পাসওয়ার্ড মিল।
+const NON_BLANK_WHERE = `holder_name IS NOT NULL AND BTRIM(holder_name) <> ''`;
+const { validateHolderName } = require('../utils/holderName');
 const REDIS_SESSION_PREFIX = 'livo:sess:'; // app.js-এর RedisStore prefix-এর সাথে মিল রাখতে হবে
 
 function parseArgs(argv) {
@@ -54,16 +63,68 @@ async function backupTableExists(db) {
   return !!(rows && rows[0] && rows[0].t);
 }
 
-async function countAffected(db) {
+const ALLOWED_CHAR_RE = /[\p{L}\p{M}\u200c\u200d .'’-]/u;
+/** শ্রেণি (শুধু গণনার জন্য; মান কখনো ফেরত/ছাপা হয় না)। বৈধ হলে 'valid'। সিদ্ধান্ত = validateHolderName, শ্রেণি শুধু বিবরণ। */
+function classifyHolderName(value) {
+  if (validateHolderName(value).valid) return 'valid';
+  const v = String(value);
+  const hasLetter = /\p{L}/u.test(v);
+  const hasDigit = /\p{N}/u.test(v);
+  const hasSymbol = [...v].some((ch) => !ALLOWED_CHAR_RE.test(ch) && !/\p{N}/u.test(ch));
+  if (hasLetter && (hasDigit || hasSymbol)) return 'password_like'; // অক্ষর + অঙ্ক/চিহ্ন মেশানো
+  if (hasDigit) return 'digits_only';
+  if (hasSymbol) return 'symbols_only';
+  return 'length_or_format';
+}
+
+async function ownPasswordMatches(userHash, value, compare) {
+  if (!userHash) return false;
+  const v = String(value);
+  const cands = [...new Set([v, validateHolderName(v).value].filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 72))];
+  for (const c of cands) { if (await compare(c, userHash)) return true; }
+  return false;
+}
+
+/**
+ * আক্রান্ত row চিহ্নিত করে। lock=true হলে (ট্রানজ্যাকশনের ভেতরে) সংশ্লিষ্ট row-গুলো FOR UPDATE করে — যাতে যা গোনা হলো
+ * ঠিক তা-ই ব্যাকআপ/ফাঁকা হয়। কোনো মান ফেরত দেয় না — শুধু আইডি ও গণনা।
+ */
+async function scanAffected(db, { lock = false, compare } = {}) {
+  const cmp = compare || ((plain, hash) => require('bcryptjs').compare(plain, hash));
   const { rows } = await db.query(
-    `SELECT COUNT(*)::int AS rows_count, COUNT(DISTINCT user_id)::int AS users_count
-       FROM bank_cards WHERE ${AFFECTED_WHERE}`
+    `SELECT id, user_id, holder_name FROM bank_cards WHERE ${NON_BLANK_WHERE} ORDER BY id${lock ? ' FOR UPDATE' : ''}`
   );
-  return { rows: rows[0].rows_count, users: rows[0].users_count };
+  const byClass = { password_like: 0, digits_only: 0, symbols_only: 0, length_or_format: 0, own_password: 0 };
+  let valid = 0;
+  const ids = []; const users = new Set();
+  const validRows = [];
+  for (const r of rows) {
+    const cls = classifyHolderName(r.holder_name);
+    if (cls === 'valid') { valid += 1; validRows.push(r); continue; }
+    byClass[cls] += 1; ids.push(r.id); if (r.user_id != null) users.add(r.user_id);
+  }
+  // বৈধ-দেখতে মান যেটা ইউজারের নিজের পাসওয়ার্ড — তাও আক্রান্ত
+  const owners = [...new Set(validRows.map((r) => r.user_id).filter((x) => x != null))];
+  if (owners.length) {
+    const pw = await db.query(`SELECT id, password FROM users WHERE id = ANY($1::int[])`, [owners]);
+    const hashOf = new Map(pw.rows.map((x) => [x.id, x.password]));
+    for (const r of validRows) {
+      if (r.user_id == null) continue;
+      if (await ownPasswordMatches(hashOf.get(r.user_id), r.holder_name, cmp)) {
+        byClass.own_password += 1; valid -= 1; ids.push(r.id); users.add(r.user_id);
+      }
+    }
+  }
+  return { ids, userIds: [...users], rows: ids.length, users: users.size, valid, byClass };
+}
+
+async function countAffected(db, opts) {
+  const { rows, users, valid, byClass } = await scanAffected(db, opts);
+  return { rows, users, valid, byClass };
 }
 
 /** একটাই ট্রানজ্যাকশন: ব্যাকআপ → ফাঁকা করা → রিসেট ফ্ল্যাগ। ফেরত দেয় আক্রান্ত user_id তালিকা (ছাপা হয় না)। */
-async function applyInTransaction(client) {
+async function applyInTransaction(client, opts = {}) {
   await client.query('BEGIN');
   try {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT false`);
@@ -76,21 +137,23 @@ async function applyInTransaction(client) {
         holder_name TEXT,
         backed_up_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
-    // লক নিয়ে একই row-সেটের ওপর ব্যাকআপ ও আপডেট, যাতে মাঝখানে নতুন মান ঢুকে ব্যাকআপ ছাড়া মুছে না যায়।
-    await client.query(`SELECT id FROM bank_cards WHERE ${AFFECTED_WHERE} FOR UPDATE`);
-    await client.query(`
-      INSERT INTO ${BACKUP_TABLE} (bank_card_id, user_id, holder_name)
-      SELECT id, user_id, holder_name FROM bank_cards WHERE ${AFFECTED_WHERE}`);
-    const userRes = await client.query(
-      `SELECT DISTINCT user_id FROM bank_cards WHERE ${AFFECTED_WHERE} AND user_id IS NOT NULL`
-    );
-    const userIds = userRes.rows.map((r) => r.user_id);
-    const upd = await client.query(`UPDATE bank_cards SET holder_name = NULL WHERE ${AFFECTED_WHERE}`);
+    // লক নিয়ে একই row-সেটের ওপর শ্রেণিবিন্যাস, ব্যাকআপ ও আপডেট (মাঝখানে বদলালে ভুল row ছোঁয়া হয় না)
+    const scan = await scanAffected(client, { lock: true, compare: opts.compare });
+    const ids = scan.ids;
+    const userIds = scan.userIds;
+    let clearedRows = 0;
+    if (ids.length) {
+      await client.query(`
+        INSERT INTO ${BACKUP_TABLE} (bank_card_id, user_id, holder_name)
+        SELECT id, user_id, holder_name FROM bank_cards WHERE id = ANY($1::int[])`, [ids]);
+      const upd = await client.query(`UPDATE bank_cards SET holder_name = NULL WHERE id = ANY($1::int[])`, [ids]);
+      clearedRows = upd.rowCount;
+    }
     if (userIds.length) {
       await client.query(`UPDATE users SET must_reset_password = true WHERE id = ANY($1::int[])`, [userIds]);
     }
     await client.query('COMMIT');
-    return { userIds, clearedRows: upd.rowCount };
+    return { userIds, clearedRows };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) { /* উপেক্ষা */ }
     throw err;
@@ -138,6 +201,8 @@ async function run({ argv, env, out, deps }) {
   try {
     const before = await countAffected(pool);
     out(`[${args.apply ? 'APPLY' : 'DRY-RUN'}] আক্রান্ত row: ${before.rows}, আক্রান্ত ইউজার: ${before.users}`);
+    const c = before.byClass;
+    out(`শ্রেণি — পাসওয়ার্ড-সদৃশ (অক্ষর+অঙ্ক/চিহ্ন): ${c.password_like}, শুধু অঙ্ক: ${c.digits_only}, শুধু চিহ্ন: ${c.symbols_only}, দৈর্ঘ্য/ফরম্যাট: ${c.length_or_format}, নিজের-পাসওয়ার্ড-মিল: ${c.own_password}; বৈধ নাম (অক্ষত থাকবে): ${before.valid}`);
 
     if (!args.apply) {
       out('DRY-RUN: কিছুই বদলানো হয়নি। সত্যিই চালাতে --apply দিন।');
@@ -156,7 +221,7 @@ async function run({ argv, env, out, deps }) {
     const client = await pool.connect();
     let result;
     try {
-      result = await applyInTransaction(client);
+      result = await applyInTransaction(client, { compare: deps.compare });
     } finally {
       client.release();
     }
@@ -199,7 +264,7 @@ async function run({ argv, env, out, deps }) {
   }
 }
 
-module.exports = { run, parseArgs, usesRedisSessions, backupTableExists, countAffected, applyInTransaction, revokeRedisSessions, BACKUP_TABLE, AFFECTED_WHERE };
+module.exports = { run, parseArgs, usesRedisSessions, backupTableExists, countAffected, scanAffected, classifyHolderName, applyInTransaction, revokeRedisSessions, BACKUP_TABLE, NON_BLANK_WHERE };
 
 if (require.main === module) {
   require('dotenv').config();

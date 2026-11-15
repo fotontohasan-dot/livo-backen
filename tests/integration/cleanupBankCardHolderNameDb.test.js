@@ -1,12 +1,13 @@
 // scripts/cleanupBankCardHolderName.js — আসল Postgres + আসল Redis। প্রতিটা টেস্ট নিজস্ব scratch DB-তে (শেয়ার্ড DB স্পর্শ করে না)।
 const { Client, Pool } = require('pg');
 const Redis = require('ioredis');
+const bcrypt = require('bcryptjs');
 const { run, BACKUP_TABLE } = require('../../scripts/cleanupBankCardHolderName');
 
 const BASE = process.env.DATABASE_URL;
 const REDIS_URL = process.env.TEST_REDIS_URL || 'redis://127.0.0.1:6379';
 const urlFor = (db) => { const u = new URL(BASE); u.pathname = '/' + db; return u.toString(); };
-const SECRETS = ['Sup3rSecretPass!', 'hunter2hunter2', 'নামটি গোপন'];
+const SECRETS = ['Sup3rSecretPass!', 'hunter2hunter2', 'নামটি গোপন১২৩'];
 const created = []; const pools = [];
 const redisKeys = [];
 
@@ -17,7 +18,7 @@ async function makeScratch(tag) {
   created.push(name);
   const pool = new Pool({ connectionString: urlFor(name) }); pools.push(pool);
   await pool.query(`
-    CREATE TABLE users (id SERIAL PRIMARY KEY, username TEXT, must_reset_password BOOLEAN NOT NULL DEFAULT false);
+    CREATE TABLE users (id SERIAL PRIMARY KEY, username TEXT, password TEXT, must_reset_password BOOLEAN NOT NULL DEFAULT false);
     CREATE TABLE bank_cards (id SERIAL PRIMARY KEY, user_id INTEGER, bank_name TEXT, account_number TEXT, holder_name TEXT);
     CREATE TABLE device_sessions (sid TEXT, user_id INTEGER, revoked_at TIMESTAMPTZ);`);
   return { name, pool };
@@ -157,5 +158,47 @@ describe('--apply', () => {
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/আক্রান্ত row: 0/);
     expect((await snap(pool)).hasBackup).toBe(false);
+  });
+});
+
+// ---- নতুন: আক্রান্ত-শর্ত = ভ্যালিডেটর প্রত্যাখ্যান + নিজের-পাসওয়ার্ড মিল; বৈধ নাম কখনো মোছা নয় ----
+const VALID_NAMES = ['মোহাম্মদ রফিকুল ইসলাম', 'ফাতেমা খাতুন', 'আব্দুল্লাহ', 'শ্রীমতী কৃষ্ণা', 'রাজ্জাক', 'Md. Rahim', "O'Brien", 'Anne-Marie', 'র\u200d্যাব আলী', 'কার\u200c্য সম্পাদক'];
+const INVALID_NAMES = ['Pass1234', 'P@ssw0rd!', '12345678', 'name_1', 'a', '<b>x</b>', '😀 smile', '১২৩৪৫৬', 'x'.repeat(61), '-name'];
+
+describe('আক্রান্ত-শর্ত ভ্যালিডেটরের সঙ্গে মিল', () => {
+  test('বৈধ নাম (স্বরচিহ্ন/হসন্ত/ZWJ/ZWNJ সহ) অক্ষত; অবৈধ সব ধরা; শ্রেণি-গণনা মেলে; আউটপুটে মান নেই', async () => {
+    const { pool } = await makeScratch('parity');
+    const uid = (await pool.query("INSERT INTO users (username, password) VALUES ('u_par', $1) RETURNING id", [await bcrypt.hash('Zq9!unrelated', 4)])).rows[0].id;
+    for (const n of [...VALID_NAMES, ...INVALID_NAMES]) await pool.query("INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,'bKash','01700000000',$2)", [uid, n]);
+    const dry = await exec([], pool);
+    expect(dry.code).toBe(0);
+    expect(dry.out).toContain(`আক্রান্ত row: ${INVALID_NAMES.length}, আক্রান্ত ইউজার: 1`);
+    expect(dry.out).toContain(`বৈধ নাম (অক্ষত থাকবে): ${VALID_NAMES.length}`);
+    const ap = await exec(['--apply'], pool);
+    expect(ap.code).toBe(0);
+    const left = (await pool.query('SELECT holder_name FROM bank_cards ORDER BY id')).rows.map((r) => r.holder_name);
+    expect(left.slice(0, VALID_NAMES.length)).toEqual(VALID_NAMES);                       // বৈধ: বাইট-বাই-বাইট অক্ষত
+    expect(left.slice(VALID_NAMES.length).every((x) => x === null)).toBe(true);           // অবৈধ: সব NULL
+    const bk = (await pool.query(`SELECT holder_name FROM ${BACKUP_TABLE}`)).rows.map((r) => r.holder_name);
+    expect(bk.sort()).toEqual([...INVALID_NAMES].sort());                                 // ব্যাকআপে শুধু অবৈধ
+    for (const n of [...VALID_NAMES, ...INVALID_NAMES].filter((x) => x.length >= 5)) expect(ap.out + dry.out).not.toContain(n); // ১–২ অক্ষরের মান সাধারণ শব্দের অংশ হয়ে যায়, তাই ≥৫
+  });
+
+  test('বৈধ-দেখতে মান ইউজারের নিজের পাসওয়ার্ড হলে (bcrypt মিল) আক্রান্ত; অন্যের পাসওয়ার্ডের সমান হলে নয়', async () => {
+    const { pool } = await makeScratch('ownpw');
+    const mk = async (name, pw) => (await pool.query('INSERT INTO users (username, password) VALUES ($1,$2) RETURNING id', [name, await bcrypt.hash(pw, 4)])).rows[0].id;
+    const a = await mk('u_own', 'Correct Horse Battery');
+    const b = await mk('u_other', 'Another Long Phrase');
+    await pool.query("INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,'bKash','01700000001','Correct Horse Battery'), ($2,'bKash','01700000002','Correct Horse Battery'), ($1,'bKash','01700000003','রহিম উদ্দিন')", [a, b]);
+    const dry = await exec([], pool);
+    expect(dry.out).toMatch(/আক্রান্ত row: 1, আক্রান্ত ইউজার: 1/);
+    expect(dry.out).toMatch(/নিজের-পাসওয়ার্ড-মিল: 1/);
+    expect((await exec(['--apply'], pool)).code).toBe(0);
+    const rows = (await pool.query('SELECT user_id, holder_name FROM bank_cards ORDER BY id')).rows;
+    expect(rows[0].holder_name).toBeNull();                 // নিজের পাসওয়ার্ড → মুছল
+    expect(rows[1].holder_name).toBe('Correct Horse Battery'); // অন্যের → নাম হিসেবে বৈধ, অক্ষত
+    expect(rows[2].holder_name).toBe('রহিম উদ্দিন');
+    const flags = Object.fromEntries((await pool.query('SELECT id, must_reset_password AS f FROM users')).rows.map((x) => [x.id, x.f]));
+    expect(flags[a]).toBe(true); expect(flags[b]).toBe(false);
   });
 });

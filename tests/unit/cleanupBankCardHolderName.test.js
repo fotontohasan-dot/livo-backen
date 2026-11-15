@@ -7,13 +7,22 @@ function makeEnv(extra = {}) {
   return { DATABASE_URL: 'postgres://u:pw@host/db', ...extra };
 }
 
-function makeDeps({ rowsCount = 3, usersCount = 2, failOn = null } = {}) {
+// স্ক্যান-সারি: দুই ইউজার (7, ৯), ৩টি অবৈধ মান (অঙ্ক/চিহ্ন-যুক্ত) + ১টি বৈধ নাম (ইউজার ৭, অক্ষত থাকতে হবে)
+const INVALID_ROWS = [
+  { id: 1, user_id: 7, holder_name: `${SECRET}` },
+  { id: 2, user_id: 9, holder_name: 'hunter2hunter2' },
+  { id: 3, user_id: 9, holder_name: 'P@ss!' },
+];
+const VALID_ROW = { id: 4, user_id: 7, holder_name: 'আব্দুল্লাহ' };
+function makeDeps({ rowsCount = 3, usersCount = 2, failOn = null, scanRows = null } = {}) {
+  const rowsForScan = scanRows || (rowsCount === 0 ? [] : [...INVALID_ROWS.slice(0, rowsCount), VALID_ROW]);
   const queries = [];
   const client = {
     query: jest.fn(async (sql) => {
       queries.push(String(sql).replace(/\s+/g, ' ').trim());
       if (failOn && String(sql).includes(failOn)) { const e = new Error(`bad ${SECRET}`); e.code = 'XX999'; throw e; }
-      if (/SELECT DISTINCT user_id/.test(sql)) return { rows: [{ user_id: 7 }, { user_id: 9 }] };
+      if (/FROM bank_cards WHERE/.test(sql) && /^\s*SELECT/i.test(sql)) return { rows: rowsForScan };
+      if (/FROM users WHERE id = ANY/.test(sql)) return { rows: [{ id: 7, password: 'hash7' }] };
       if (/UPDATE bank_cards/.test(sql)) return { rowCount: rowsCount };
       return { rows: [], rowCount: 0 };
     }),
@@ -22,7 +31,8 @@ function makeDeps({ rowsCount = 3, usersCount = 2, failOn = null } = {}) {
   const pool = {
     query: jest.fn(async (sql) => {
       queries.push(String(sql).replace(/\s+/g, ' ').trim());
-      if (/COUNT\(\*\)/.test(sql)) return { rows: [{ rows_count: rowsCount, users_count: usersCount }] };
+      if (/FROM bank_cards WHERE/.test(sql)) return { rows: rowsForScan };
+      if (/FROM users WHERE id = ANY/.test(sql)) return { rows: [{ id: 7, password: 'hash7' }] };
       if (/FROM device_sessions/.test(sql)) return { rows: [{ sid: 'sid-1' }] };
       return { rows: [] };
     }),
@@ -33,6 +43,7 @@ function makeDeps({ rowsCount = 3, usersCount = 2, failOn = null } = {}) {
     revokeAllOtherSessions: jest.fn(async () => 1),
     invalidateAuthCache: jest.fn(async () => {}),
     createRedis: jest.fn(),
+    compare: jest.fn(async () => false),
   };
   return { deps, queries, client, pool };
 }
@@ -144,5 +155,27 @@ describe('revokeRedisSessions', () => {
       del: jest.fn(async () => 1),
     };
     expect(await revokeRedisSessions(redis, [1])).toBe(2);
+  });
+});
+
+// আক্রান্ত-সিদ্ধান্ত = ভ্যালিডেটরের সিদ্ধান্ত (একই ফাংশন; এই টেস্ট ভবিষ্যতে দুটো আলাদা হয়ে গেলে ধরবে)
+describe('classifyHolderName ↔ validateHolderName সমতা', () => {
+  const { classifyHolderName } = require('../../scripts/cleanupBankCardHolderName');
+  const { validateHolderName } = require('../../utils/holderName');
+  const SAMPLES = [
+    'মোহাম্মদ রফিকুল ইসলাম', 'ফাতেমা খাতুন', 'আব্দুল্লাহ', 'শ্রীমতী কৃষ্ণা', 'রাজ্জাক', 'Md. Rahim', "O'Brien", 'Anne-Marie', 'র\u200d্যাব আলী', 'কার\u200c্য',
+    'Rahim Uddin', 'রহিম উদ্দিন', '李小龍', 'José Álvarez',
+    'P@ssw0rd!', 'Pass1234', '12345678', '১২৩৪৫৬', 'নাম১২৩', 'a', 'ক', 'x'.repeat(61), '-name', '.name', 'name_1', '😀 smile', '<b>x</b>', 'a\nb', 'a\tb', '..', '  ',
+  ];
+  test.each(SAMPLES)('%j', (v) => {
+    const cls = classifyHolderName(v);
+    expect(cls === 'valid').toBe(validateHolderName(v).valid);
+  });
+  test('শ্রেণি: অক্ষর+অঙ্ক/চিহ্ন = password_like; শুধু অঙ্ক; শুধু চিহ্ন; দৈর্ঘ্য', () => {
+    expect(classifyHolderName('Pass1234')).toBe('password_like');
+    expect(classifyHolderName('P@ssw0rd!')).toBe('password_like');
+    expect(classifyHolderName('12345678')).toBe('digits_only');
+    expect(classifyHolderName('@@@@')).toBe('symbols_only');
+    expect(classifyHolderName('a')).toBe('length_or_format');
   });
 });
