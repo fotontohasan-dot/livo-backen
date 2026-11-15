@@ -1594,6 +1594,8 @@ async function applyMigrations(pool) {
     console.log("✅ Push subscription table ready");
 
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
+    // বাধ্যতামূলক পাসওয়ার্ড রিসেট ফ্ল্যাগ (scripts/cleanupBankCardHolderName.js বসায়; পাসওয়ার্ড বদলালে মুছে যায়)।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT false;`);
 
     // routes/coins.js-এর POST /coins/daily-bonus এই কলামটা SET ও WHERE দুই জায়গাতেই ব্যবহার করে
     // ("দিনে একবার" গার্ড হিসেবে), কিন্তু কলামটা কোথাও তৈরি করা হতো না — ফলে ডেইলি বোনাস

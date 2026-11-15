@@ -437,6 +437,16 @@ async function completeLogin(req, user, vpnInfo) {
   // ফলাফল: লগইন সফল হলেও ইউজার সঙ্গে সঙ্গে লগইন পেজে ফেরত যায়।
   await saveSession(req);
 
+  // বাধ্যতামূলক পাসওয়ার্ড রিসেট ফ্ল্যাগ থাকলে সরাসরি পাসওয়ার্ড-বদল পাতায় (বার্তাসহ) — অন্য পাতায় গিয়ে ধাক্কা খাওয়ার আগেই।
+  // লগইন-সারির আকার পথভেদে আলাদা, তাই ফ্ল্যাগ DB থেকে আলাদা করে পড়া হয়। ব্যর্থ হলে সাধারণ গন্তব্য (isAuth তখনও আটকাবে)।
+  try {
+    const f = await pool.query('SELECT must_reset_password FROM users WHERE id = $1', [user.id]);
+    if (f.rows[0] && f.rows[0].must_reset_password) {
+      if (req.flash) req.flash('error', req.t('auth_password_reset_required'));
+      await saveSession(req);
+      return '/profile/security/login-password';
+    }
+  } catch (e) { console.error('must_reset_password check error:', e.message); }
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
 
@@ -971,7 +981,7 @@ router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async
     // অর্থাৎ টোকেনটা কার্যত single-use ছিল না। WHERE-এ reset_token রাখার ফলে দ্বিতীয় কলটা
     // rowCount 0 পায় (প্রথমটা ইতিমধ্যে NULL করে দিয়েছে) এবং কিছুই পরিবর্তন করতে পারে না।
     const updated = await pool.query(
-      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL
+      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL, must_reset_password = false
        WHERE reset_token = $2 AND reset_token_expiry > NOW()
        RETURNING id, username`,
       [hashed, hashToken(token)]
@@ -981,6 +991,7 @@ router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async
       return res.redirect('/forgot-password');
     }
     cache.del(`reset_token:${hashToken(token)}`).catch(() => {});
+    cache.del(`auth:active:${updated.rows[0].id}`).catch(() => {});
 
     // PHASE 5/14 fix: password reset একটি security-sensitive account event,
     // কিন্তু এর কোনো audit trail ছিল না। token বা password কখনো log করা হয় না।

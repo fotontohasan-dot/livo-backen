@@ -62,4 +62,19 @@ function nonMockProviders(env = process.env) {
   return out;
 }
 
-module.exports = { isStaging, resolveSslczMode, nonMockProviders, SSLCZ_LIVE_URL, SSLCZ_SANDBOX_URL };
+/**
+ * APP_ENV সেট নেই, অথচ পরিবেশ দেখে staging মনে হচ্ছে (Render সার্ভিসের নাম বা PUBLIC_APP_URL-এ "staging")।
+ * তাহলে সতর্কতার বার্তা ফেরত দেয়, নইলে null। কোনো মান ছাপে না — শুধু ভেরিয়েবলের নাম।
+ */
+function stagingWithoutAppEnvWarning(env = process.env) {
+  if (String(env.APP_ENV || '').trim()) return null;
+  const svc = String(env.RENDER_SERVICE_NAME || '');
+  const url = hostOf(env.PUBLIC_APP_URL || '');
+  if (/staging/i.test(svc) || /staging/i.test(url)) {
+    return 'APP_ENV সেট নেই, অথচ এটি staging পরিবেশ মনে হচ্ছে (সার্ভিসের নাম/PUBLIC_APP_URL দেখে)। '
+      + 'staging-এর সুরক্ষা (SSLCommerz sandbox-এ বাধ্য রাখা, DB SSL আচরণ, প্রোভাইডার যাচাই) সক্রিয় হবে না। APP_ENV=staging বসান।';
+  }
+  return null;
+}
+
+module.exports = { isStaging, stagingWithoutAppEnvWarning, resolveSslczMode, nonMockProviders, SSLCZ_LIVE_URL, SSLCZ_SANDBOX_URL };
