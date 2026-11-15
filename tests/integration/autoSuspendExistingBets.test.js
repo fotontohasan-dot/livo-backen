@@ -29,6 +29,22 @@ async function makeMarket() {
 }
 const bet = (u, matchId, body) => u.agent.post(`/matches/${matchId}/bet`).set('X-CSRF-Token', u.token).type('form').send(body);
 const coins = async (id) => Number((await pool.query('SELECT coins FROM users WHERE id=$1', [id])).rows[0].coins);
+// "২০" = first_bet ব্যাজের রিওয়ার্ড (services/badges.js: BADGES[first_bet].reward = 20)। routes/matches.js বাজির COMMIT-এর *পরে*
+// await ছাড়া checkBadges(userId) চালায় (fire-and-forget), তাই বাজির রেসপন্সের পরপরই ব্যালেন্স পড়লে ৮৫০ বা ৮৭০ — রেস।
+// এখানে sleep-অনুমান নয়: ব্যাজের coin_transactions(type='badge') সারি না আসা পর্যন্ত পোল করা হয় (সারি লেখা ও coins += reward একই
+// ট্রানজ্যাকশনে বলে সারি দেখা মানেই ব্যালেন্সে বোনাস জমা)। সারি না এলে টাইমআউটে স্পষ্ট ত্রুটি — নীরবে ৮৫০ ধরে এগোয় না।
+const BADGE_REWARD = 20;
+async function coinsAfterBadgeSettled(userId, expectedBadgeRows = 1) {
+  const end = Date.now() + 10000;
+  for (;;) {
+    const rows = (await pool.query("SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='badge'", [userId])).rows;
+    if (rows.length >= expectedBadgeRows) return { coins: await coins(userId), badge: rows.reduce((a, r) => a + Number(r.amount), 0) };
+    if (Date.now() > end) throw new Error('first_bet ব্যাজ-রিওয়ার্ড ১০ সেকেন্ডে আসেনি');
+    await new Promise((r) => setTimeout(r, 25));
+  }
+}
+// সাসপেন্ড-ছাড়া / অটো / ম্যানুয়াল — তিন দৃশ্যের ব্যালেন্স-পথ এখানে জমে, শেষে তুলনা হয়
+const trajectories = {};
 const setAuto = (name) => pool.query(
   `INSERT INTO integration_suspend (name, suspended, source, reason, suspended_at, updated_at)
    VALUES ($1, true, 'auto', 'consecutive_failures', NOW(), NOW())
@@ -51,8 +67,11 @@ describe.each([['auto', async () => setAuto('sports:cricapi')], ['manual', async
       // সাসপেন্ডের আগে দুটো বাজি
       expect((await bet(u, m1.matchId, { market_id: m1.marketId, runner: 'A', side: 'back', stake: '100' })).status).toBe(200);
       expect((await bet(u, m2.matchId, { market_id: m2.marketId, runner: 'A', side: 'back', stake: '50' })).status).toBe(200);
-      const afterBets = await coins(u.userId);   // সাসপেন্ডের আগের ব্যালেন্স (বিদ্যমান বাজি-পথের নিজস্ব রিবেট/ক্যাশব্যাক সমেত); এর সঙ্গেই সব তুলনা
-      expect(afterBets).toBeLessThan(1000);
+      // সাসপেন্ডের আগের ব্যালেন্স — ব্যাজ-বোনাস সম্পূর্ণ হওয়ার *পরে* পড়া (রেস নেই)। ১০০০ − ১৫০ (স্টেক) + ২০ (first_bet ব্যাজ) = ৮৭০।
+      const settled = await coinsAfterBadgeSettled(u.userId);
+      const afterBets = settled.coins;
+      expect(settled.badge).toBe(BADGE_REWARD);
+      expect(afterBets).toBe(1000 - 100 - 50 + BADGE_REWARD);
 
       await suspend();
       expect(await autoSuspend.getMatchProviderSuspension('cricket-cricapi')).toBeTruthy();
@@ -63,6 +82,8 @@ describe.each([['auto', async () => setAuto('sports:cricapi')], ['manual', async
       expect(blocked.status).toBe(503);
       expect(blocked.body).toMatchObject({ success: false, code: 'STALE_ODDS', suspended: true });
       expect(await coins(u.userId)).toBe(afterBets);
+      // ব্লকড বাজি নতুন কোনো বোনাসও আনে না (ব্যাজ আগেই একবার পেয়েছে; দ্বিতীয়বার সারি আসার জো নেই)
+      expect((await pool.query("SELECT COUNT(*)::int AS c FROM coin_transactions WHERE user_id=$1 AND type='badge'", [u.userId])).rows[0].c).toBe(1);
 
       // সেটলমেন্ট (জয়) চলে: ১০০ × ২.০ = ২০০ ক্রেডিট
       const c1 = await pool.connect();
@@ -85,6 +106,7 @@ describe.each([['auto', async () => setAuto('sports:cricapi')], ['manual', async
       } finally { c2.release(); }
       expect(await coins(u.userId)).toBe(afterBets + 200 + 50);
       expect((await pool.query("SELECT status FROM bets WHERE market_id=$1", [m2.marketId])).rows[0].status).toBe('void');
+      trajectories[kind] = { afterBets, afterWin: afterBets + 200, final: afterBets + 200 + 50 };
     });
 
     test('ব্রাউজিং আটকায় না: ম্যাচ তালিকা ও ক্যাসিনো লবি ২০০', async () => {
@@ -96,6 +118,32 @@ describe.each([['auto', async () => setAuto('sports:cricapi')], ['manual', async
       expect(b.status).toBe(200);
     });
   });
+
+describe('একই দৃশ্য সাসপেন্ড ছাড়া: ব্যালেন্স-পথ অভিন্ন', () => {
+  test('সাসপেন্ড না থাকলে ৮৭০ → ১০৭০ → ১১২০; অটো ও ম্যানুয়াল সাসপেন্ডের ফলের সঙ্গে হুবহু সমান', async () => {
+    await clear('sports:cricapi');
+    expect(await autoSuspend.getMatchProviderSuspension('cricket-cricapi')).toBeFalsy();
+    const u = await makeUser(1000);
+    const m1 = await makeMarket();
+    const m2 = await makeMarket();
+    expect((await bet(u, m1.matchId, { market_id: m1.marketId, runner: 'A', side: 'back', stake: '100' })).status).toBe(200);
+    expect((await bet(u, m2.matchId, { market_id: m2.marketId, runner: 'A', side: 'back', stake: '50' })).status).toBe(200);
+    const { coins: afterBets, badge } = await coinsAfterBadgeSettled(u.userId);
+    expect(badge).toBe(BADGE_REWARD);
+    expect(afterBets).toBe(870);
+    const c1 = await pool.connect();
+    try { await c1.query('BEGIN'); await settlement.settleMarketBets(c1, m1.marketId, 'A'); await c1.query('COMMIT'); } finally { c1.release(); }
+    const afterWin = await coins(u.userId);
+    const c2 = await pool.connect();
+    try { await c2.query('BEGIN'); await settlement.voidMarketBets(c2, m2.marketId, 'match cancelled'); await c2.query('COMMIT'); } finally { c2.release(); }
+    const none = { afterBets, afterWin, final: await coins(u.userId) };
+    expect(none).toEqual({ afterBets: 870, afterWin: 1070, final: 1120 });
+    // উপরের দুই describe আগে চলেছে; দুটোর ফলই থাকতে হবে (না থাকলে তুলনা ফাঁকা পাস না করে ব্যর্থ হয়)
+    expect(Object.keys(trajectories).sort()).toEqual(['auto', 'manual']);
+    expect(trajectories.auto).toEqual(none);
+    expect(trajectories.manual).toEqual(none);
+  });
+});
 
 describe.each([['auto', async () => setAuto('casino:db-games')], ['manual', async () => autoSuspend.manualSuspend('casino:db-games', { by: 'test', byId: null })]])(
   'ক্যাসিনো সাসপেন্ড (%s): চলমান রাউন্ডের ওয়ালেট callback আটকায় না', (kind, suspend) => {
