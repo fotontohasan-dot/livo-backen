@@ -59,3 +59,28 @@ describe('sanitizeImportedRows (রিস্টোর/ইমপোর্ট)', (
     expect(out.rows.map((r) => r.holder_name)).toEqual(['Rahim Uddin', null, null, '', 'রহিম উদ্দিন', undefined]);
   });
 });
+
+// K2 (task 2): অনুরোধ করা নাম-তালিকা — স্বরচিহ্ন/হসন্ত (\p{M}) ও ZWJ/ZWNJ হারায় না; সার্ভার ও ক্লায়েন্ট একই ফল দেয়
+describe('বাংলা/ইংরেজি নামের নির্দিষ্ট তালিকা + \\p{M}/ZWJ/ZWNJ সংরক্ষণ', () => {
+  const ZWNJ = '\u200c';
+  const ZWJ = '\u200d';
+  const NAMES = [
+    'মোহাম্মদ রফিকুল ইসলাম', 'ফাতেমা খাতুন', 'আব্দুল্লাহ', 'শ্রীমতী কৃষ্ণা', 'রাজ্জাক',
+    'Md. Rahim', "O'Brien", 'Anne-Marie',
+    `র${ZWJ}্যাব আলী`, `কার${ZWNJ}্য সম্পাদক`, `রহিম${ZWNJ} উদ্দিন`,
+  ];
+  test.each(NAMES)('বৈধ: %j', (n) => {
+    expect(validateHolderName(n).valid).toBe(true);
+    expect(client.check(n).valid).toBe(true);
+  });
+  test.each(NAMES)('মান অক্ষত (NFC, ছাঁটা-ছাড়া কিছু হারায় না): %j', (n) => {
+    expect(validateHolderName(n).value).toBe(n.normalize('NFC'));
+  });
+  test('হসন্ত/স্বরচিহ্ন ও ZWJ/ZWNJ কোড-পয়েন্ট সংরক্ষিত', () => {
+    const v = validateHolderName('আব্দুল্লাহ').value;
+    expect(v).toContain('\u09cd'); // হসন্ত
+    expect(v).toContain('\u09c1'); // উ-কার
+    expect(validateHolderName(`র${ZWJ}্যাব`).value).toContain(ZWJ);
+    expect(validateHolderName(`কার${ZWNJ}্য`).value).toContain(ZWNJ);
+  });
+});

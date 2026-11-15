@@ -133,6 +133,7 @@
   "account_number_placeholder_alt": "Enter account number",
   "holder_name_placeholder": "Enter your name",
   "holder_name_invalid": "Enter a valid name — only letters, spaces, dots (.), hyphens (-) and apostrophes (') are allowed; no digits or other symbols. (2–60 characters)",
+  "holder_name_matches_password": "This matches your account password — do not type your password in the name field. Enter the account holder's real name.",
   "add_card_btn": "Add Card",
   "change_password_title": "Change Password",
   "current_password": "Current Password",

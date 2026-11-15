@@ -90,12 +90,27 @@ router.post('/update-personal', isAuth, async (req, res) => {
   res.redirect('/profile/security/personal');
 });
 
+// K2: holder_name ইউজারের নিজের পাসওয়ার্ড হলে প্রত্যাখ্যান (সাধারণ ভুল: পাসওয়ার্ড নামের ঘরে লেখা)। শুধু শর্ত যাচাই —
+// bcrypt হ্যাশের সঙ্গে compare, প্লেইন টেক্সট কোথাও রাখা/লগ করা হয় না। কাঁচা ইনপুট ও নরমালাইজড মান — দুটোই মেলানো হয়।
+// DB/bcrypt ত্রুটি হলে throw করে (কলারের try/catch ধরে, নাম সেভ হয় না — নীরবে ছেড়ে দেওয়া হয় না)।
+async function holderNameEqualsOwnPassword(userId, rawInput, normalized) {
+  const r = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+  const hash = r.rows[0] && r.rows[0].password;
+  if (!hash) return false;
+  const candidates = [...new Set([String(rawInput), normalized])].filter((c) => c && c.length <= 72);
+  for (const c of candidates) {
+    if (await bcrypt.compare(c, hash)) return true;
+  }
+  return false;
+}
+
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
     // K2: সার্ভারই আসল গার্ড — শুধু অক্ষর/স্পেস/ডট/হাইফেন/অ্যাপোস্ট্রফি; মান লগ/ফেরত হয় না
     const hn = validateHolderName(holder_name);
     if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/security/bank'); }
+    if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/security/bank'); }
     await pool.query(
       `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
       [req.session.user.id, bank_name, account_number, hn.value]
@@ -680,6 +695,7 @@ router.post('/cards/add', isAuth, async (req, res) => {
     // K2: একই সার্ভার-ভ্যালিডেটর (utils/holderName.js)
     const hn = validateHolderName(holder_name);
     if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/cards'); }
+    if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/cards'); }
     await pool.query(
       'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,$2,$3,$4)',
       [req.session.user.id, bank_name, account_number, hn.value]
