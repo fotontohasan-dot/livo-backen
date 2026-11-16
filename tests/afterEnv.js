@@ -32,6 +32,10 @@ const CACHE_KEEP_SUBPREFIXES = ['rl:'];
 
 async function clearTestCacheKeys() {
   if (process.env.NODE_ENV !== 'test') return;
+  // কিছু ফাইল jest.useFakeTimers() দিয়ে সব টাইমার/nextTick নকল করে (যেমন tests/unit/bootTimerShutdown.test.js,
+  // যা Redis-ই ছোঁয় না — সব mock)। নকল ঘড়িতে ioredis-এর কানেক্ট কখনো এগোয় না এবং hook আটকে ফাইল ফেল করায়।
+  // এমন ফাইলে ক্যাশ পরিষ্কারের কিছু নেই, তাই বাদ।
+  if (typeof setTimeout.clock !== 'undefined' || setTimeout._isMockFunction) return;
   if (String(process.env.REDIS_ENABLED || '').toLowerCase() === 'false') return;
   const url = process.env.CACHE_REDIS_URL || process.env.REDIS_URL;
   if (!url) return;
@@ -56,6 +60,15 @@ async function clearTestCacheKeys() {
   }
 }
 
-if (typeof beforeAll === 'function') beforeAll(clearTestCacheKeys, 15000);
+// আসল (নকল-নয়) টাইমারে সীমা: পরিষ্কার কখনোই ফাইল আটকাবে না বা ফেল করাবে না — সর্বোচ্চ ৫ সেকেন্ড, তারপর এগিয়ে যায়।
+function boundedClear() {
+  const realTimers = require('timers');
+  return new Promise((resolve) => {
+    const t = realTimers.setTimeout(resolve, 5000);
+    clearTestCacheKeys().catch(() => {}).then(() => { realTimers.clearTimeout(t); resolve(); });
+  });
+}
+
+if (typeof beforeAll === 'function') beforeAll(boundedClear, 15000);
 
 module.exports = {};
