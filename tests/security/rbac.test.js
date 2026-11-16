@@ -85,6 +85,25 @@ describe('RBAC (services/rbac.js)', () => {
       expect(after.permissions.roles_manage).toBe(true); // অপরিবর্তিত থাকল
     });
 
+    test('updateRole() super_admin-এর permission JSON বদলাতে পারে না — সবসময় সব true (K10)', async () => {
+      const superAdmin = await rbac.getRole('super_admin');
+      await rbac.updateRole(superAdmin.id, { name: superAdmin.name, description: superAdmin.description, permissions: { roles_manage: false } });
+      const after = await rbac.getRole('super_admin');
+      expect(Object.keys(after.permissions).sort()).toEqual(Object.keys(rbac.PERMISSIONS).sort());
+      expect(Object.values(after.permissions).every((v) => v === true)).toBe(true);
+      // আচরণও অক্ষত
+      const { userId } = await makeAdminAgent();
+      await rbac.assignUserRole(userId, 'super_admin');
+      expect((await rbac.getUserPermissions(userId)).isSuperAdmin).toBe(true);
+    });
+
+    test('অন্য রোলের updateRole আগের মতোই কাজ করে (permission সম্পাদনা হয়)', async () => {
+      const role = await rbac.createRole({ name: 'K10 Edit ' + Date.now(), permissions: { users_view: true } });
+      const updated = await rbac.updateRole(role.id, { permissions: { users_view: false, dashboard_view: true } });
+      expect(updated.permissions).toEqual({ users_view: false, dashboard_view: true });
+      await rbac.deleteRole(role.id);
+    });
+
     test('import দিয়ে system role ওভাররাইট করা যায় না', async () => {
       const result = await rbac.importRoles([
         { key: 'super_admin', name: 'Hacked', permissions: {} }
