@@ -204,6 +204,29 @@ function buildJobDefinitions() {
       }
     },
 
+    integration_suspend_probe: {
+      label: 'Auto-Suspend Probe',
+      description: 'অটো-সাসপেন্ড থাকা ক্যাসিনো ও স্পোর্টস API-তে হালকা শুধু-পড়া probe কল (প্রতি ২ মিনিটে একবার) (ফলাফল breaker/outcome দিয়ে নিজে চালু করার সিদ্ধান্তে যায়)। payment/wallet কখনো নয়',
+      defaultIntervalMs: 1 * MIN,
+      defaultEnabled: true,
+      maxRetries: 0,
+      handler: async () => {
+        const autoSuspend = require('./autoSuspend');
+        const { ADAPTERS } = require('./casinoProviders');
+        for (const a of ADAPTERS) {
+          if (a && a.name && !/^mock/i.test(a.name) && typeof a.fetchGames === 'function') {
+            autoSuspend.registerProbe(`casino:${a.name}`, () => a.fetchGames());
+          }
+        }
+        // স্পোর্টস: শুধু-পড়া, ক্যাশ-বাইপাস probe (sportsAPI.probe*) — ম্যাচ সিঙ্ক/DB/ইউজার/বাজি/ওয়ালেট ছোঁয় না
+        const sportsAPI = require('./sportsAPI');
+        autoSuspend.registerProbe('sports:cricapi', () => sportsAPI.probeCricket());
+        autoSuspend.registerProbe('sports:rapidapi', () => sportsAPI.probeFootball());
+        const n = await autoSuspend.runProbes();
+        return n ? `${n}টি probe চালানো হয়েছে` : 'কোনো probe লাগেনি';
+      }
+    },
+
     system_health_check: {
       label: 'System Health Check',
       description: 'DB/Redis/Queue/Email চেক করে; overall status "error" হলে Telegram-এ অ্যাডমিনকে সতর্ক করে',
