@@ -106,6 +106,10 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
       </div>
     </div>
 
+    <% if (typeof showHomeFeatures !== 'undefined' && showHomeFeatures) { %>
+      <%- include('home-features') %>
+    <% } %>
+
     <!-- লাইসেন্স সেকশন -->
     <div class="dz3-8">
       <h3 class="text-main dz3-9"><%= t.footer_license_title %></h3>
