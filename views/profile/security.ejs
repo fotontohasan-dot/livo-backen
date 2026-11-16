@@ -232,6 +232,7 @@
       <div class="ix71-13">
         <h4 class="ix71-14"><%= t.add_new_card %></h4>
         <form class="im72-5" action="/profile/add-bank-card" method="POST">
+          <input type="hidden" name="wallet_kind" value="ewallet">
           <select class="ix71-15" name="bank_name" required>
             <option class="ix71-16" value=""><%= t.select_payment_method %></option>
             <option class="ix71-16" value="bKash">bKash</option>

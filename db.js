@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { isStaging } = require('./utils/stagingGuard');
 
 // ==================== SSL কনফিগারেশন (এনভায়রনমেন্ট-সচেতন) ====================
 // আগে এখানে `ssl: { rejectUnauthorized: false }` হার্ডকোড করা ছিল, অর্থাৎ pg সবসময় SSL
@@ -48,7 +49,7 @@ function resolveSslConfig() {
   // staging (APP_ENV/NODE_ENV=staging): Render-এর DB self-signed সার্টিফিকেট দেয়, তাই
   // "self-signed certificate" এরর এড়াতে যাচাই বন্ধ। প্রোডাকশন এতে প্রভাবিত নয় (নিচে strict)।
   // চাইলে DATABASE_CA_CERT দিলে staging-ও যাচাইসহ চলবে (উপরের লাইন)।
-  if (require('./utils/stagingGuard').isStaging()) {
+  if (isStaging()) {
     console.warn('⚠️ staging: ডাটাবেস TLS সার্টিফিকেট যাচাই বন্ধ (rejectUnauthorized: false) — শুধু staging-এর জন্য।');
     return { rejectUnauthorized: false };
   }
