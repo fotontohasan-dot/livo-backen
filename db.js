@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { isStaging } = require('./utils/stagingGuard');
 
 // ==================== SSL কনফিগারেশন (এনভায়রনমেন্ট-সচেতন) ====================
 // আগে এখানে `ssl: { rejectUnauthorized: false }` হার্ডকোড করা ছিল, অর্থাৎ pg সবসময় SSL
@@ -32,6 +33,11 @@ function resolveSslConfig() {
   if (explicit === 'false' || explicit === '0' || explicit === 'off') return false;
 
   if (process.env.NODE_ENV === 'test') return false;
+
+  // স্টেজিং (APP_ENV=staging): ম্যানেজড ডাটাবেসের self-signed সার্টিফিকেটে
+  // "self-signed certificate" ত্রুটি এড়াতে যাচাই বন্ধ। শুধু স্টেজিংয়ের জন্য —
+  // প্রোডাকশন নিচের কঠোর পথেই থাকে (APP_ENV=production হলে এই শাখা চলে না)।
+  if (isStaging()) return { rejectUnauthorized: false };
 
   const isProduction = process.env.NODE_ENV === 'production';
   const ca = (process.env.DATABASE_CA_CERT || '').trim();
