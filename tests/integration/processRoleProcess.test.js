@@ -160,6 +160,17 @@ describe('Test B + E — PROCESS_ROLE=worker', () => {
       await admin.query(`CREATE DATABASE ${emptyName}`);
     });
     afterAll(async () => {
+      // রেস: probe.end() ফেরত আসার পরও সার্ভারে সেশনটা তখনো বন্ধ হচ্ছে থাকতে পারে (ধীর/ব্যস্ত মেশিনে)।
+      // সেই মুহূর্তে `DROP DATABASE … WITH (FORCE)` ওই সেশন মেরে দিলে ক্লায়েন্ট `terminating connection due to
+      // administrator command` (57P01) পায় এবং কোনো 'error' হ্যান্ডলার না থাকায় সেটা unhandled error হয়ে টেস্ট ফেল করায়।
+      // তাই drop-এর আগে শর্ত-ভিত্তিক অপেক্ষা: ওই ডাটাবেসে আর কোনো সেশন না থাকা পর্যন্ত (সীমিত সময়)। কোনো blind sleep নয়;
+      // FORCE রাখা হয়েছে (সময়সীমা পেরোলে অবশিষ্ট সেশন নিয়েও ডাটাবেস মোছা যায়)।
+      const deadline = Date.now() + 10000;
+      for (;;) {
+        const r = await admin.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = $1', [emptyName]);
+        if (r.rows[0].n === 0 || Date.now() > deadline) break;
+        await new Promise((resolve) => setTimeout(resolve, 25)); // শর্ত-পোলিং ব্যবধান, blind sleep নয়
+      }
       await admin.query(`DROP DATABASE IF EXISTS ${emptyName} WITH (FORCE)`);
       await admin.end();
     });
