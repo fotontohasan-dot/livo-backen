@@ -179,6 +179,10 @@ describe('API ফিল্টারিং — আসল ডেটা দিয�
       overs: null, league: null, startTime: null, metadata: null
     });
 
+    // /matches/api/live ফলাফল Redis-এ ১০ সেকেন্ড ক্যাশ করে (key `matches:live`), আর Redis পুরো স্যুটে শেয়ার্ড।
+    // আগে চলা ফাইল এন্ডপয়েন্ট ছুঁয়ে গেলে বাসি (ম্যাচহীন) পেলোড ক্যাশে থাকে এবং এই টেস্টের সদ্য-ঢোকানো ম্যাচ দেখা
+    // যায় না। ক্যাশ খালি করলে আসল ক্যোয়ারি চলে (assertion অপরিবর্তিত; staleSportsData.test.js-ও একই করে)।
+    await require('../../services/cache').del('matches:live');
     const res = await request(app).get('/matches/api/live');
     expect(res.status).toBe(200);
 
