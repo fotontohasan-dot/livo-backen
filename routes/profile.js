@@ -91,6 +91,15 @@ router.post('/update-personal', isAuth, async (req, res) => {
   res.redirect('/profile/security/personal');
 });
 
+// bank_cards.wallet_kind-এর অনুমোদিত মান — views/profile/cards.ejs-এর kind-toggle (ewallet / crypto)।
+// আগে দুই রুটই wallet_kind বাদ দিয়ে INSERT করত, তাই ফর্মে crypto বেছে নিলেও কলামের ডিফল্ট
+// 'ewallet' বসত। এখন ফর্মের মান সার্ভারে যাচাই হয়: অজানা/অনুপস্থিত/পুনরাবৃত্ত মান নীরবে
+// ডিফল্টে না গিয়ে পরিষ্কার এরর দেয়। সঠিক হিসেবে ধরা হয় শুধু হুবহু মিল (কেস/স্পেস স্বাভাবিকীকরণ নেই)।
+const ALLOWED_WALLET_KINDS = Object.freeze(['ewallet', 'crypto']);
+function parseWalletKind(value) {
+  return typeof value === 'string' && ALLOWED_WALLET_KINDS.includes(value) ? value : null;
+}
+
 // K2: holder_name ইউজারের নিজের পাসওয়ার্ড হলে প্রত্যাখ্যান (সাধারণ ভুল: পাসওয়ার্ড নামের ঘরে লেখা)। শুধু শর্ত যাচাই —
 // bcrypt হ্যাশের সঙ্গে compare, প্লেইন টেক্সট কোথাও রাখা/লগ করা হয় না। কাঁচা ইনপুট ও নরমালাইজড মান — দুটোই মেলানো হয়।
 // DB/bcrypt ত্রুটি হলে throw করে (কলারের try/catch ধরে, নাম সেভ হয় না — নীরবে ছেড়ে দেওয়া হয় না)।
@@ -108,13 +117,18 @@ async function holderNameEqualsOwnPassword(userId, rawInput, normalized) {
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
-    // K2: সার্ভারই আসল গার্ড — শুধু অক্ষর/স্পেস/ডট/হাইফেন/অ্যাপোস্ট্রফি; মান লগ/ফেরত হয় না
+    const walletKind = parseWalletKind(req.body.wallet_kind);
+    if (!walletKind) {
+      req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
+      return res.redirect('/profile/security/bank');
+    }
+    // K2: সার্ভারই আসল গার্ড — মান লগ/ফেরত হয় না
     const hn = validateHolderName(holder_name);
     if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/security/bank'); }
     if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/security/bank'); }
     await pool.query(
-      `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
-      [req.session.user.id, bank_name, account_number, hn.value]
+      `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1, $2, $3, $4, $5)`,
+      [req.session.user.id, bank_name, account_number, hn.value, walletKind]
     );
     req.flash('success', req.t('profile_msg_08'));
   } catch (err) {
@@ -695,13 +709,18 @@ router.get('/cards', isAuth, async (req, res) => {
 router.post('/cards/add', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    const walletKind = parseWalletKind(req.body.wallet_kind);
+    if (!walletKind) {
+      req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
+      return res.redirect('/profile/cards');
+    }
     // K2: একই সার্ভার-ভ্যালিডেটর (utils/holderName.js)
     const hn = validateHolderName(holder_name);
     if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/cards'); }
     if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/cards'); }
     await pool.query(
-      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,$2,$3,$4)',
-      [req.session.user.id, bank_name, account_number, hn.value]
+      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1,$2,$3,$4,$5)',
+      [req.session.user.id, bank_name, account_number, hn.value, walletKind]
     );
     req.flash('success', req.t('profile_msg_32'));
   } catch (err) {
