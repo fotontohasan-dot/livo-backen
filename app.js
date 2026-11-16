@@ -396,17 +396,9 @@ const useRedisSession = process.env.SESSION_STORE_TYPE === 'redis' || (redisEnab
 
 if (useRedisSession && process.env.REDIS_URL) {
   try {
-    const { RedisStore } = require('connect-redis');
-    const Redis = require('ioredis');
-    const redisClient = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: false
-    });
-    redisClient.on('error', (err) => console.warn('[session-redis] error:', err.message));
-    sessionStore = new RedisStore({
-      client: redisClient,
-      prefix: 'livo:sess:'
-    });
+    const { createRedisSessionStore } = require('./services/sessionStore');
+    // ioredis ক্লায়েন্ট connect-redis ১০-এর আশা করা API-তে অ্যাডাপ্ট করা হয় (services/sessionStore.js)
+    sessionStore = createRedisSessionStore(process.env.REDIS_URL, { prefix: 'livo:sess:' }).store;
     console.log('✅ Express session store: Redis (connect-redis)');
   } catch (err) {
     console.warn('⚠️ connect-redis initialization failed, falling back to PostgreSQL session store:', err.message);
@@ -423,6 +415,8 @@ if (!sessionStore) {
     console.log('✅ Express session store: PostgreSQL (connect-pg-simple)');
   }
 }
+
+require('./services/sessionStore').setActiveSessionStore(sessionStore); // সেশন বাতিলের সময় সক্রিয় স্টোর থেকেও মোছার জন্য
 
 const isProd = process.env.NODE_ENV === 'production';
 

@@ -26,6 +26,7 @@
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 const { pool } = require('../../db');
 const withdrawalWindow = require('../../services/withdrawalWindow');
+const paymentMethods = require('../../services/paymentMethods');
 
 jest.setTimeout(60000);
 
@@ -119,6 +120,11 @@ describe('Phase 13 — গুরুত্বপূর্ণ পেজে error s
   });
 
   test('/payment/deposit — মেথড লোড ব্যর্থ হলে এরর ব্যানার দেখায়', async () => {
+    // listActivePublic() ফলাফল Redis-এ ৩০ সেকেন্ড ক্যাশ করে (key `payment_methods:active`), আর Redis
+    // পুরো স্যুটে শেয়ার্ড। আগে চলা ফাইল (depositSubmitFlow, userJourney, withdrawalWindow,
+    // featureFlagMatrix…) ডিপোজিট পেজ খুললে ক্যাশ ভরে থাকে — তখন নিচের ব্যর্থ-করা ক্যোয়ারি আদৌ চলে না,
+    // ব্যানার আসে না, টেস্ট ফেল করে। ক্যাশ খালি করলে ক্যোয়ারিটা নিশ্চিতভাবে চলে (assertion অপরিবর্তিত)।
+    await paymentMethods.invalidateActiveCache();
     failQueriesMatching('FROM payment_methods');
     const res = await user.agent.get('/payment/deposit');
     expect(res.status).toBe(200);

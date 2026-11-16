@@ -27,8 +27,8 @@ const { pool } = require('../../db');
 
 const ROOT = path.join(__dirname, '..', '..');
 
-async function planFor(sql, params = []) {
-  const r = await pool.query(`EXPLAIN ${sql}`, params);
+async function planFor(sql, params = [], db = pool) {
+  const r = await db.query(`EXPLAIN ${sql}`, params);
   return r.rows.map((x) => x['QUERY PLAN']).join('\n');
 }
 
@@ -54,9 +54,27 @@ describe('হট-পাথ ইনডেক্স — সিকুয়েনশ
   });
 
   test('bank_cards user_id লুকআপ ইনডেক্স ব্যবহার করে', async () => {
-    const plan = await planFor('SELECT id FROM bank_cards WHERE user_id = $1', [1]);
-    expect(plan).toMatch(/idx_bank_cards_user/);
-    expect(plan).not.toMatch(/Seq Scan on bank_cards/);
+    // planner ছোট টেবিলে (শেয়ার্ড টেস্ট DB-তে মাত্র কয়েকটা সারি + ANALYZE) ঠিকই Seq Scan বেছে নেয় — সেটা
+    // ইনডেক্স অনুপস্থিতির প্রমাণ নয়। তাই বাস্তবসম্মত আকারের ডেটা একটা রোলব্যাক-যোগ্য ট্রানজ্যাকশনের অস্থায়ী
+    // (pg_temp) টেবিলে বসাই; ইনডেক্সের সংজ্ঞা নেওয়া হয় আসল idx_bank_cards_user থেকে (মুছে গেলে এখানেই ফেল)।
+    // enable_seqscan বন্ধ করা হয় না — আসল প্ল্যানই যাচাই হয়। শেয়ার্ড DB-র স্থায়ী ডেটা অপরিবর্তিত।
+    const def = await pool.query(`SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_bank_cards_user' AND tablename = 'bank_cards'`);
+    expect(def.rows).toHaveLength(1);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`CREATE TEMP TABLE bank_cards (LIKE public.bank_cards INCLUDING DEFAULTS) ON COMMIT DROP`);
+      await client.query(def.rows[0].indexdef.replace(/ON (public\.)?bank_cards/, 'ON pg_temp.bank_cards'));
+      await client.query(`INSERT INTO pg_temp.bank_cards (id, user_id, bank_name, account_number, holder_name)
+                          SELECT g, g, 'bKash', '017' || g, 'N' FROM generate_series(1, 20000) g`);
+      await client.query('ANALYZE pg_temp.bank_cards');
+      const plan = await planFor('SELECT id FROM bank_cards WHERE user_id = $1', [1], client);
+      expect(plan).toMatch(/idx_bank_cards_user/);
+      expect(plan).not.toMatch(/Seq Scan on bank_cards/);
+    } finally {
+      await client.query('ROLLBACK').catch(() => {});
+      client.release();
+    }
   });
 
   test('last_ip ইনডেক্স partial — NULL সারি অপ্রয়োজনে ইনডেক্সে নেই', async () => {

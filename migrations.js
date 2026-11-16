@@ -811,6 +811,11 @@ async function applyMigrations(pool) {
       );
     `);
 
+    // routes/profile.js (/security SELECT) ও routes/payment.js wallet_kind পড়ে; কোনো migration কলামটা বানাত না
+    // (bd8b1b2e-তে কোড এসেছিল)। idempotent: কলাম আগে থেকে থাকলে (যেমন হাতে যোগ করা প্রোডাকশন) কিছুই বদলায় না।
+    // কোড 'crypto' ছাড়া সবকিছুকে ewallet ধরে — তাই ডিফল্ট 'ewallet'। ব্যালেন্স/সেটেলমেন্টের সাথে সম্পর্ক নেই।
+    await pool.query(`ALTER TABLE bank_cards ADD COLUMN IF NOT EXISTS wallet_kind TEXT NOT NULL DEFAULT 'ewallet';`);
+
     await pool.query(`
       ALTER TABLE payment_requests
       ADD COLUMN IF NOT EXISTS gateway TEXT,

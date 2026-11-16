@@ -3,6 +3,7 @@
 // "Active Devices" ট্র্যাক করে যাতে ইউজার নির্দিষ্ট ডিভাইস বা সব ডিভাইস থেকে লগআউট করতে পারে।
 
 const crypto = require('crypto');
+const { destroySessionById } = require('./sessionStore');
 const geoip = require('geoip-lite');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
@@ -194,6 +195,7 @@ async function revokeDeviceSession(userId, deviceSessionId, actorLabel) {
   } catch (e) {
     console.error('user_sessions delete error:', e.message);
   }
+  await destroySessionById(sid); // Redis স্টোর সক্রিয় থাকলে সেখান থেকেও
 
   await logAdminAction(null, actorLabel || 'SYSTEM', 'DEVICE_SESSION_REVOKED',
     `ইউজার #${userId} — ডিভাইস লগআউট করা হয়েছে: ${device_name || sid}`, null);
@@ -209,6 +211,7 @@ async function revokeAllOtherSessions(userId, currentSid, actorLabel) {
   for (const row of rows.rows) {
     await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE id = $1`, [row.id]);
     try { await pool.query(`DELETE FROM user_sessions WHERE sid = $1`, [row.sid]); } catch (e) {}
+    await destroySessionById(row.sid); // Redis স্টোর সক্রিয় থাকলে সেখান থেকেও
   }
   if (rows.rows.length) {
     await logAdminAction(null, actorLabel || 'SYSTEM', 'ALL_OTHER_SESSIONS_REVOKED',
