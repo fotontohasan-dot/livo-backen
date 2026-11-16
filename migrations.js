@@ -1599,6 +1599,8 @@ async function applyMigrations(pool) {
     console.log("✅ Push subscription table ready");
 
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
+    // বাধ্যতামূলক পাসওয়ার্ড রিসেট ফ্ল্যাগ (scripts/cleanupBankCardHolderName.js বসায়; পাসওয়ার্ড বদলালে মুছে যায়)।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT false;`);
 
     // routes/coins.js-এর POST /coins/daily-bonus এই কলামটা SET ও WHERE দুই জায়গাতেই ব্যবহার করে
     // ("দিনে একবার" গার্ড হিসেবে), কিন্তু কলামটা কোথাও তৈরি করা হতো না — ফলে ডেইলি বোনাস
@@ -2005,6 +2007,18 @@ async function applyMigrations(pool) {
     }
 
     console.log("✅ RBAC (Role & Permission) tables ready");
+
+    // K10: system_diagnostics_manage (Integration হাতে সাসপেন্ড/রিজিউম) শুধু super_admin রোলে। অন্য কোনো রোলের permissions-এ
+    // থাকলে (যেমন ভুলে কাস্টম রোলে বসানো) সরানো হয়; super_admin-এ স্পষ্ট true। idempotent — বারবার চালালে একই ফল।
+    // দ্রষ্টব্য: roles ক্যাশ (role:<key>) TTL শেষে বা রিস্টার্টে নতুন মান পায়।
+    await pool.query(`
+      UPDATE roles SET permissions = permissions - 'system_diagnostics_manage', updated_at = NOW()
+      WHERE key <> 'super_admin' AND permissions ? 'system_diagnostics_manage'
+    `);
+    await pool.query(`
+      UPDATE roles SET permissions = jsonb_set(permissions, '{system_diagnostics_manage}', 'true'::jsonb, true)
+      WHERE key = 'super_admin' AND COALESCE(permissions->>'system_diagnostics_manage','') <> 'true'
+    `);
 
     // ==================== Telegram Integration Settings ====================
     // এক-সারির কনফিগ টেবিল (id সবসময় 1)। bot_token_enc-এ টোকেন AES-256-GCM দিয়ে
@@ -2629,6 +2643,11 @@ async function applyMigrations(pool) {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+    // K10: 401/403 ("অথ ত্রুটি" — API key মেয়াদ শেষ/ভুল) আলাদা ট্র্যাক। সাসপেন্ডে এটা গোনা হয় না; শুধু অ্যাডমিনকে দেখানোর জন্য।
+    // শুধু স্ট্যাটাস কোড ও সময় — রেসপন্স বডি/হেডার/কী কখনো নয়।
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS last_auth_error_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS last_auth_error_status SMALLINT`);
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS auth_error_count BIGINT NOT NULL DEFAULT 0`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS process_heartbeat (
         instance_id TEXT PRIMARY KEY,
@@ -2640,6 +2659,26 @@ async function applyMigrations(pool) {
       );
     `);
     console.log('✅ integration_status ও process_heartbeat ready');
+
+    // K10: অটো-সাসপেন্ড অবস্থা (web ও worker একই দেখে)। শুধু sports:*/casino:*/sms/email; payment:*/wallet:* কখনো নয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS integration_suspend (
+        name TEXT PRIMARY KEY,
+        suspended BOOLEAN NOT NULL DEFAULT false,
+        source TEXT,
+        reason TEXT,
+        detail VARCHAR(255),
+        suspended_at TIMESTAMPTZ,
+        resumed_at TIMESTAMPTZ,
+        success_streak INTEGER NOT NULL DEFAULT 0,
+        suspend_count INTEGER NOT NULL DEFAULT 0,
+        updated_by TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    // K10: probe-এর ২ মিনিটের সীমা সব প্রসেসের মধ্যে শেয়ার্ড (আগে প্রসেস-লোকাল ছিল, তাই একাধিক web/worker প্রসেস মিলে বেশি probe যেত)।
+    await pool.query(`ALTER TABLE integration_suspend ADD COLUMN IF NOT EXISTS last_probe_at TIMESTAMPTZ`);
+    console.log('✅ integration_suspend ready');
 
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration

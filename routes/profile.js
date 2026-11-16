@@ -1,6 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
+const { validateHolderName } = require('../utils/holderName');
 const router = express.Router();
 const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
@@ -99,6 +100,20 @@ function parseWalletKind(value) {
   return typeof value === 'string' && ALLOWED_WALLET_KINDS.includes(value) ? value : null;
 }
 
+// K2: holder_name ইউজারের নিজের পাসওয়ার্ড হলে প্রত্যাখ্যান (সাধারণ ভুল: পাসওয়ার্ড নামের ঘরে লেখা)। শুধু শর্ত যাচাই —
+// bcrypt হ্যাশের সঙ্গে compare, প্লেইন টেক্সট কোথাও রাখা/লগ করা হয় না। কাঁচা ইনপুট ও নরমালাইজড মান — দুটোই মেলানো হয়।
+// DB/bcrypt ত্রুটি হলে throw করে (কলারের try/catch ধরে, নাম সেভ হয় না — নীরবে ছেড়ে দেওয়া হয় না)।
+async function holderNameEqualsOwnPassword(userId, rawInput, normalized) {
+  const r = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+  const hash = r.rows[0] && r.rows[0].password;
+  if (!hash) return false;
+  const candidates = [...new Set([String(rawInput), normalized])].filter((c) => c && c.length <= 72);
+  for (const c of candidates) {
+    if (await bcrypt.compare(c, hash)) return true;
+  }
+  return false;
+}
+
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
@@ -107,9 +122,13 @@ router.post('/add-bank-card', isAuth, async (req, res) => {
       req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
       return res.redirect('/profile/security/bank');
     }
+    // K2: সার্ভারই আসল গার্ড — মান লগ/ফেরত হয় না
+    const hn = validateHolderName(holder_name);
+    if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/security/bank'); }
+    if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/security/bank'); }
     await pool.query(
       `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1, $2, $3, $4, $5)`,
-      [req.session.user.id, bank_name, account_number, holder_name, walletKind]
+      [req.session.user.id, bank_name, account_number, hn.value, walletKind]
     );
     req.flash('success', req.t('profile_msg_08'));
   } catch (err) {
@@ -150,7 +169,8 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security/login-password');
     }
     const hashed = await bcrypt.hash(np, 12);
-    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW(), must_reset_password=false WHERE id=$2`, [hashed, req.session.user.id]);
+    cache.del(`auth:active:${req.session.user.id}`).catch(() => {});
     // পাসওয়ার্ড বদলের পর অন্য সব ডিভাইসের পুরনো সেশন বাতিল (সেশন হাইজ্যাক ঝুঁকি কমায়);
     // বর্তমান সেশন চালু থাকে। routes/auth.js-এর password-reset-এও একই আচরণ।
     try {
@@ -694,9 +714,13 @@ router.post('/cards/add', isAuth, async (req, res) => {
       req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
       return res.redirect('/profile/cards');
     }
+    // K2: একই সার্ভার-ভ্যালিডেটর (utils/holderName.js)
+    const hn = validateHolderName(holder_name);
+    if (!hn.valid) { req.flash('error', req.t('holder_name_invalid')); return res.redirect('/profile/cards'); }
+    if (await holderNameEqualsOwnPassword(req.session.user.id, holder_name, hn.value)) { req.flash('error', req.t('holder_name_matches_password')); return res.redirect('/profile/cards'); }
     await pool.query(
       'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1,$2,$3,$4,$5)',
-      [req.session.user.id, bank_name, account_number, holder_name, walletKind]
+      [req.session.user.id, bank_name, account_number, hn.value, walletKind]
     );
     req.flash('success', req.t('profile_msg_32'));
   } catch (err) {
