@@ -3341,6 +3341,7 @@
   "profile_msg_34": "❌ মতামত পাঠাতে সমস্যা হয়েছে।",
   "profile_msg_daily_limit_set": "দৈনিক ডিপোজট সীমা {value} টাকা সেট হয়েছে।",
   "profile_msg_self_exclude_set": "আপনার অ্যাকাউন্ট {value} দিনের জন্য বন্ধ করা হয়েছে।",
+  "profile_msg_wallet_kind_invalid": "❌ ওয়ালেটের ধরন সঠিক নয়। ই-ওয়ালেট বা ক্রিপ্টো বেছে নিন।",
   "profile_msg_daily_limit_removed": "ডিপোজিট সীমা সরানো হয়েছে।",
   "txn_pwd_title_change": "ট্রানজেকশন পাসওয়ার্ড পরিবর্তন করুন",
   "txn_pwd_title_set": "ট্রানজেকশন পাসওয়ার্ড সেট করুন",

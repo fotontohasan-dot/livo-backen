@@ -3341,6 +3341,7 @@
   "profile_msg_34": "❌ Could not send your feedback.",
   "profile_msg_daily_limit_set": "Daily deposit limit set to {value}.",
   "profile_msg_self_exclude_set": "Your account has been locked for {value} days.",
+  "profile_msg_wallet_kind_invalid": "❌ Invalid wallet type. Please choose E-wallet or Crypto.",
   "profile_msg_daily_limit_removed": "Deposit limit removed.",
   "viph_total_label": "Total",
   "txn_pwd_title_change": "Change transaction password",
