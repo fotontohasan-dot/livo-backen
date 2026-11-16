@@ -6,6 +6,7 @@ const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const { getBaseUrl } = require('../utils/publicUrl');
 const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 const { listActiveSessions, revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { logAdminAction } = require('../services/fraudDetection');
@@ -89,12 +90,26 @@ router.post('/update-personal', isAuth, async (req, res) => {
   res.redirect('/profile/security/personal');
 });
 
+// bank_cards.wallet_kind-এর অনুমোদিত মান — views/profile/cards.ejs-এর kind-toggle (ewallet / crypto)।
+// আগে দুই রুটই wallet_kind বাদ দিয়ে INSERT করত, তাই ফর্মে crypto বেছে নিলেও কলামের ডিফল্ট
+// 'ewallet' বসত। এখন ফর্মের মান সার্ভারে যাচাই হয়: অজানা/অনুপস্থিত/পুনরাবৃত্ত মান নীরবে
+// ডিফল্টে না গিয়ে পরিষ্কার এরর দেয়। সঠিক হিসেবে ধরা হয় শুধু হুবহু মিল (কেস/স্পেস স্বাভাবিকীকরণ নেই)।
+const ALLOWED_WALLET_KINDS = Object.freeze(['ewallet', 'crypto']);
+function parseWalletKind(value) {
+  return typeof value === 'string' && ALLOWED_WALLET_KINDS.includes(value) ? value : null;
+}
+
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    const walletKind = parseWalletKind(req.body.wallet_kind);
+    if (!walletKind) {
+      req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
+      return res.redirect('/profile/security/bank');
+    }
     await pool.query(
-      `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
-      [req.session.user.id, bank_name, account_number, holder_name]
+      `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1, $2, $3, $4, $5)`,
+      [req.session.user.id, bank_name, account_number, holder_name, walletKind]
     );
     req.flash('success', req.t('profile_msg_08'));
   } catch (err) {
@@ -401,6 +416,8 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
+    // isAuth-এর ৩০ সেকেন্ডের active-status ক্যাশ মুছে দেওয়া — নাহলে অন্য ডিভাইসের সেশন ৩০ সেকেন্ড পর্যন্ত চলত
+    await cache.del(cacheKeys.userActiveStatus(req.session.user.id)).catch(() => {});
     req.flash('success', req.t('profile_msg_self_exclude_set').replace('{value}', days));
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
@@ -672,9 +689,14 @@ router.get('/cards', isAuth, async (req, res) => {
 router.post('/cards/add', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    const walletKind = parseWalletKind(req.body.wallet_kind);
+    if (!walletKind) {
+      req.flash('error', req.t('profile_msg_wallet_kind_invalid'));
+      return res.redirect('/profile/cards');
+    }
     await pool.query(
-      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,$2,$3,$4)',
-      [req.session.user.id, bank_name, account_number, holder_name]
+      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name, wallet_kind) VALUES ($1,$2,$3,$4,$5)',
+      [req.session.user.id, bank_name, account_number, holder_name, walletKind]
     );
     req.flash('success', req.t('profile_msg_32'));
   } catch (err) {

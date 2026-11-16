@@ -2,9 +2,9 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "staging" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "staging" ]
 
 # PHASE 11: আগে কোনো permissions block ছিল না, ফলে GITHUB_TOKEN repository-র
 # default permission (প্রায়ই read/write) পেত। এই workflow শুধু কোড checkout
@@ -33,6 +33,17 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      # Redis: সেশন/ক্যাশ/BullMQ পথ ও processRoleProcess-এর Redis টেস্ট (আগে skip হতো) এখন আসল Redis-এ চলে।
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/bet420_test
@@ -41,7 +52,9 @@ jobs:
       # কনফিগারেশনটা ওয়ার্কফ্লো পড়েই বোঝা যায়।
       DATABASE_SSL: false
       SESSION_SECRET: test_secret_key_for_ci_only
-      REDIS_ENABLED: false
+      REDIS_ENABLED: true
+      REDIS_URL: redis://localhost:6379
+      TEST_REDIS_URL: redis://localhost:6379
       SSLCZ_IS_LIVE: false
       VAPID_SUBJECT: mailto:test@example.com
       FRONTEND_URL: http://localhost:4123
@@ -101,6 +114,13 @@ jobs:
       # (এবং জব) সাথে সাথেই ফেল করে; লগ/annotation নিচের `if: always()` ও
       # `if: failure()` ধাপগুলো থেকেই পাওয়া যায়।
       id: tests
+      env:
+        # jest.config.js-এ maxWorkers:1 + workerIdleMemoryLimit আগে থেকেই আছে (টেস্ট একটাই worker child-এ
+        # চলে ও ৪০০MB ছাড়ালে রিসাইকেল হয়) — তাই এখানে --runInBand দেওয়া হয়নি: ওটা main process-এ চালায়,
+        # রিসাইকেল অচল হয়, আর jest.config.js-এর মাপা ফল SIGKILL/OOM। NODE_OPTIONS worker child-দেরও
+        # উত্তরাধিকারসূত্রে যায়; মাপা heap ~৫৫০MB, তাই ২GB সীমা বাধা নয় — শুধু heap-চালিত রানঅ্যাওয়ে
+        # দ্রুত ও স্পষ্ট ব্যর্থতা দেয়, runner-কে চুপচাপ OOM-kill হতে দেয় না।
+        NODE_OPTIONS: --max-old-space-size=2048
       run: |
         set -o pipefail
         npm test 2>&1 | tee jest-output.log

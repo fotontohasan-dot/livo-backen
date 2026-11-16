@@ -61,10 +61,11 @@ async function makeUserWithPendingStepUp() {
   const sidCookie = agent.jar.getCookie('connect.sid', CookieAccessInfo.All);
   const rawSid = decodeURIComponent(sidCookie.value).split('.')[0].replace(/^s:/, '');
 
-  const sessRow = await pool.query(`SELECT sess FROM user_sessions WHERE sid = $1`, [rawSid]);
-  const sess = sessRow.rows[0].sess;
+  // সক্রিয় session store (CI-তে Redis, নয়তো Postgres) দিয়েই পড়া/লেখা — নির্দিষ্ট টেবিলে নয়
+  const store = require('../services/sessionStore').getActiveSessionStore();
+  const sess = await new Promise((res, rej) => store.get(rawSid, (e, v) => (e ? rej(e) : res(v))));
   sess.pendingLoginUserId = userId;
-  await pool.query(`UPDATE user_sessions SET sess = $1 WHERE sid = $2`, [JSON.stringify(sess), rawSid]);
+  await new Promise((res, rej) => store.set(rawSid, sess, (e) => (e ? rej(e) : res())));
 
   return { agent, token, userId, stepUpId };
 }
