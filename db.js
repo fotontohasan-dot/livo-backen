@@ -34,11 +34,6 @@ function resolveSslConfig() {
 
   if (process.env.NODE_ENV === 'test') return false;
 
-  // স্টেজিং (APP_ENV=staging): ম্যানেজড ডাটাবেসের self-signed সার্টিফিকেটে
-  // "self-signed certificate" ত্রুটি এড়াতে যাচাই বন্ধ। শুধু স্টেজিংয়ের জন্য —
-  // প্রোডাকশন নিচের কঠোর পথেই থাকে (APP_ENV=production হলে এই শাখা চলে না)।
-  if (isStaging()) return { rejectUnauthorized: false };
-
   const isProduction = process.env.NODE_ENV === 'production';
   const ca = (process.env.DATABASE_CA_CERT || '').trim();
   const insecure = (process.env.DATABASE_SSL_INSECURE || '').trim().toLowerCase();
@@ -54,7 +49,7 @@ function resolveSslConfig() {
   // staging (APP_ENV/NODE_ENV=staging): Render-এর DB self-signed সার্টিফিকেট দেয়, তাই
   // "self-signed certificate" এরর এড়াতে যাচাই বন্ধ। প্রোডাকশন এতে প্রভাবিত নয় (নিচে strict)।
   // চাইলে DATABASE_CA_CERT দিলে staging-ও যাচাইসহ চলবে (উপরের লাইন)।
-  if (require('./utils/stagingGuard').isStaging()) {
+  if (isStaging()) {
     console.warn('⚠️ staging: ডাটাবেস TLS সার্টিফিকেট যাচাই বন্ধ (rejectUnauthorized: false) — শুধু staging-এর জন্য।');
     return { rejectUnauthorized: false };
   }
