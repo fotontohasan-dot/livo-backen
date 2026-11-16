@@ -20,7 +20,7 @@ async function makeUser() {
   const u = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
   return { agent, token, userId: u.rows[0].id };
 }
-const post = (u, p, body) => u.agent.post(p).set('X-CSRF-Token', u.token).set('User-Agent', REALISTIC_UA).type('form').send({ bank_name: 'bKash', account_number: '01712345678', ...body });
+const post = (u, p, body) => u.agent.post(p).set('X-CSRF-Token', u.token).set('User-Agent', REALISTIC_UA).type('form').send({ wallet_kind: 'ewallet', bank_name: 'bKash', account_number: '01712345678', ...body });
 const holders = async (id) => (await pool.query('SELECT holder_name FROM bank_cards WHERE user_id = $1 ORDER BY id', [id])).rows.map((r) => r.holder_name);
 
 describe.each(ROUTES)('লেখার পথ $path', ({ path: route, back }) => {
@@ -50,7 +50,7 @@ describe.each(ROUTES)('লেখার পথ $path', ({ path: route, back }) =>
   test('holder_name অনুপস্থিত/অ্যারে/অবজেক্ট হলেও সংরক্ষিত হয় না', async () => {
     const u = await makeUser();
     await post(u, route, {});
-    await u.agent.post(route).set('X-CSRF-Token', u.token).set('User-Agent', REALISTIC_UA).type('form').send('bank_name=bKash&account_number=01712345678&holder_name=Rahim&holder_name=Karim');
+    await u.agent.post(route).set('X-CSRF-Token', u.token).set('User-Agent', REALISTIC_UA).type('form').send('wallet_kind=ewallet&bank_name=bKash&account_number=01712345678&holder_name=Rahim&holder_name=Karim');
     expect(await holders(u.userId)).toEqual([]);
   });
 });

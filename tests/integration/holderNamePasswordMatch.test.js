@@ -24,7 +24,7 @@ async function makeUser(password = PW) {
   return { agent, token, userId: u.rows[0].id };
 }
 const post = (u, p, body) => u.agent.post(p).set('X-CSRF-Token', u.token).set('User-Agent', REALISTIC_UA).type('form')
-  .send({ bank_name: 'bKash', account_number: '01712345678', ...body });
+  .send({ wallet_kind: 'ewallet', bank_name: 'bKash', account_number: '01712345678', ...body });
 const holders = async (id) => (await pool.query('SELECT holder_name FROM bank_cards WHERE user_id = $1', [id])).rows.map((r) => r.holder_name);
 
 describe.each(ROUTES)('$path', ({ path: route, back }) => {
