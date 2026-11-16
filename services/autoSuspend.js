@@ -121,11 +121,21 @@ function pgStore(pool) {
         `UPDATE integration_suspend SET suspended = false, resumed_at = NOW(), success_streak = 0, updated_by = $2, updated_at = NOW()
          WHERE name = $1 AND suspended ${onlyAuto ? "AND source = 'auto'" : ''} RETURNING *`, [name, by || null]);
       return r.rows[0] || null;
+    },
+    // probe "দাবি": সব প্রসেসের মধ্যে একটাই জিতবে। এক পরমাণু UPDATE — row-লকে দুই প্রসেস একসাথে এলেও একটার rowCount ১, অন্যটার ০।
+    // সময় DB-র ঘড়িতে (NOW()), তাই প্রসেসগুলোর ঘড়ির ফারাক গুরুত্বহীন। ফেরত: true = এই প্রসেস probe চালাবে।
+    async claimProbe(name, intervalMs) {
+      const r = await pool.query(
+        `UPDATE integration_suspend SET last_probe_at = NOW()
+         WHERE name = $1 AND suspended AND source = 'auto'
+           AND (last_probe_at IS NULL OR last_probe_at <= NOW() - ($2::double precision * INTERVAL '1 millisecond'))
+         RETURNING name`, [name, Number(intervalMs)]);
+      return r.rowCount === 1;
     }
   };
 }
 
-function createAutoSuspend({ store, now = Date.now, env = process.env, logger = console, breakers = null, audit = null } = {}) {
+function createAutoSuspend({ store, now = Date.now, env = process.env, logger = console, breakers = null, audit = null, onReadFailure = null } = {}) {
   const trackers = new Map(); // name -> { consecutive, window, rateLimited }
   const cache = new Map();    // name -> { at, state|null }
   const probes = new Map();   // name -> async fn
@@ -135,12 +145,20 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
 
   const cfg = () => resolveConfig(env);
 
+  // warn লগে কোনো মান যায় না: শুধু ধ্রুব বার্তা ও (থাকলে) নিরাপদ ত্রুটি-কোড; err.message/SQL/কানেকশন-তথ্য কখনো নয়।
   function logStoreError(err) {
     const t = now();
     if (t - lastErrLog > 30000) {
       lastErrLog = t;
-      logger.warn('[auto-suspend] স্টোর ত্রুটি (ফেইল-ওপেন, ফিচার বন্ধ হচ্ছে না):', String(err && (err.code || err.message)).slice(0, 80));
+      const code = err && typeof err.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(err.code) ? err.code : 'unknown';
+      logger.warn(`[auto-suspend] স্টোর ত্রুটি (ফেইল-ওপেন, ফিচার বন্ধ হচ্ছে না) code=${code}`);
     }
+  }
+
+  // সাসপেন্ড অবস্থা *পড়া* ব্যর্থ: ফেইল-ওপেন (বাজির পথ চালু) + throttled warn + প্রতিবার মেট্রিক।
+  function readFailure(err) {
+    logStoreError(err);
+    try { if (onReadFailure) onReadFailure(); } catch (_) { /* মেট্রিক ব্যর্থ হলেও বাজির পথ চলে */ }
   }
 
   function sanitize(text) {
@@ -156,7 +174,7 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       cache.set(name, { at: now(), state });
       return state;
     } catch (err) {
-      logStoreError(err);
+      readFailure(err);
       return null; // ফেইল-ওপেন
     }
   }
@@ -272,7 +290,7 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       const rows = await store.list();
       listCache = { at: now(), rows };
       return rows;
-    } catch (err) { logStoreError(err); return []; }
+    } catch (err) { readFailure(err); return []; }
   }
 
   /** সাসপেন্ড থাকা casino প্রোভাইডারের নামের Set (লবির জন্য, এক কোয়েরিতে) */
@@ -300,6 +318,17 @@ function createAutoSuspend({ store, now = Date.now, env = process.env, logger = 
       const fn = probes.get(row.name);
       if (!fn) continue;
       if (now() - (lastProbeAt.get(row.name) || 0) < c.probeIntervalMs) continue; // রেট-লিমিটেড API-তে ঘন ঘন নয়
+      // একাধিক প্রসেস (web×২ + worker; PROCESS_ROLE সেট না থাকলে প্রতিটাতেই scheduler চলে) মিলে একই API-তে ডবল probe না যাক:
+      // সীমাটা DB-তে শেয়ার্ড। দাবি না পেলে বা দাবি করা ব্যর্থ হলে *এই টিকে probe নয়* (ডুপ্লিকেটের চেয়ে একটা টিক বাদ নিরাপদ;
+      // ফেইল-ওপেন সাসপেন্ডের পথ এতে অপরিবর্তিত)। স্টোরে claimProbe না থাকলে (টেস্টের মেমরি-স্টোর) শুধু লোকাল সীমা।
+      if (typeof store.claimProbe === 'function') {
+        let won = false; let failed = false;
+        try { won = await store.claimProbe(row.name, c.probeIntervalMs); } catch (err) { failed = true; logStoreError(err); }
+        if (!won) {
+          if (!failed) lastProbeAt.set(row.name, now()); // অন্য প্রসেস জিতেছে — এই প্রসেস এই ব্যবধানে আর চেষ্টা করবে না; DB-ত্রুটিতে পরের টিকে আবার চেষ্টা
+          continue;
+        }
+      }
       lastProbeAt.set(row.name, now());
       try { await fn(); ran++; } catch (_) { /* ব্যর্থ probe = breaker/outcome নিজেই ধরেছে */ }
     }
@@ -320,6 +349,7 @@ function instance() {
   const store = pgStore({ query: (...a) => require('../db').pool.query(...a) });
   singleton = createAutoSuspend({
     store,
+    onReadFailure: () => { try { require('./metrics').incAutoSuspendReadFailure(); } catch (_) { /* metrics না থাকলেও চলে */ } },
     audit: (id, label, action, details) => require('./auditLog').logAdminAction(id, label, action, details, null)
   });
   try { require('./circuitBreaker').onStateChange((ev) => singleton.onBreakerChange(ev)); } catch (_) { /* breaker না থাকলে শুধু নিজস্ব সংকেত */ }

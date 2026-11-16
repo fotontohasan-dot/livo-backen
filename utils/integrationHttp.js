@@ -10,7 +10,7 @@
 // প্রতিটা ফলাফল recordIntegrationResult-এ যায় (শেষ সফল/ব্যর্থ সময়, sanitize করা error)।
 
 const { getBreaker, CircuitOpenError } = require('../services/circuitBreaker');
-const { recordIntegrationResult } = require('../services/integrationStatus');
+const { recordIntegrationResult, recordAuthError, isAuthErrorStatus } = require('../services/integrationStatus');
 const autoSuspend = require('../services/autoSuspend');
 
 const isUpstreamFailure = (res) => !!res && (res.status >= 500 || res.status === 429);
@@ -30,6 +30,9 @@ async function integrationFetch(name, url, options = {}, cfg = {}) {
       res = await plainTimeoutFetch(url, options, timeoutMs || Number(process.env.HTTP_TIMEOUT_MS) || 5000);
     }
     recordIntegrationResult(name, res.ok, res.ok ? null : `HTTP ${res.status}`);
+    // 401/403 = অথ ত্রুটি (API key মেয়াদ শেষ/ভুল): সাসপেন্ডে গোনা হয় না (নিচে), কিন্তু Integrations Status-এ আলাদা অবস্থা হিসেবে
+    // দেখানো হয় যাতে অ্যাডমিন জানে। শুধু কোড রেকর্ড হয়; fire-and-forget, কখনো throw করে না।
+    if (isAuthErrorStatus(res.status)) recordAuthError(name, res.status);
     // K10: শুধু 5xx ও 429 ব্যর্থতা (টাইমআউট/নেটওয়ার্ক ত্রুটি নিচের catch-এ)। 4xx (401/404 ইত্যাদি) গোনা হয় না —
     // ব্যর্থতাও না, সফলতাও না (আগে 4xx "সফল" ধরে ব্যর্থতার ধারা শূন্য করত ও নিজে-চালুর গণনায় যোগ হতো)।
     // payment:*/wallet:* এখানে উপেক্ষিত।

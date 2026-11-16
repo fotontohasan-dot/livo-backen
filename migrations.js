@@ -2636,6 +2636,11 @@ async function applyMigrations(pool) {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+    // K10: 401/403 ("অথ ত্রুটি" — API key মেয়াদ শেষ/ভুল) আলাদা ট্র্যাক। সাসপেন্ডে এটা গোনা হয় না; শুধু অ্যাডমিনকে দেখানোর জন্য।
+    // শুধু স্ট্যাটাস কোড ও সময় — রেসপন্স বডি/হেডার/কী কখনো নয়।
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS last_auth_error_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS last_auth_error_status SMALLINT`);
+    await pool.query(`ALTER TABLE integration_status ADD COLUMN IF NOT EXISTS auth_error_count BIGINT NOT NULL DEFAULT 0`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS process_heartbeat (
         instance_id TEXT PRIMARY KEY,
@@ -2664,6 +2669,8 @@ async function applyMigrations(pool) {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+    // K10: probe-এর ২ মিনিটের সীমা সব প্রসেসের মধ্যে শেয়ার্ড (আগে প্রসেস-লোকাল ছিল, তাই একাধিক web/worker প্রসেস মিলে বেশি probe যেত)।
+    await pool.query(`ALTER TABLE integration_suspend ADD COLUMN IF NOT EXISTS last_probe_at TIMESTAMPTZ`);
     console.log('✅ integration_suspend ready');
 
   } catch (err) {

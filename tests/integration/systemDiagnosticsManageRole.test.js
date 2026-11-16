@@ -13,7 +13,20 @@ const insertRaw = async (name, p) => { // গার্ড এড়িয়ে 
   return key;
 };
 
+// শেয়ার্ড টেস্ট DB-তে super_admin রোলের permissions এই ফাইলের টেস্ট বদলায় (updateRole, migration-এর আগে key সরানো)।
+// আগে তা পুনরুদ্ধার হতো না: ফলে একই DB-তে চলা rbac.test.js-এ super_admin.roles_manage `undefined` আসত।
+// তাই শুরুতে পুরো permissions সংরক্ষণ করে শেষে হুবহু ফেরানো হয় (কোনো assertion বদলায়নি)।
+let superAdminPermsSnapshot = null;
+beforeAll(async () => {
+  const r = await pool.query("SELECT permissions FROM roles WHERE key = 'super_admin'");
+  superAdminPermsSnapshot = r.rows[0] ? r.rows[0].permissions : null;
+});
+
 afterAll(async () => {
+  if (superAdminPermsSnapshot) {
+    await pool.query("UPDATE roles SET permissions = $1::jsonb WHERE key = 'super_admin'", [JSON.stringify(superAdminPermsSnapshot)]);
+    await require('../../services/cache').del('role:super_admin');
+  }
   for (const k of createdKeys) await pool.query('DELETE FROM roles WHERE key = $1', [k]);
   await pool.query("UPDATE roles SET permissions = permissions - $1 WHERE key <> 'super_admin'", [KEY]);
 });

@@ -210,9 +210,15 @@ async function createRole({ name, description, permissions }) {
 async function updateRole(id, { name, description, permissions }) {
   const role = await getRole(id);
   if (!role) throw new PublicError('Role পাওয়া যায়নি।');
+  // K10: super_admin-এর permission JSON সম্পাদনা করা যায় না — সবসময় সব true। আচরণ এতে বদলায় না (getUserPermissions() এই
+  // JSON পড়েই না, role.key দেখে), কিন্তু রোল ম্যাট্রিক্স (roles-matrix.ejs) JSON থেকেই আঁকে, তাই আংশিক JSON বসলে ভুল "—" দেখাত।
+  // অ্যাডমিন রুট আগে থেকেই সব true পাঠায়; এটা সার্ভিস-স্তরের গার্ড (সরাসরি কল/ভবিষ্যৎ রুটের জন্য)।
+  const effectivePermissions = role.key === 'super_admin'
+    ? Object.fromEntries(Object.keys(PERMISSIONS).map((k) => [k, true]))
+    : stripSuperAdminOnly(permissions, role.key);
   const r = await pool.query(
     `UPDATE roles SET name=$2, description=$3, permissions=$4, updated_at=NOW() WHERE id=$1 RETURNING *`,
-    [role.id, name || role.name, description ?? role.description, JSON.stringify(stripSuperAdminOnly(permissions, role.key))]
+    [role.id, name || role.name, description ?? role.description, JSON.stringify(effectivePermissions)]
   );
   await cache.del(`role:${role.key}`);
   return r.rows[0];
