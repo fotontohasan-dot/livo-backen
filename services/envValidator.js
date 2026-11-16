@@ -153,7 +153,9 @@ function runStartupValidation() {
   }
 
   // staging গার্ড: কোন প্রোভাইডার মক নয় (শুধু নাম, কোনো সিক্রেট নয়) — বুট আটকায় না।
-  const { isStaging, nonMockProviders } = require('../utils/stagingGuard');
+  const { isStaging, nonMockProviders, stagingWithoutAppEnvWarning } = require('../utils/stagingGuard');
+  const missingAppEnv = stagingWithoutAppEnvWarning();
+  if (missingAppEnv) console.warn('⚠️ STAGING সতর্কতা: ' + missingAppEnv);
   if (isStaging()) {
     const real = nonMockProviders();
     if (real.length) {
