@@ -54,7 +54,7 @@ describe.each([
     const { agent, userId } = await loggedInUser();
     const _csrf = await csrfFor(agent);
     const res = await agent.post(route).type('form').send({
-      bank_name: bankName, account_number: account, holder_name: 'pw-secret-1', wallet_kind: kind, _csrf });
+      bank_name: bankName, account_number: account, holder_name: 'Test Holder', wallet_kind: kind, _csrf });
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe(redirectTo);
     const cards = await cardsOf(userId);
@@ -71,7 +71,7 @@ describe.each([
     const { agent, userId } = await loggedInUser();
     const _csrf = await csrfFor(agent);
     const res = await agent.post(route).type('form').send({
-      bank_name: 'bKash', account_number: '01711000002', holder_name: 'pw-secret-1', wallet_kind: bad, _csrf });
+      bank_name: 'bKash', account_number: '01711000002', holder_name: 'Test Holder', wallet_kind: bad, _csrf });
     expect(res.status).toBe(302);
     expect(await cardsOf(userId)).toEqual([]);
     const next = await agent.get(redirectTo);
@@ -82,7 +82,7 @@ describe.each([
     const { agent, userId } = await loggedInUser();
     const _csrf = await csrfFor(agent);
     const res = await agent.post(route).type('form').send({
-      bank_name: 'USDT (TRC20)', account_number: 'TXyzCryptoAddr0002', holder_name: 'pw-secret-1', _csrf });
+      bank_name: 'USDT (TRC20)', account_number: 'TXyzCryptoAddr0002', holder_name: 'Test Holder', _csrf });
     expect(res.status).toBe(302);
     expect(await cardsOf(userId)).toEqual([]);
     const next = await agent.get(redirectTo);
@@ -93,7 +93,7 @@ describe.each([
     const { agent, userId } = await loggedInUser();
     const _csrf = await csrfFor(agent);
     const res = await agent.post(route).type('form').send(
-      `bank_name=bKash&account_number=01711000003&holder_name=pw-secret-1&wallet_kind=ewallet&wallet_kind=crypto&_csrf=${encodeURIComponent(_csrf)}`);
+      `bank_name=bKash&account_number=01711000003&holder_name=Test+Holder&wallet_kind=ewallet&wallet_kind=crypto&_csrf=${encodeURIComponent(_csrf)}`);
     expect(res.status).toBe(302);
     expect(await cardsOf(userId)).toEqual([]);
   });
@@ -108,10 +108,10 @@ describe('crypto কার্ডের প্রভাব — কার্ড-�
     ({ agent, userId } = await loggedInUser());
     const _csrf = await csrfFor(agent);
     const a = await agent.post('/profile/cards/add').type('form').send({
-      bank_name: 'USDT (TRC20)', account_number: CRYPTO_ACC, holder_name: 'pw-secret-1', wallet_kind: 'crypto', _csrf });
+      bank_name: 'USDT (TRC20)', account_number: CRYPTO_ACC, holder_name: 'Test Holder', wallet_kind: 'crypto', _csrf });
     expect(a.status).toBe(302);
     const b = await agent.post('/profile/cards/add').type('form').send({
-      bank_name: 'bKash', account_number: EWALLET_ACC, holder_name: 'pw-secret-1', wallet_kind: 'ewallet', _csrf });
+      bank_name: 'bKash', account_number: EWALLET_ACC, holder_name: 'Test Holder', wallet_kind: 'ewallet', _csrf });
     expect(b.status).toBe(302);
   });
 
@@ -154,7 +154,7 @@ describe('crypto কার্ডের প্রভাব — কার্ড-�
     const u = await loggedInUser();
     const _csrf = await csrfFor(u.agent);
     await u.agent.post('/profile/cards/add').type('form').send({
-      bank_name: 'Nagad', account_number: '01811000888', holder_name: 'pw-secret-1', wallet_kind: 'ewallet', _csrf });
+      bank_name: 'Nagad', account_number: '01811000888', holder_name: 'Test Holder', wallet_kind: 'ewallet', _csrf });
     const page = await u.agent.get('/profile/security');
     expect(page.status).toBe(200);
     expect(page.text).not.toMatch(/Crypto wallet linked|ক্রিপ্টো ওয়ালেট যুক্ত আছে/);
