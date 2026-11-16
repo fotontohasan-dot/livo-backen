@@ -322,7 +322,12 @@ async function restoreDatabaseBackup(record) {
   // যাতে আগের মতো একটা খারাপ সারি বাকি সারিগুলোকে না আটকায় (per-row skip আচরণ অক্ষত থাকে)।
   const BATCH_SIZE = 500;
   for (const table of RESTORE_ORDER) {
-    const rows = parsed.tables[table];
+    let rows = parsed.tables[table];
+    // K2: ইমপোর্ট/রিস্টোরও holder_name-এর সার্ভার-ভ্যালিডেটর মানে — পুরনো ব্যাকআপে সাধারণ টেক্সটে থাকা পাসওয়ার্ড-সদৃশ মান ফিরে আসে না
+    // (অবৈধ হলে শুধু ওই ঘর NULL; কার্ড সারি বাদ যায় না)।
+    if (table === 'bank_cards' && Array.isArray(rows) && rows.length) {
+      rows = require('../utils/holderName').sanitizeImportedRows(rows).rows;
+    }
     if (!rows || rows.length === 0) { results[table] = 0; continue; }
     const columns = Object.keys(rows[0]);
     const colList = columns.map(c => `"${c}"`).join(', ');

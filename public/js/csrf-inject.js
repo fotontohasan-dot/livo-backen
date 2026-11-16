@@ -127,6 +127,22 @@
     });
   };
 
+  // বাধ্যতামূলক পাসওয়ার্ড রিসেট: সার্ভার 403 + code=MUST_RESET_PASSWORD দিলে যেকোনো fetch থেকেই ইউজারকে পাসওয়ার্ড-বদল পাতায় নেওয়া হয়
+  // (নইলে পাতা নীরবে ব্যর্থ হতো)। redirect শুধু একই-অরিজিনের পাথ হলে মানা হয়।
+  var fetchBeforeResetGuard = window.fetch;
+  window.fetch = function() {
+    return fetchBeforeResetGuard.apply(window, arguments).then(function(res) {
+      if (res.status !== 403) return res;
+      return res.clone().json().then(function(body) {
+        if (body && body.code === 'MUST_RESET_PASSWORD') {
+          var to = (typeof body.redirect === 'string' && body.redirect.charAt(0) === '/' && body.redirect.charAt(1) !== '/') ? body.redirect : '/profile/security/login-password';
+          if (window.location.pathname !== to) window.location.assign(to);
+        }
+        return res;
+      }).catch(function() { return res; });
+    });
+  };
+
   // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
   var origOpen = XMLHttpRequest.prototype.open;
   var origSend = XMLHttpRequest.prototype.send;
