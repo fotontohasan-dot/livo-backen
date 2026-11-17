@@ -2533,7 +2533,7 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
 
-  logAdminAction(
+  await logAdminAction(
     req.session.user.id, req.session.user.username, 'BULK_USER_BAN',
     `বাল্ক ব্যান: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
   );
