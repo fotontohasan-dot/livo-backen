@@ -410,6 +410,12 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referrer ON referrals(referrer_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referred ON referrals(referred_id);`);
 
+    // রেফারেল বোনাস: রেফার-করা ইউজারের প্রথম নিশ্চিত ডিপোজিটে রেফারারকে। আটকানো (অ্যাডমিন রিভিউ) অবস্থা ও
+    // পরিমাণ রেকর্ড। idempotent; ব্যালেন্স/সেটেলমেন্টের সাথে সম্পর্ক নেই।
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_held BOOLEAN NOT NULL DEFAULT false;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS hold_reason TEXT;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_amount NUMERIC(12,2);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referral_commissions (
         id SERIAL PRIMARY KEY,

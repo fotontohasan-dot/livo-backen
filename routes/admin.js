@@ -2197,7 +2197,8 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       params.push(`%${search}%`);
       conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
     }
-    if (status === 'bonus_paid') conditions.push('r.signup_bonus_paid = true');
+    if (status === 'bonus_paid') conditions.push('r.signup_bonus_paid = true AND r.bonus_held = false');
+    if (status === 'held') conditions.push('r.bonus_held = true');
     if (status === 'pending') conditions.push('r.signup_bonus_paid = false');
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -2212,14 +2213,15 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
 
     const summaryRes = await pool.query(`
       SELECT COUNT(*) AS total_referrals,
-             COUNT(*) FILTER (WHERE signup_bonus_paid = true) AS bonus_paid_count
+             COUNT(*) FILTER (WHERE signup_bonus_paid = true AND bonus_held = false) AS bonus_paid_count,
+             COUNT(*) FILTER (WHERE bonus_held = true) AS held_count
       FROM referrals
     `);
     const commissionSummaryRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM referral_commissions`);
 
     params.push(limit, offset);
     const referrals = await pool.query(
-      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done, r.signup_bonus_paid, r.created_at,
+      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done, r.signup_bonus_paid, r.bonus_held, r.hold_reason, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
               COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned
@@ -2238,6 +2240,7 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       summary: {
         totalReferrals: parseInt(summaryRes.rows[0].total_referrals),
         bonusPaidCount: parseInt(summaryRes.rows[0].bonus_paid_count),
+        heldCount: parseInt(summaryRes.rows[0].held_count),
         totalCommissionPaid: Number(commissionSummaryRes.rows[0].total)
       }
     });
@@ -2245,7 +2248,7 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     console.error('referrals list error:', err.message);
     res.render('admin/referrals', { loadError: true,
       referrals: [], page: 1, totalPages: 1, total: 0, search: '', status: '',
-      summary: { totalReferrals: 0, bonusPaidCount: 0, totalCommissionPaid: 0 }
+      summary: { totalReferrals: 0, bonusPaidCount: 0, heldCount: 0, totalCommissionPaid: 0 }
     });
   }
 });
