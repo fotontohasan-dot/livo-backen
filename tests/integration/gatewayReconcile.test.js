@@ -5,7 +5,7 @@
 // AUDIT FINDING (এখানে ঠিক করা হয়েছে): SSLCommerz ডিপোজিট ক্রেডিট হওয়ার দুটোই পথ
 // (/success ব্রাউজার রিডাইরেক্ট ও /ipn সার্ভার কলব্যাক) একসাথে ব্যর্থ হতে পারত —
 // ইউজার পেমেন্ট করেই ট্যাব বন্ধ করল, আর ঠিক তখনই সার্ভার ডাউন থাকায় IPN হারিয়ে গেল।
-// তখন টাকা কাটা হয়েছে অথচ payment_requests রো চিরকাল 'pending', ইউজার কয়েন পায় না,
+// তখন টাকা কাটা হয়েছে অথচ payment_requests রো চিরকাল 'pending', ইউজার টাকা পায় না,
 // আর এটা ধরার কোনো স্বয়ংক্রিয় উপায়ই ছিল না।
 //
 // এখানে গেটওয়ে মডিউলটা stub করা হয়েছে (আসল HTTP কল ছাড়া), কিন্তু যাচাইয়ের যুক্তি
@@ -129,7 +129,7 @@ describe('reconcileStuckDeposits — সফল পেমেন্ট ক্র�
 });
 
 describe('reconcileStuckDeposits — ব্যর্থ/অনুপস্থিত পেমেন্ট', () => {
-  test('গেটওয়েতে ট্রানজেকশন না থাকলে (NOT_FOUND) reject হয়, কোনো কয়েন যায় না', async () => {
+  test('গেটওয়েতে ট্রানজেকশন না থাকলে (NOT_FOUND) reject হয়, কোনো টাকা যায় না', async () => {
     const u = await makeUser(0);
     const dep = await makePendingDeposit(u, 400);
     stubGateway(async () => ({ status: 'NOT_FOUND', amount: null, raw: {} }));

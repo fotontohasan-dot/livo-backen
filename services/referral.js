@@ -106,7 +106,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
 
     // ==================== পেআউটের আগে duplicate-account গেট ====================
     // duplicateDetection আগে শুধু রেজিস্ট্রেশনে চলত এবং কেবল ফ্ল্যাগ বানাত।
-    // রেফারেল পেআউটই সবচেয়ে বড় প্রলোভন (৫০+ রেফারে জনপ্রতি ১৫০০ কয়েন), তাই
+    // রেফারেল পেআউটই সবচেয়ে বড় প্রলোভন (৫০+ রেফারে জনপ্রতি ১৫০০ টাকা), তাই
     // টাকা ছাড়ার ঠিক আগে আরেকবার যাচাই — একই ডিভাইস/IP/পেমেন্ট অ্যাকাউন্ট হলে
     // বোনাস pending_review-তে যায়, অ্যাডমিন ছাড় দিলে তবেই active হবে।
     let flagged = false;
@@ -117,8 +117,8 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
       console.error('referral duplicate check error:', e.message);
     }
 
-    // রেফারারকে বোনাস কয়েন
-    // pending_review হলে কয়েন এখনই দেওয়া হয় না — অ্যাডমিন ছাড় দিলে তখন যাবে।
+    // রেফারারকে বোনাস টাকা
+    // pending_review হলে টাকা এখনই দেওয়া হয় না — অ্যাডমিন ছাড় দিলে তখন যাবে।
     if (!flagged) {
       await client.query(
         `UPDATE users SET coins = coins + $1 WHERE id = $2`,
@@ -136,7 +136,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
        VALUES ($1, $2, 0, $3, 'signup')`,
       [ref.referrer_id, referredUserId, bonus]
     );
-    // কয়েন লেনদেন
+    // টাকা লেনদেন
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)
        VALUES ($1, $2, 'referral_bonus', 'রেফারেল প্রথম-ডিপোজিট বোনাস')`,
@@ -147,8 +147,8 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
       [ref.referrer_id, flagged
-        ? `আপনার রেফারেল বোনাস (${bonus} কয়েন) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
-        : `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
+        ? `আপনার রেফারেল বোনাস (${bonus} টাকা) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
+        : `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} টাকা বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
     );
   } catch (e) {
     console.error('processReferralDeposit error:', e.message);
@@ -182,7 +182,7 @@ async function distributeCommission(bettorId, stake) {
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
-        // কমিশন কয়েন যোগ
+        // কমিশন টাকা যোগ
         await client.query(
           `UPDATE users SET coins = coins + $1 WHERE id = $2`,
           [commission, referrerId]
@@ -193,7 +193,7 @@ async function distributeCommission(bettorId, stake) {
            VALUES ($1, $2, $3, $4, 'commission')`,
           [referrerId, bettorId, level, commission]
         );
-        // কয়েন লেনদেন
+        // টাকা লেনদেন
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'referral_commission', $3)`,

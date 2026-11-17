@@ -6,7 +6,7 @@ const { pool } = require('../db');
 const { t } = require('../utils/i18n');
 
 const CASHBACK_RATE = 0.05;   // নিট লোকসানের ৫%
-const MIN_CASHBACK = 10;      // সর্বনিম্ন ক্লেইম ১০ কয়েন
+const MIN_CASHBACK = 10;      // সর্বনিম্ন ক্লেইম ১০ টাকা
 const CATEGORIES = ['sports', 'casino', 'live'];
 const CATEGORY_LABEL = { sports: 'স্পোর্টস', casino: 'ক্যাসিনো', live: 'লাইভ ডিলার' };
 
@@ -150,7 +150,7 @@ async function claimCashback(userId, category = 'sports', lang = 'bn') {
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'ক্যাশব্যাক!', $2, 'success')`,
-      [userId, `আপনি ${CATEGORY_LABEL[category]} থেকে ${amount} কয়েন ক্যাশব্যাক পেয়েছেন!`]
+      [userId, `আপনি ${CATEGORY_LABEL[category]} থেকে ${amount} টাকা ক্যাশব্যাক পেয়েছেন!`]
     );
 
     await client.query('COMMIT');

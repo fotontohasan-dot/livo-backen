@@ -56,7 +56,7 @@ async function initPayment({ amount, tranId, customer, baseUrl }) {
     cancel_url: `${baseUrl}/payment/sslcommerz/cancel`,
     ipn_url: `${baseUrl}/payment/sslcommerz/ipn`,
     shipping_method: 'NO',
-    product_name: 'Bet420 Coins',
+    product_name: 'Bet420 BDT',
     product_category: 'Gaming',
     product_profile: 'general',
     cus_name: customer.name || 'Bet420 User',

@@ -73,11 +73,11 @@
       </div>
       <div class="dz56-11">
         <span class="dz56-12"><%= t('cb_net_loss') %></span>
-        <span class="dz56-13"><%= Number(c.netLoss).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
+        <span class="dz56-13"><%= Number(c.netLoss).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> টাকা</span>
       </div>
       <div class="dz56-14">
         <span class="dz56-12"><%= t('cb_cashback_5') %></span>
-        <span class="dz56-15"><%= Number(c.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
+        <span class="dz56-15"><%= Number(c.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> টাকা</span>
       </div>
       <% if (c.available) { %>
         <form action="/profile/cashback/claim" method="POST">
@@ -97,11 +97,11 @@
       <div class="dz56-19">📊 <%= t('cb_summary') %></div>
       <div class="dz56-20">
         <span class="dz56-12"><%= t('cb_weekly_total') %></span>
-        <span class="dz56-21"><%= Number(cashback.weekly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
+        <span class="dz56-21"><%= Number(cashback.weekly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> টাকা</span>
       </div>
       <div class="dz56-22">
         <span class="dz56-12"><%= t('cb_monthly_total') %></span>
-        <span class="dz56-21"><%= Number(cashback.monthly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
+        <span class="dz56-21"><%= Number(cashback.monthly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> টাকা</span>
       </div>
     </div>
 

@@ -117,7 +117,7 @@ describe('Phase 4 — প্রকৃত সমান্তরাল ডেব�
       const ok = results.filter(Boolean).length;
       expect(await coins(id)).toBe(START - ok * DEBIT);
       expect(await coins(id)).toBeGreaterThanOrEqual(0);
-      // ১০০ কয়েনে ৪০ করে ঠিক দুটোই সম্ভব
+      // ১০০ টাকায় ৪০ করে ঠিক দুটোই সম্ভব
       expect(ok).toBe(2);
     } finally {
       await drop(id);

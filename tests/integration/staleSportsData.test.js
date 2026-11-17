@@ -64,7 +64,7 @@ describe('dataFreshness — নিয়ম', () => {
 });
 
 describe('বাজি গ্রহণ: বাসি ডেটায় প্রত্যাখ্যান (fail-closed)', () => {
-  test('বাসি (২ ঘণ্টা আগে সিঙ্ক) ম্যাচে বাজি → ৫০৩ STALE_ODDS, বাজি/কয়েন-কাটা নেই', async () => {
+  test('বাসি (২ ঘণ্টা আগে সিঙ্ক) ম্যাচে বাজি → ৫০৩ STALE_ODDS, বাজি/টাকা-কাটা নেই', async () => {
     const u = await makeUser(1000);
     const { matchId, marketId } = await makeMarket({ syncedAgoMs: 2 * HOUR });
     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -110,7 +110,7 @@ describe('বাজি গ্রহণ: বাসি ডেটায় প্�
     expect((await bet(u, matchId, { market_id: marketId, runner: 'A', side: 'back', stake: '100' })).status).toBe(200);
   });
 
-  test('accumulator: বাসি ম্যাচের সিলেকশন থাকলে পুরো acca প্রত্যাখ্যাত, কয়েন অক্ষত', async () => {
+  test('accumulator: বাসি ম্যাচের সিলেকশন থাকলে পুরো acca প্রত্যাখ্যাত, টাকা অক্ষত', async () => {
     const u = await makeUser(5000);
     const good = await makeMarket({ syncedAgoMs: 1000 });
     const old = await makeMarket({ syncedAgoMs: 2 * HOUR });

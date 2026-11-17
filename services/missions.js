@@ -150,7 +150,7 @@ async function claimMission(userId, missionId, lang = 'bn') {
       const progress = d.target_type === 'bet_count' ? Number(row.bet_count) : Number(row.turnover);
       if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_not_complete') }; }
 
-      // দৈনিক মিশন রিওয়ার্ড ক্যাপ — একই দিনে সর্বোচ্চ ১০০ কয়েন
+      // দৈনিক মিশন রিওয়ার্ড ক্যাপ — একই দিনে সর্বোচ্চ ১০০ টাকা
       const DAILY_MISSION_CAP = 100;
       const claimedToday = await client.query(
         `SELECT COALESCE(SUM(md.reward),0) AS total
@@ -204,7 +204,7 @@ async function claimMission(userId, missionId, lang = 'bn') {
     const notifResult = await client.query(
       `INSERT INTO notifications (user_id, title, message, type, category)
        VALUES ($1, 'মিশন সম্পন্ন!', $2, 'success', 'mission') RETURNING *`,
-      [userId, `আপনি "${d.title}" মিশন শেষ করে ${finalReward} কয়েন পেয়েছেন!`]
+      [userId, `আপনি "${d.title}" মিশন শেষ করে ${finalReward} টাকা পেয়েছেন!`]
     );
     const notifRow = notifResult.rows[0];
 

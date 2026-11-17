@@ -167,7 +167,7 @@ const definition = {
     { name: 'Payment',       description: 'Deposit & Withdrawal' },
     { name: 'Profile',       description: 'User profile & settings' },
     { name: 'Leaderboard',   description: 'Rankings' },
-    { name: 'Coins',         description: 'Demo coins / bonus' },
+    { name: 'Coins',         description: 'Demo BDT / bonus' },
     { name: 'Notifications', description: 'User notifications' },
     { name: 'Accumulator',   description: 'Parlay/Acca bets' },
     { name: 'Sports',        description: 'Live sports data' },
@@ -435,16 +435,16 @@ const definition = {
     // ═══════════════════ COINS ═══════════════════
     '/coins/balance': {
       get: {
-        tags: ['Coins'], summary: 'Demo coin balance',
+        tags: ['Coins'], summary: 'Demo BDT balance',
         responses: {
-          200: { description: 'Coin balance', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, coins: { type: 'integer', example: 9999 } } } } } },
+          200: { description: 'BDT balance', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, coins: { type: 'integer', example: 9999 } } } } } },
           401: { '$ref': '#/components/responses/Unauthorized' }
         }
       }
     },
     '/coins/daily-bonus': {
       post: {
-        tags: ['Coins'], summary: 'Claim daily bonus coins',
+        tags: ['Coins'], summary: 'Claim daily bonus BDT',
         responses: {
           200: { description: 'Bonus claimed', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, coins_awarded: { type: 'integer' }, new_balance: { type: 'integer' } } } } } },
           400: { description: 'Already claimed today', content: { 'application/json': { schema: { '$ref': '#/components/schemas/Error' } } } },
