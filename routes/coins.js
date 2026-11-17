@@ -68,14 +68,14 @@ router.post('/daily-bonus', isAuth, requireFeature('daily_rewards'), async (req,
       [userId, bonusAmount]
     );
     await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Daily Bonus!','You claimed 100 daily coins','success')`,
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Daily Bonus!','You claimed 100 daily BDT','success')`,
       [userId]
     );
 
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
-    req.flash('success', `Daily bonus claimed! +${bonusAmount} coins`);
+    req.flash('success', `Daily bonus claimed! +${bonusAmount} BDT`);
     res.redirect('/coins');
   } catch (err) {
     await client.query('ROLLBACK');

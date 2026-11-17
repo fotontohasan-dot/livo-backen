@@ -66,9 +66,9 @@ async function settleBet(client, bet, won) {
   const notif = await client.query(
     `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,$4) RETURNING *`,
     won
-      ? [bet.user_id, `${label} বেট জয়!`.trim(), `আপনি ${credit} কয়েন জিতেছেন!`, 'success']
+      ? [bet.user_id, `${label} বেট জয়!`.trim(), `আপনি ${credit} টাকা জিতেছেন!`, 'success']
       : [bet.user_id, 'বেট ফলাফল', kind === 'lay'
-          ? `আপনার লে বেটটি হেরে গেছে — ${bet.liability} কয়েন লায়াবিলিটি হারিয়েছেন।`
+          ? `আপনার লে বেটটি হেরে গেছে — ${bet.liability} টাকা লায়াবিলিটি হারিয়েছেন।`
           : 'আপনার বেটটি হেরে গেছে।', 'error']
   );
   return { won, credit, notif: notif.rows[0] };
@@ -126,7 +126,7 @@ async function voidBet(client, bet, reason) {
   }
   const notif = await client.query(
     `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,'info') RETURNING *`,
-    [bet.user_id, 'বেট বাতিল', `আপনার বেটটি বাতিল হয়েছে — ${refund} কয়েন ফেরত দেওয়া হয়েছে।`]);
+    [bet.user_id, 'বেট বাতিল', `আপনার বেটটি বাতিল হয়েছে — ${refund} টাকা ফেরত দেওয়া হয়েছে।`]);
   return { refund, notif: notif.rows[0] };
 }
 

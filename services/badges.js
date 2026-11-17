@@ -101,7 +101,7 @@ async function checkBadges(userId) {
             }
             await client.query(
               `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'নতুন ব্যাজ!', $2, 'success')`,
-              [userId, `${b.icon} "${b.name}" ব্যাজ অর্জন করেছেন! +${b.reward} কয়েন`]
+              [userId, `${b.icon} "${b.name}" ব্যাজ অর্জন করেছেন! +${b.reward} টাকা`]
             );
             await client.query('COMMIT');
           }

@@ -86,7 +86,7 @@ describe('Reward integrity — badges', () => {
     expect(await coinsOf(userId)).toBe(20);
   });
 
-  test('দ্বিতীয়বার checkBadges ডাকলে আগের ব্যাজে আর কোনো কয়েন যোগ হয় না', async () => {
+  test('দ্বিতীয়বার checkBadges ডাকলে আগের ব্যাজে আর কোনো টাকা যোগ হয় না', async () => {
     const userId = await createUser();
     await pool.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, -10, 'bet', 'test bet')`,
@@ -172,7 +172,7 @@ describe('Reward integrity — ব্যালেন্স ↔ লেজার a
 
     await withFailingLedgerInsert(userId, () => checkBadges(userId));
 
-    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — কয়েন বাড়েনি
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — টাকা বাড়েনি
     // ব্যাজ-ইনসার্টও একই ট্রানজেকশনে থাকায় রোলব্যাক হয়ে গেছে — earned হিসেবে "আটকে" থাকেনি
     const badgeRows = await pool.query(
       `SELECT COUNT(*)::int AS c FROM user_badges WHERE user_id = $1 AND badge_code = 'first_bet'`,
@@ -193,7 +193,7 @@ describe('Reward integrity — ব্যালেন্স ↔ লেজার a
 
     await withFailingLedgerInsert(userId, () => addVipTurnover(userId, threshold));
 
-    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস কয়েন যোগ হয়নি
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস টাকা যোগ হয়নি
   });
 
   test('উইন স্ট্রিক বোনাসে ledger-ইনসার্ট ব্যর্থ হলে coins বৃদ্ধিও রোলব্যাক হয়', async () => {
@@ -204,6 +204,6 @@ describe('Reward integrity — ব্যালেন্স ↔ লেজার a
 
     await withFailingLedgerInsert(userId, () => recordGameResult(userId, true, 100));
 
-    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস কয়েন যোগ হয়নি
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস টাকা যোগ হয়নি
   });
 });

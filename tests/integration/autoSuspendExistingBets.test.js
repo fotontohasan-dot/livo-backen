@@ -60,7 +60,7 @@ describe.each([['auto', async () => setAuto('sports:cricapi')], ['manual', async
   'স্পোর্টস সাসপেন্ড (%s)', (kind, suspend) => {
     afterEach(async () => { await clear('sports:cricapi'); });
 
-    test('নতুন বাজি ৫০৩ (কয়েন কাটে না), কিন্তু আগের বাজির সেটলমেন্ট ও void-রিফান্ড চলে', async () => {
+    test('নতুন বাজি ৫০৩ (টাকা কাটে না), কিন্তু আগের বাজির সেটলমেন্ট ও void-রিফান্ড চলে', async () => {
       const u = await makeUser(1000);
       const m1 = await makeMarket();
       const m2 = await makeMarket();

@@ -124,7 +124,7 @@ describe('Phase 6 — withdrawal balance hold', () => {
       );
       const ok = results.filter(Boolean).length;
 
-      // ১০০০ কয়েনে ৪০০ করে ঠিক দুটোই সম্ভব
+      // ১০০০ টাকায় ৪০০ করে ঠিক দুটোই সম্ভব
       expect(ok).toBe(2);
 
       const snap = await pool.query(

@@ -188,7 +188,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
 
     const after = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
     const coinsAfter = Number(after.rows[0].coins);
-    // ১ম রেফারেলের বোনাস সবসময় ১০০ কয়েন (signupBonusFor(1) === 100) — দুইবার দিলে ২০০ হতো
+    // ১ম রেফারেলের বোনাস সবসময় ১০০ টাকা (signupBonusFor(1) === 100) — দুইবার দিলে ২০০ হতো
     expect(coinsAfter - coinsBefore).toBe(100);
 
     const refRow = await pool.query('SELECT signup_bonus_paid FROM referrals WHERE referrer_id=$1 AND referred_id=$2', [referrerId, referredId]);

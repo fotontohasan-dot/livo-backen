@@ -36,7 +36,7 @@ describe('ফ্ল্যাগ আছে: বাজি/ওয়ালেট/�
   let u;
   beforeAll(async () => { u = await makeUser({ flagged: true }); });
 
-  test('বাজি → পাসওয়ার্ড-বদল পাতায় রিডাইরেক্ট; বাজি/কয়েন-কাটা নেই', async () => {
+  test('বাজি → পাসওয়ার্ড-বদল পাতায় রিডাইরেক্ট; বাজি/টাকা-কাটা নেই', async () => {
     const { matchId, marketId } = await makeMarket();
     const r = await post(u, `/matches/${matchId}/bet`, { market_id: marketId, runner: 'A', side: 'back', stake: '100' });
     expect(r.status).toBe(302);

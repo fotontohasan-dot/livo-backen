@@ -202,7 +202,7 @@ describe('Admin Panel', () => {
       expect(res.status).toBe(302);
 
       const userRow = await pool.query('SELECT coins, demo_balance FROM users WHERE id=$1', [u.rows[0].id]);
-      expect(Number(userRow.rows[0].coins)).toBe(1000); // ডেমো বাজি থেকে সত্যিকারের কয়েন তৈরি হওয়া উচিত না
+      expect(Number(userRow.rows[0].coins)).toBe(1000); // ডেমো বাজি থেকে সত্যিকারের টাকা তৈরি হওয়া উচিত না
       expect(Number(userRow.rows[0].demo_balance)).toBe(1200); // 1000 + payout(200)
     });
 

@@ -154,7 +154,7 @@ describe('উল্লম্ব প্রিভিলেজ — সাধার�
 
     const v = await pool.query('SELECT coins, is_banned FROM users WHERE id = $1', [victim.userId]);
     expect(v.rows.length).toBe(1);            // মুছে যায়নি
-    expect(Number(v.rows[0].coins)).toBe(100); // কয়েন বাড়েনি
+    expect(Number(v.rows[0].coins)).toBe(100); // টাকা বাড়েনি
     expect(v.rows[0].is_banned).toBe(false);   // ব্যান হয়নি
   });
 

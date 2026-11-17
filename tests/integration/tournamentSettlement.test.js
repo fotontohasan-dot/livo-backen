@@ -136,7 +136,7 @@ describe('settleTournament — বিতরণ ও idempotency', () => {
     expect(t.rows[0].settled_at).not.toBeNull();
   });
 
-  test('দ্বিতীয়বার settle করলে একটি কয়েনও দ্বিতীয়বার যায় না', async () => {
+  test('দ্বিতীয়বার settle করলে একটি টাকাও দ্বিতীয়বার যায় না', async () => {
     const u = await makeUser(0);
     const tid = await makeTournament({ prizePool: 500 });
     await addParticipant(tid, u, 10);

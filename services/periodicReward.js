@@ -91,7 +91,7 @@ async function claimWeekly(userId, lang = 'bn') {
     );
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'সপ্তাহিক ক্যাশব্যাক!', $2, 'success')`,
-      [userId, `আপনি ${status.amount} কয়েন সপ্তাহিক ক্যাশব্যাক পেয়েছেন!`]
+      [userId, `আপনি ${status.amount} টাকা সপ্তাহিক ক্যাশব্যাক পেয়েছেন!`]
     );
     await client.query('COMMIT');
     return { success: true, amount: status.amount, message: t(lang, 'reward_coins_received_status_amount').replace('{value}', status.amount) };
@@ -166,7 +166,7 @@ async function claimMonthly(userId, lang = 'bn') {
     );
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'মাসিক রিওয়ার্!', $2, 'success')`,
-      [userId, `আপনি ${status.bonus} কয়েন মাসিক রিওয়ার্ড পেয়েছেন!`]
+      [userId, `আপনি ${status.bonus} টাকা মাসিক রিওয়ার্ড পেয়েছেন!`]
     );
     await client.query('COMMIT');
     return { success: true, amount: status.bonus, message: t(lang, 'reward_coins_received_status_bonus').replace('{value}', status.bonus) };

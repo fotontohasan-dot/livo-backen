@@ -284,7 +284,7 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
       const wn = await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
          VALUES ($1, 'অ্যাকুমুলেটর জয়!', $2, 'success') RETURNING *`,
-        [acca.user_id, `অভিনন্দন! আপনি অ্যাকুমুলেটরে ${payout} কয়েন জিতেছেন!`]
+        [acca.user_id, `অভিনন্দন! আপনি অ্যাকুমুলেটরে ${payout} টাকা জিতেছেন!`]
       );
       notifsToEmit.push({ userId: acca.user_id, row: wn.rows[0] });
     }

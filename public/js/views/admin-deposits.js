@@ -8,7 +8,7 @@ async function approveDeposit(id) {
     try {
         const res = await fetch('/admin/api/deposits/' + id + '/approve', { method: 'POST' });
         const data = await res.json();
-        if (data.success) { alert('✅ ডিপোজিট Approve হয়েছে, ইউজারের কয়েন যোগ হয়ে গেছে।'); location.reload(); }
+        if (data.success) { alert('✅ ডিপোজিট Approve হয়েছে, ইউজারের টাকা যোগ হয়ে গেছে।'); location.reload(); }
         else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
     } catch (e) { alert('❌ সার্ভার এরর'); }
 }
