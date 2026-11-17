@@ -84,3 +84,14 @@ CREATE TABLE referral_reward_adjustments (  -- রিভার্সাল অ�
 6. **অডিট ট্রেইল অপর্যাপ্ত**: tier/status/qualifying_deposit/reviewer নেই; `referral_commissions` UNIQUE নেই; টিয়ার ও ন্যূনতম হার্ডকোড (নিয়মে কনফিগযোগ্য)।
 7. **কপি অসঙ্গতি**: promo popup seed-এ "প্রতিটি বন্ধুর প্রথম ডিপোজিটে ৫০০ টাকা" — প্রকৃত টিয়ারের (১০০–১৫০০) সঙ্গে মেলে না (migrations.js ~১৪৩৮)।
 **সিদ্ধান্ত দরকার (PM):** (ক) ফোন-মিল সিগন্যাল কোন উৎস থেকে (users.phone) এবং রেফারার↔রেফার্ড তুলনা চাই কি; (খ) পুরোনো pending_review বোনাসের (থাকলে) পরিণতি; (গ) approved ডিপোজিট রিভার্সালের ট্রিগার (অ্যাডমিন বাটন? গেটওয়ে চার্জব্যাক?) কে সংজ্ঞায়িত করবে।
+
+## Migration ও Rollback (Referral V2 engine)
+- `migrations.js`-এ additive ব্লক: `referral_rewards` (UNIQUE referred_user_id; status ∈ pending_review/paid/rejected/reversed/legacy_paid/retry_pending; `evidence JSONB` বাড়তি কলাম), `referral_reward_adjustments`, সিড `site_settings.referral_min_deposit=500` ও `referral_tiers` (JSON, বিদ্যমান মান অক্ষুণ্ণ)।
+- ব্যাকফিল: `referrals.signup_bonus_paid = true` সব সারি → `legacy_paid` (পুরোনো pending_review বোনাসের রেফারেলও এর মধ্যে)। ব্যালেন্স/লেজার/bonuses অপরিবর্তিত। এটি আবার চালালেও নিরাপদ (idempotent)।
+- **Rollback** (পুরোনো কোড এই টেবিল পড়ে না, তাই নিরাপদ; আগে ইঞ্জিনের কোড revert করতে হবে):
+  ```sql
+  DROP TABLE IF EXISTS referral_reward_adjustments;
+  DROP TABLE IF EXISTS referral_rewards;
+  DELETE FROM site_settings WHERE key IN ('referral_min_deposit','referral_tiers');
+  ```
+  `referrals`, `referral_commissions`, `bonuses`, `coin_transactions`-এ কোনো ব্যাকফিল-লেখা নেই, তাই এগুলোর রোলব্যাক লাগে না।
