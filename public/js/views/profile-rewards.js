@@ -35,7 +35,7 @@
       eggStatusEl.textContent = '🔒 আজ ডিপোজিট করুন, তারপর ভাঙতে পারবেন';
       eggBtn.disabled = true; eggBtn.textContent = 'লক';
     } else {
-      eggStatusEl.textContent = 'ডিমে টোকা দিয়ে কয়েন জিতুন';
+      eggStatusEl.textContent = 'ডিমে টোকা দিয়ে টাকা জিতুন';
       eggBtn.disabled = false; eggBtn.textContent = 'ডিম ভাঙুন';
     }
 
@@ -80,7 +80,7 @@
           .then(function (res) {
             eggResult.style.display = 'block';
             if (res.ok) {
-              eggResult.textContent = '🎉 আপনি ' + res.amount + ' কয়েন জিতেছেন!';
+              eggResult.textContent = '🎉 আপনি ' + res.amount + ' টাকা জিতেছেন!';
               eggBtn.disabled = true; eggBtn.textContent = 'নেওয়া হয়েছে';
               eggStatusEl.textContent = 'আজকেরটা নেওয়া হয়ে গেছে ✅';
             } else {
@@ -105,7 +105,7 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.ok) {
-          redStatusEl.textContent = '🎉 আপনি ' + res.amount + ' কয়েন জিতেছেন!';
+          redStatusEl.textContent = '🎉 আপনি ' + res.amount + ' টাকা জিতেছেন!';
           redBtn.textContent = 'নেওয়া হয়েছে';
         } else {
           redStatusEl.textContent = res.message || 'সমস্যা হয়েছে।';

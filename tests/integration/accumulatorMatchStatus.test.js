@@ -29,7 +29,7 @@ async function makeMarket(status) {
 afterAll(async () => { await pool.query("UPDATE matches SET status = 'finished' WHERE title = 'AccaStatusTest'"); });
 
 describe('placeAccumulator — ম্যাচ স্ট্যাটাস', () => {
-  test.each(['finished', 'cancelled'])('%s ম্যাচের লেগ থাকলে পুরো acca প্রত্যাখ্যাত (MATCH_CLOSED), কয়েন অক্ষত', async (status) => {
+  test.each(['finished', 'cancelled'])('%s ম্যাচের লেগ থাকলে পুরো acca প্রত্যাখ্যাত (MATCH_CLOSED), টাকা অক্ষত', async (status) => {
     const userId = await makeUser(5000);
     const open = await makeMarket('live');
     const closed = await makeMarket(status);

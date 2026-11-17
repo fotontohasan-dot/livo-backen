@@ -169,7 +169,7 @@ const adminActionLimiter = rateLimit({
   store: new RedisRateLimitStore('rl:adminaction:')
 });
 
-// টাকা/কয়েন সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
+// টাকা/টাকা সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
 // কম্প্রোমাইজড সেশন বা স্ক্রিপ্টেড অপব্যবহার হলেও ক্ষতির পরিমাণ সীমিত রাখতে।
 const adminFinancialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -1993,7 +1993,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: req.t('payment_request_not_found_or_processed') });
     }
-    // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
+    // উইথড্র রিকোয়েস্ট করার সময় টাকা কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     // ফেরতটা coin_transactions লেজারেও লিখতে হয়। আগে এই রুটে শুধু ব্যালেন্স বাড়ত, কোনো
     // লেজার সারি লেখা হতো না — অথচ উইথড্র রিকোয়েস্টের সময় -amount সারিটা লেখা হয়েছিল।
@@ -2009,7 +2009,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     const wRejectNotif = await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
-      [request.user_id, req.t('admin_withdraw_cancelled_title'), `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
+      [request.user_id, req.t('admin_withdraw_cancelled_title'), `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, টাকা ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
     if (wRejectNotif.rows[0]) emitToUser(request.user_id, wRejectNotif.rows[0]);
@@ -2541,7 +2541,7 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
 
-  logAdminAction(
+  await logAdminAction(
     req.session.user.id, req.session.user.username, 'BULK_USER_BAN',
     `বাল্ক ব্যান: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
   );
@@ -2740,13 +2740,13 @@ router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminF
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     const reason = (req.body.reason || '').trim().slice(0, 200);
     // ব্যালেন্স আপডেট ও লেজার এন্ট্রি — দুটো আলাদা pool.query ছিল, কোনো ট্রানজেকশন ছাড়া।
-    // দ্বিতীয়টা ব্যর্থ হলে (বা মাঝপথে প্রসেস মরলে) কয়েন যোগ হয়ে যেত কিন্তু coin_transactions-এ
+    // দ্বিতীয়টা ব্যর্থ হলে (বা মাঝপথে প্রসেস মরলে) টাকা যোগ হয়ে যেত কিন্তু coin_transactions-এ
     // কোনো রেকর্ড থাকত না — ব্যালেন্স আর লেজার স্থায়ীভাবে আলাদা হয়ে যেত। এখন একসাথে commit হয়।
     await withTransaction(async (client) => {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
-      await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন কয়েন যোগ']);
+      await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন টাকা যোগ']);
     });
-    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} কয়েন যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} টাকা যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', req.t('admin_coins_added'));
   } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
@@ -2759,8 +2759,8 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
     // দুটো বাগ ছিল এখানে:
     //   ১. ব্যালেন্স ও লেজার আলাদা pool.query-তে, কোনো ট্রানজেকশন ছাড়া।
     //   ২. GREATEST(coins - $1, 0) ব্যালেন্সকে শূন্যে আটকায়, কিন্তু লেজারে পুরো -amount
-    //      লেখা হতো। ১০০ কয়েনের ইউজার থেকে ৫০০ কমালে ব্যালেন্স হতো ০ (আসলে কমেছে ১০০)
-    //      অথচ লেজার বলত -৫০০ — স্থায়ী ৪০০ কয়েনের গরমিল।
+    //      লেখা হতো। ১০০ টাকার ইউজার থেকে ৫০০ কমালে ব্যালেন্স হতো ০ (আসলে কমেছে ১০০)
+    //      অথচ লেজার বলত -৫০০ — স্থায়ী ৪০০ টাকার গরমিল।
     // এখন দুটোই এক ট্রানজেকশনে, আর লেজারে ঠিক যতটা সত্যিই কমেছে সেটাই লেখা হয়।
     // ব্যালেন্স আগের মতোই শূন্যের নিচে নামে না।
     const removed = await withTransaction(async (client) => {
@@ -2776,11 +2776,11 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
       await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [actualRemoved, req.params.id]);
       await client.query(
         `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove',$3)`,
-        [req.params.id, -actualRemoved, reason || 'অ্যাডমিন কয়েন কমানো']
+        [req.params.id, -actualRemoved, reason || 'অ্যাডমিন টাকা কমানো']
       );
       return actualRemoved;
     });
-    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${removed} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${removed} টাকা কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', req.t('admin_coins_removed').replace('{value}', removed));
   } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
@@ -3173,7 +3173,7 @@ router.post('/markets/:marketId/void', rbac.requirePermission('matches_manage'),
     await client.query('COMMIT');
     out.notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
     await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_VOIDED', `Market #${marketId} voided — ${out.total} bets, ${out.refunded} refunded`, req.ip);
-    respondVoid(req, res, 200, { success: true, voided: out.total, refunded: out.refunded, message: `Market voided — ${out.total} bets, ${out.refunded} coins refunded` }, '/admin/markets');
+    respondVoid(req, res, 200, { success: true, voided: out.total, refunded: out.refunded, message: `Market voided — ${out.total} bets, ${out.refunded} BDT refunded` }, '/admin/markets');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('market void error:', err.message);
@@ -3204,7 +3204,7 @@ router.post('/matches/:id/cancel', rbac.requirePermission('matches_manage'), asy
     notifs.forEach((n) => { emitToUser(n.userId, n.row); emitMyBetsChanged(n.userId, 'void'); });
     try { await cache.del(cacheKeys.matchDetail(matchId)); await cache.del('matches:live'); } catch (e) {}
     await logAdminAction(req.session.user.id, req.session.user.username, 'MATCH_CANCELLED', `Match #${matchId} cancelled — ${total} bets voided, ${refunded} refunded`, req.ip);
-    respondVoid(req, res, 200, { success: true, voided: total, refunded, message: `Match cancelled — ${total} bets voided, ${refunded} coins refunded` }, '/admin/matches');
+    respondVoid(req, res, 200, { success: true, voided: total, refunded, message: `Match cancelled — ${total} bets voided, ${refunded} BDT refunded` }, '/admin/matches');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('match cancel error:', err.message);
@@ -3289,7 +3289,7 @@ router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, re
        VALUES ($1, $2, $3, $4, $5, 'active')`,
       [userRes.rows[0].id, bonus_type, bonus_amount, sports_required, casino_required]
     );
-    await logAdminAction(req.session.user.id, req.session.user.username, 'BONUS_ADD', `${username} কে ${bonus_amount} কয়েন বোনাস দেওয়া হয়েছে`, req.ip);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BONUS_ADD', `${username} কে ${bonus_amount} টাকা বোনাস দেওয়া হয়েছে`, req.ip);
     res.redirect('/admin/bonuses');
   } catch (err) {
     console.error('Bonus add error:', err.message);
@@ -3514,7 +3514,7 @@ router.post('/tournaments/:id/status', rbac.requirePermission('matches_manage'),
     if (status === 'completed') {
       const result = await settleTournament(id);
       await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_SETTLE',
-        `টুর্নামেন্ট #${id} settle: ${result.success ? (result.alreadySettled ? 'আগেই settled' : `${result.distributed} কয়েন, ${result.awards.filter(a => a.amount > 0).length} জন বিজয়ী`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
+        `টুর্নামেন্ট #${id} settle: ${result.success ? (result.alreadySettled ? 'আগেই settled' : `${result.distributed} টাকা, ${result.awards.filter(a => a.amount > 0).length} জন বিজয়ী`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
       logAuditEvent({
         req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
         action: 'TOURNAMENT_SETTLED', category: 'financial',
@@ -3530,7 +3530,7 @@ router.post('/tournaments/:id/status', rbac.requirePermission('matches_manage'),
     if (status === 'cancelled') {
       const result = await cancelTournament(id);
       await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_CANCEL',
-        `টুর্নামেন্ট #${id} বাতিল: ${result.success ? (result.alreadyRefunded ? 'আগেই ফেরত হয়েছে' : `${result.refunded} কয়েন ${result.refundCount} জনকে ফেরত`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
+        `টুর্নামেন্ট #${id} বাতিল: ${result.success ? (result.alreadyRefunded ? 'আগেই ফেরত হয়েছে' : `${result.refunded} টাকা ${result.refundCount} জনকে ফেরত`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
       logAuditEvent({
         req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
         action: 'TOURNAMENT_CANCELLED', category: 'financial',

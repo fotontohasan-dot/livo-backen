@@ -63,12 +63,87 @@ async function createReferral(client, referrerId, referredId) {
   }
 }
 
-// ==================== ২. প্রথম ডিপোজিট বোনাস (V2) ====================
-// রেফারার বোনাস এখন services/referralRewards.js-এর ইঞ্জিন দেয় — ডিপোজিট COMMIT-এর পরে আলাদা
-// ট্রানজ্যাকশনে (routes/payment.js creditApprovedDeposit-এর কলাররা afterDepositCommit ডাকে)।
-// আগের processReferralDeposit (ডিপোজিট ট্রানজ্যাকশনের ভেতরে, signup_bonus_paid ফ্ল্যাগ, খালি-তথ্যের
-// duplicate গেট) সরানো হয়েছে।
+// ==================== ২. প্রথম ডিপোজিট প্রসেস ====================
+// ডিপোজিট approve হওয়ার সময় ডাকা হবে।
+// রেফার করা ইউজার প্রথমবার (৫০০+) ডিপোজিট করলে — রেফারারকে প্রোগ্রেসিভ বোনাস।
+async function processReferralDeposit(client, referredUserId, depositAmount) {
+  try {
+    if (depositAmount < MIN_DEPOSIT_FOR_BONUS) return; // ৫০০-র কম, বোনাস নেই
 
+    // আগে এখানে SELECT দিয়ে signup_bonus_paid যাচাই করে, পরে আলাদা UPDATE দিয়ে flag সেট করা হতো —
+    // দুটো ধাপের মাঝে কোনো লক ছিল না, তাই একই রেফার্ড ইউজারের দুইটা ডিপোজিট কাছাকাছি সময়ে
+    // approve হলে (দুই admin ট্যাব, বা success-redirect ও IPN-এর race) দুটোই signup_bonus_paid=false
+    // পড়ত আর দুইবার বোনাস দিত। এখন একটা atomic conditional UPDATE দিয়ে flag claim করা হয় —
+    // WHERE signup_bonus_paid=false শর্তসহ, যেটা single-statement হওয়ায় সবসময় exactly-once গ্যারান্টি দেয়,
+    // client কোনো transaction-এ থাকুক বা না থাকুক। rowCount 0 মানে অন্য কোনো concurrent কল আগেই claim করেছে।
+    const claimRes = await client.query(
+      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true
+       WHERE referred_id = $1 AND signup_bonus_paid = false
+       RETURNING id, referrer_id`,
+      [referredUserId]
+    );
+    const ref = claimRes.rows[0];
+    if (!ref) return; // কেউ রেফার করেনি, অথবা বোনাস আগেই claim হয়ে গেছে (রেস জেতেনি)
+
+    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া, এই রেফারটিসহ) — সেটাই এর অবস্থান
+    const cntRes = await client.query(
+      `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true`,
+      [ref.referrer_id]
+    );
+    const thisIsNumber = parseInt(cntRes.rows[0].count); // এই রেফারটি ধরে কতজন হলো
+
+    const bonus = signupBonusFor(thisIsNumber);
+
+    // ==================== পেআউটের আগে duplicate-account গেট ====================
+    // duplicateDetection আগে শুধু রেজিস্ট্রেশনে চলত এবং কেবল ফ্ল্যাগ বানাত।
+    // রেফারেল পেআউটই সবচেয়ে বড় প্রলোভন (৫০+ রেফারে জনপ্রতি ১৫০০ টাকা), তাই
+    // টাকা ছাড়ার ঠিক আগে আরেকবার যাচাই — একই ডিভাইস/IP/পেমেন্ট অ্যাকাউন্ট হলে
+    // বোনাস pending_review-তে যায়, অ্যাডমিন ছাড় দিলে তবেই active হবে।
+    let flagged = false;
+    try {
+      const flag = await evaluateDuplicateAccount(referredUserId, {});
+      flagged = !!(flag && Number(flag.risk_score) >= REFERRAL_REVIEW_RISK_THRESHOLD);
+    } catch (e) {
+      console.error('referral duplicate check error:', e.message);
+    }
+
+    // রেফারারকে বোনাস টাকা
+    // pending_review হলে টাকা এখনই দেওয়া হয় না — অ্যাডমিন ছাড় দিলে তখন যাবে।
+    if (!flagged) {
+      await client.query(
+        `UPDATE users SET coins = coins + $1 WHERE id = $2`,
+        [bonus, ref.referrer_id]
+      );
+    }
+
+    // টার্নওভার লক — এই সারিটা না থাকলে canWithdraw() রেফারেল বোনাস আটকাতে পারে না,
+    // অর্থাৎ বোনাস তাৎক্ষণিকভাবে তোলা যায় (ভুয়া রেফার ফার্মিংয়ের মূল ফাঁক)।
+    await createBonus(client, ref.referrer_id, 'referral', bonus,
+      flagged ? { status: 'pending_review' } : {});
+    // কমিশন হিস্ট্রি (অডিট)
+    await client.query(
+      `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
+       VALUES ($1, $2, 0, $3, 'signup')`,
+      [ref.referrer_id, referredUserId, bonus]
+    );
+    // টাকা লেনদেন
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'referral_bonus', 'রেফারেল প্রথম-ডিপোজিট বোনাস')`,
+      [ref.referrer_id, bonus]
+    );
+    // নোটিফিকেশন
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type)
+       VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
+      [ref.referrer_id, flagged
+        ? `আপনার রেফারেল বোনাস (${bonus} টাকা) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
+        : `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} টাকা বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
+    );
+  } catch (e) {
+    console.error('processReferralDeposit error:', e.message);
+  }
+}
 // ==================== ৩. মাল্টি-লেভেল কমিশন বিতরণ ====================
 // বাজি ধরার সময় ডাকা হবে (গেম ও স্পোর্টস দুই জায়গায়)।
 // বাজি যে ধরল তার উপরে ৩ ধাপ পর্যন্ত রেফারারদের কমিশন দেয়।
@@ -97,7 +172,7 @@ async function distributeCommission(bettorId, stake) {
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
-        // কমিশন কয়েন যোগ
+        // কমিশন টাকা যোগ
         await client.query(
           `UPDATE users SET coins = coins + $1 WHERE id = $2`,
           [commission, referrerId]
@@ -108,7 +183,7 @@ async function distributeCommission(bettorId, stake) {
            VALUES ($1, $2, $3, $4, 'commission')`,
           [referrerId, bettorId, level, commission]
         );
-        // কয়েন লেনদেন
+        // টাকা লেনদেন
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'referral_commission', $3)`,

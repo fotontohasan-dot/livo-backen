@@ -23,7 +23,7 @@ async function rejectWithdrawal(id) {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
         });
         const data = await res.json();
-        if (data.success) { alert('✅ উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।'); location.reload(); }
+        if (data.success) { alert('✅ উইথড্র বাতিল হয়েছে, টাকা ফেরত দেওয়া হয়েছে।'); location.reload(); }
         else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
     } catch (e) { alert('❌ সার্ভার এরর'); }
 }

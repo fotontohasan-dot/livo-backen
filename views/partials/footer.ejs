@@ -9,19 +9,19 @@
   .dz3-5 { display: flex; flex-wrap: wrap; gap: 2px 4px; justify-content: center; align-items: center; margin-bottom: 12px; }
   .dz3-6 { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
   .dz3-7 { padding: 6px 12px; font-size: 11px; font-weight: 600; }
-  .dz3-8 { margin-bottom: 16px; }
-  .dz3-9 { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-align: center; }
-  .dz3-10 { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
-  .dz3-11 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
-  .dz3-12 { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
-  .dz3-13 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .dz3-8 { margin-bottom: 10px; }
+  .dz3-9 { font-size: 11px; font-weight: 700; margin-bottom: 5px; text-align: center; }
+  .dz3-10 { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+  .dz3-11 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .dz3-12 { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
+  .dz3-13 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .dz3-14 { padding-top: 14px; margin-top: 10px; border-top: 1px solid var(--border-glass); text-align: center; }
   .dz3-15 { font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; margin-bottom: 8px; line-height: 1.6; }
 .footer-badge {
-  padding: 9px 4px;
-  border-radius: 10px;
+  padding: 4px 2px;
+  border-radius: 7px;
   text-align: center;
-  font-size: 9px;
+  font-size: 7.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -29,7 +29,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--text-main);
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-glass);
@@ -40,7 +40,7 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.25); border-color: var(--secondary);
 }
-.footer-badge i { font-size: 13px; color: var(--gold); }
+.footer-badge i { font-size: 10px; color: var(--gold); }
 .footer-badge-security { color: var(--text-main); }
 .footer-badge-security i { color: #6FB6E8; }
 .footer-badge-responsible { color: var(--text-main); }
@@ -105,6 +105,10 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
         <div class="footer-license dz3-7">Curacao Licensed</div>
       </div>
     </div>
+
+    <% if (typeof showHomeFeatures !== 'undefined' && showHomeFeatures) { %>
+      <%- include('home-features') %>
+    <% } %>
 
     <!-- লাইসেন্স সেকশন -->
     <div class="dz3-8">

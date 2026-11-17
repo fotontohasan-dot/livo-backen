@@ -71,7 +71,7 @@ async function claimRedPacket(userId, lang = 'bn') {
     // ব্যালেন্স বাড়ানোর পাশাপাশি coin_transactions লেজারেও লিখতে হয়। আগে শুধু
     // daily_rewards ও bonuses টেবিলে লেখা হতো, coin_transactions-এ কিছুই যেত না —
     // ফলে ইউজারের ব্যালেন্স আর লেনদেন-ইতিহাসের যোগফল স্থায়ীভাবে আলাদা হয়ে যেত এবং
-    // /profile/transactions-এ এই কয়েনগুলো কোথা থেকে এল তা দেখাই যেত না।
+    // /profile/transactions-এ এই টাকাগুলো কোথা থেকে এল তা দেখাই যেত না।
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)
        VALUES ($1, $2, 'red_packet', 'লাল খামের দৈনিক পুরস্কার')`,
