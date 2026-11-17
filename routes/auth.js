@@ -160,7 +160,7 @@ router.get('/', async (req, res) => {
       homeCasino.getHomeCasino(req.query),
       homeCasino.getBanners(),
     ]);
-    res.render('index', { user: req.session.user || null, casino, banners, homeCasino });
+    res.render('index', { user: req.session.user || null, casino, banners, homeCasino, currentPage: 'home', bottomNavVariant: 'casino' });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
