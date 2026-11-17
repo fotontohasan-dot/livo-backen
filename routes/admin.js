@@ -82,6 +82,7 @@ const { grantFreeBet } = require('../services/freebet');
 const { settleTournament, cancelTournament } = require('../services/tournamentSettlement');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
+const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const { emitToUser, emitMyBetsChanged, broadcastToAllUsers } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 // routes/auth.js-এর মতোই — অস্তিত্বহীন অ্যাডমিন username/email-এ bcrypt.compare() না চালালে
@@ -1823,6 +1824,7 @@ router.get('/deposits/legacy-disabled', rbac.requirePermission('payments_view'),
 
 router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approve'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
+  let referralPending = null; // ইঞ্জিন client.release()-এর পরে চলে
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1834,6 +1836,7 @@ router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approv
     }
     const crApprove = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    referralPending = { userId: request.user_id, depositId: request.id };
     if (crApprove && crApprove.notification) emitToUser(request.user_id, crApprove.notification);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
     logAuditEvent({
@@ -1848,6 +1851,7 @@ router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approv
     res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   } finally {
     client.release();
+    if (referralPending) await referralAfterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 });
 
@@ -2197,14 +2201,16 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       params.push(`%${search}%`);
       conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
     }
-    if (status === 'bonus_paid') conditions.push('r.signup_bonus_paid = true');
-    if (status === 'pending') conditions.push('r.signup_bonus_paid = false');
+    // V2: বোনাস-অবস্থা referral_rewards থেকে (paid/legacy_paid = বোনাস পাওয়া; বাকি সব pending)
+    if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
+    if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid'))");
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM referrals r
        JOIN users ru ON r.referrer_id = ru.id
        JOIN users rd ON r.referred_id = rd.id
+       LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
        ${where}`,
       params
     );
@@ -2212,20 +2218,22 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
 
     const summaryRes = await pool.query(`
       SELECT COUNT(*) AS total_referrals,
-             COUNT(*) FILTER (WHERE signup_bonus_paid = true) AS bonus_paid_count
+             (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count
       FROM referrals
     `);
     const commissionSummaryRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM referral_commissions`);
 
     params.push(limit, offset);
     const referrals = await pool.query(
-      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done, r.signup_bonus_paid, r.created_at,
+      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done,
+              COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid, rr.status AS reward_status, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
               COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned
        FROM referrals r
        JOIN users ru ON r.referrer_id = ru.id
        JOIN users rd ON r.referred_id = rd.id
+       LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
        ${where}
        ORDER BY r.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
