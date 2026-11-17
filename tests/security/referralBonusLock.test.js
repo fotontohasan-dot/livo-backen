@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 const { pool } = require('../../db');
-const { processReferralDeposit } = require('../../services/referral');
+const { runEngine } = require('../helpers/referralDeposit');
 const { canWithdraw, RULES } = require('../../services/turnover');
 const { uniqueUsername, uniquePhone } = require('../helpers/app');
 
@@ -48,14 +48,7 @@ describe('রেফারেল বোনাসে টার্নওভার �
   });
 
   test('রেফারেল পেআউটের পর bonuses টেবিলে active সারি তৈরি হয়', async () => {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await processReferralDeposit(client, referredId, 500);
-      await client.query('COMMIT');
-    } finally {
-      client.release();
-    }
+    await runEngine(referredId, 500); // V2 ইঞ্জিন (আলাদা ট্রানজ্যাকশন)
 
     const bonuses = await pool.query(
       `SELECT bonus_type, bonus_amount, sports_required, status
@@ -75,14 +68,7 @@ describe('রেফারেল বোনাসে টার্নওভার �
     const before = await canWithdraw(referrerId);
     expect(before.allowed).toBe(true);
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await processReferralDeposit(client, referredId, 500);
-      await client.query('COMMIT');
-    } finally {
-      client.release();
-    }
+    await runEngine(referredId, 500); // V2 ইঞ্জিন (আলাদা ট্রানজ্যাকশন)
 
     const after = await canWithdraw(referrerId);
     expect(after.allowed).toBe(false);
@@ -90,14 +76,7 @@ describe('রেফারেল বোনাসে টার্নওভার �
   });
 
   test('ন্যূনতম ডিপোজিটের নিচে হলে বোনাসও নেই, লকও নেই', async () => {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await processReferralDeposit(client, referredId, 100);   // ৫০০-র নিচে
-      await client.query('COMMIT');
-    } finally {
-      client.release();
-    }
+    await runEngine(referredId, 100); // ৫০০-র নিচে
 
     const bonuses = await pool.query('SELECT id FROM bonuses WHERE user_id = $1', [referrerId]);
     expect(bonuses.rows.length).toBe(0);
