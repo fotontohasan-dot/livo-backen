@@ -198,6 +198,9 @@ async function startServer(opts = {}) {
     await connectDB();
     console.log("✅ PostgreSQL connected successfully");
 
+    // Redis maxmemory-policy সতর্কতা (শুধু লগ; বুট আটকায় না, await করা হয় না, ব্যর্থতা নীরব)
+    require('./services/redisEvictionCheck').checkRedisEvictionPolicy().catch(() => {});
+
     if (runsWeb(role)) {
       await runMigrations();
       console.log("✅ DB migration done");
