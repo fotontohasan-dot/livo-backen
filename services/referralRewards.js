@@ -129,14 +129,13 @@ async function collectEvidence(client, referrerId, referredId) {
     evidence.payment_account_match = { related_users: pay.rows.map(r => r.user_id), with_referrer: pay.rows.some(r => r.user_id === referrerId) };
   }
 
-  // ৩) ডিভাইস মিল (রেফারার ↔ রেফার-করা) — মূল ব্যবসায়িক নিয়মের অংশ
+  // ৩) ডিভাইস মিল (রেফারার ↔ রেফার্ড) — শুধু ক্লায়েন্ট-পাঠানো device_fingerprint।
+  // device_sessions.device_signature বাদ: fingerprint না থাকলে সেটা শুধু User-Agent-এর হ্যাশ, তাই একই
+  // মডেলের ফোন/ব্রাউজারের ভিন্ন মানুষ একই signature পায় — সেটায় ফ্ল্যাগ করলে বৈধ ইউজার আটকাত।
   const dev = await client.query(
     `SELECT 1 FROM login_logs a JOIN login_logs b ON a.device_fingerprint = b.device_fingerprint
-      WHERE a.user_id = $1 AND b.user_id = $2 AND a.device_fingerprint IS NOT NULL
-      UNION ALL
-     SELECT 1 FROM device_sessions a JOIN device_sessions b ON a.device_signature = b.device_signature
-      WHERE a.user_id = $1 AND b.user_id = $2 AND a.device_signature IS NOT NULL
-      LIMIT 1`,
+      WHERE a.user_id = $1 AND b.user_id = $2
+        AND a.device_fingerprint IS NOT NULL AND a.device_fingerprint <> '' LIMIT 1`,
     [referrerId, referredId]
   );
   if (dev.rows.length) {
@@ -158,10 +157,19 @@ async function collectEvidence(client, referrerId, referredId) {
 // ---------------------------------------------------------------- মূল ইঞ্জিন
 // আলাদা ট্রানজ্যাকশনে চলে (ডিপোজিট COMMIT-এর পরে)। কখনো throw করে না।
 async function processReferralReward(referredUserId, depositId) {
+  // কনফিগ আগে পড়া — client ধরে রেখে আরেকটা pool connection চাওয়া (settings ক্যাশ-মিস) pool আটকাতে পারে
+  let cfg;
+  try {
+    cfg = { minDeposit: await getMinDeposit(), tiers: await getTiers() };
+  } catch (e) {
+    console.error('referral reward config error (retry_pending):', e.message);
+    await markRetryPending(referredUserId, depositId).catch(() => {});
+    return { outcome: 'error' };
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const outcome = await runInTx(client, referredUserId, depositId);
+    const outcome = await runInTx(client, referredUserId, depositId, cfg);
     await client.query('COMMIT');
     return outcome;
   } catch (e) {
@@ -175,7 +183,7 @@ async function processReferralReward(referredUserId, depositId) {
   }
 }
 
-async function runInTx(client, referredUserId, depositId) {
+async function runInTx(client, referredUserId, depositId, cfg) {
   const refRes = await client.query(
     `SELECT referrer_id FROM referrals WHERE referred_id = $1`, [referredUserId]
   );
@@ -200,7 +208,7 @@ async function runInTx(client, referredUserId, depositId) {
     `SELECT id, user_id, type, status, amount FROM payment_requests WHERE id = $1`, [qualifyingId]
   );
   const dep = depRes.rows[0];
-  const minDeposit = await getMinDeposit();
+  const minDeposit = cfg.minDeposit;
   if (!dep || dep.type !== 'deposit' || Number(dep.user_id) !== Number(referredUserId)
       || dep.status !== 'approved') {
     return { outcome: 'not_qualifying' };
@@ -230,7 +238,7 @@ async function runInTx(client, referredUserId, depositId) {
     `SELECT COUNT(*)::int AS n FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
     [referrerId]
   );
-  const { tier, amount } = tierFor(cnt.rows[0].n + 1, await getTiers());
+  const { tier, amount } = tierFor(cnt.rows[0].n + 1, cfg.tiers);
 
   const row = await upsertFinal(client, existing, {
     referredUserId, referrerId, status: 'paid', tier, amount,
