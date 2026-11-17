@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 require('dotenv').config();
+require('./utils/normalizeRedisEnv').normalizeRedisEnv();
 const process = require('node:process');
 const sentryService = require('./services/sentry');
 const { resolveProcessRole, runsWeb, runsWorker } = require('./services/processRole');

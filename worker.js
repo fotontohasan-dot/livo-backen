@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 require('dotenv').config();
+require('./utils/normalizeRedisEnv').normalizeRedisEnv();
 const process = require('node:process');
 const sentryService = require('./services/sentry');
 const { connectDB } = require('./db');
