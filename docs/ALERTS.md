@@ -35,6 +35,7 @@ Free options: UptimeRobot / Better Stack / Render's own notifications. Alert cha
 | 17 | API অটো-সাসপেন্ড (K10) | `bet420_integration_suspended == 1` | যেকোনো `name` | 2 min | warn (casino/sports), info (email/sms) |
 | 18 | সাসপেন্ড flapping | `increase(bet420_integration_suspend_count[1h]) >= 3` | যেকোনো `name` | — | warn |
 | 19 | API অথ ত্রুটি (401/403, K10) — API key মেয়াদ শেষ/ভুল | `GET /admin/api/integrations` → `integrations[].authError.active == true` (অ্যাডমিন সেশন; **Prometheus মেট্রিক এখনো নেই**) | যেকোনো `id` | ১৫ মিনিট | page (`payment:*`, `casino:*`, `sports:*` — key ভুল মানে ফিচার অচল), warn (`email`, `sms`) |
+| 20 | আটকে থাকা ক্যাসিনো রাউন্ড | `bet420_casino_stuck_rounds > 0` (এবং `== -1` = গণনা ব্যর্থ, আলাদা অ্যালার্ট) | সংখ্যা > 0 | 10 min | page (আসল টাকা আটকে) — রানবুক: `docs/STUCK_ROUNDS.md` |
 
 Notes
 - #19 (প্রস্তাব, মালিক অনুমোদন করবেন): 401/403 অটো-সাসপেন্ডে গোনা হয় না, তাই #17/#18 এটা ধরবে না — এই API-গুলো নীরবে ব্যর্থ হতে পারে। এখন উৎস শুধু ইন্টিগ্রেশন পেজ/JSON-এর `authError` (সক্রিয় = শেষ অথ ত্রুটি শেষ সফল কলের পরে; কী ঠিক করে একটা সফল কল এলে নিজে মেটে)। স্বয়ংক্রিয় অ্যালার্ট চাইলে দুটো পথ: (ক) `bet420_integration_auth_error{name}` গেজ যোগ (অন্য `bet420_integration_*` গেজের মতো; নতুন কাজ — এখনো করা হয়নি), অথবা (খ) বিদ্যমান scheduler জবে সক্রিয় `authError` থাকলে Telegram সতর্কতা। কোনোটাই কনফিগার/চালু করা হয়নি।
