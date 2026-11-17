@@ -313,7 +313,7 @@ describe('A-Z User Journey', () => {
       expect(after.rows[0].count).toBe(before.rows[0].count); // নতুন কোনো রিকোয়েস্ট তৈরি হয়নি
     });
 
-    test('ভুল withdraw PIN দিয়ে উইথড্র ব্যর্থ হয়, কয়েন কাটা হয় না', async () => {
+    test('ভুল withdraw PIN দিয়ে উইথড্র ব্যর্থ হয়, টাকা কাটা হয় না', async () => {
       const g = await getCsrfAgent('/login');
       await g.agent.post('/login').set('User-Agent', REALISTIC_UA).type('form')
         .send({ identifier: phone, password, _csrf: g.token });

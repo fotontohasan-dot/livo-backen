@@ -1,6 +1,6 @@
 // services/freebet.js
 // ফ্রি বেট — সিস্টেম/অ্যাডমিন ইউজারকে ফ্রি বেট দেয়।
-// ইউজার ক্লেইম করলে সেই পরিমাণ বোনাস কয়েন পায় (টার্নওভার শর্ত সহ — স্পোর্টস ৫x / ক্যাসিনো ৩৫x)।
+// ইউজার ক্লেইম করলে সেই পরিমাণ বোনাস টাকা পায় (টার্নওভার শর্ত সহ — স্পোর্টস ৫x / ক্যাসিনো ৩৫x)।
 
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
@@ -48,7 +48,7 @@ async function getAllFreeBets(userId) {
   return r.rows;
 }
 
-// ফ্রি বেট ক্লেইম — বোনাস কয়েন + টার্নওভার বোনাস
+// ফ্রি বেট ক্লেইম — বোনাস টাকা + টার্নওভার বোনাস
 async function claimFreeBet(userId, freeBetId, lang = 'bn') {
   const client = await pool.connect();
   try {
@@ -64,7 +64,7 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
       return { success: false, message: t(lang, 'freebet_not_found_or_used') };
     }
 
-    // কয়েন যোগ + টার্নওভার বোনাস তৈরি
+    // টাকা যোগ + টার্নওভার বোনাস তৈরি
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [fb.amount, userId]);
     await createBonus(client, userId, 'deposit', fb.amount);
 

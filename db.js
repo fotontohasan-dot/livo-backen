@@ -26,8 +26,8 @@ const { isStaging } = require('./utils/stagingGuard');
 // PostgreSQL) self-signed সার্টিফিকেট দেয় — সেক্ষেত্রে DATABASE_CA_CERT-এ CA
 // সার্টিফিকেট দিলে যাচাই ওই CA-র বিপরীতে হবে।
 //
-// একান্তই দরকার হলে DATABASE_SSL_INSECURE=true দিয়ে যাচাই বন্ধ করা যায়,
-// কিন্তু তখন স্টার্টআপে স্পষ্ট সতর্কবার্তা লগ হয় — নিঃশব্দে অনিরাপদ থাকে না।
+// DATABASE_SSL_INSECURE=true: শুধু staging-এ চলে (সতর্কবার্তাসহ)। প্রোডাকশনে
+// (NODE_ENV=production ও staging নয়) চালু থাকলে বুট ব্যর্থ হয়।
 function resolveSslConfig() {
   const explicit = (process.env.DATABASE_SSL || '').trim().toLowerCase();
   if (explicit === 'false' || explicit === '0' || explicit === 'off') return false;
@@ -40,7 +40,12 @@ function resolveSslConfig() {
   const allowInsecure = insecure === 'true' || insecure === '1' || insecure === 'on';
 
   if (isProduction && allowInsecure) {
-    console.warn('⚠️ DATABASE_SSL_INSECURE চালু — ডাটাবেস TLS সার্টিফিকেট যাচাই করা হচ্ছে না (MITM ঝুঁকি)।');
+    // প্রোডাকশন (staging নয়): অনিরাপদ TLS অনুমোদিত নয় — বুট ব্যর্থ হবে।
+    if (!isStaging()) {
+      throw new Error('DATABASE_SSL_INSECURE প্রোডাকশনে অনুমোদিত নয় — ভ্যারিয়েবলটি মুছুন এবং DATABASE_CA_CERT বা সঠিক sslmode ব্যবহার করুন।');
+    }
+    // staging: শুধু সতর্কতা।
+    console.warn('⚠️ DATABASE_SSL_INSECURE চালু — ডাটাবেস TLS সার্টিফিকেট যাচাই করা হচ্ছে না (MITM ঝুঁকি)। শুধু staging-এ অনুমোদিত।');
     return { rejectUnauthorized: false };
   }
 
