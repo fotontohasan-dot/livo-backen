@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./utils/normalizeRedisEnv').normalizeRedisEnv();
 const process = require('node:process');
 
 // ==================== Environment Variable ভ্যালিডেশন ====================

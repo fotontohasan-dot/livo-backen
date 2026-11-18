@@ -410,6 +410,12 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referrer ON referrals(referrer_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referred ON referrals(referred_id);`);
 
+    // রেফারেল বোনাস: রেফার-করা ইউজারের প্রথম নিশ্চিত ডিপোজিটে রেফারারকে। আটকানো (অ্যাডমিন রিভিউ) অবস্থা ও
+    // পরিমাণ রেকর্ড। idempotent; ব্যালেন্স/সেটেলমেন্টের সাথে সম্পর্ক নেই।
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_held BOOLEAN NOT NULL DEFAULT false;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS hold_reason TEXT;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_amount NUMERIC(12,2);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referral_commissions (
         id SERIAL PRIMARY KEY,
@@ -1166,6 +1172,15 @@ async function applyMigrations(pool) {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_games_lobby
         ON games(category, is_active, admin_disabled, sort_order);
+    `);
+    // হোমের প্রোভাইডার ফিল্টার ও A-Z (ইংরেজি নামের প্রথম অক্ষর) ফিল্টারের জন্য ইনডেক্স
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_provider_lobby
+        ON games(provider, is_active, admin_disabled, sort_order);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_name_letter
+        ON games((UPPER(LEFT(name, 1))), is_active, admin_disabled);
     `);
 
     await pool.query(`
@@ -2068,6 +2083,111 @@ async function applyMigrations(pool) {
       );
     `);
     console.log("✅ Referral Contest Payout Tracking table ready");
+
+    // ==================== Referral V2: referral_rewards ====================
+    // docs/REFERRAL_V2_DESIGN.md। শুধু additive (IF NOT EXISTS) — পুরোনো referrals /
+    // referral_commissions / bonuses অপরিবর্তিত। রোলব্যাক: ওই ডকের "Rollback" অংশ।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_rewards (
+        id BIGSERIAL PRIMARY KEY,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id),
+        referrer_id INTEGER NOT NULL REFERENCES users(id),
+        status VARCHAR(20) NOT NULL,
+        tier SMALLINT,
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        qualifying_deposit_id INTEGER REFERENCES payment_requests(id),
+        review_reason TEXT,
+        evidence JSONB,
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMPTZ,
+        paid_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT referral_rewards_referred_uniq UNIQUE (referred_user_id),
+        CONSTRAINT referral_rewards_status_chk CHECK (status IN
+          ('pending_review','paid','rejected','reversed','legacy_paid','retry_pending'))
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_referrer_status ON referral_rewards(referrer_id, status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_status ON referral_rewards(status);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_reward_adjustments (
+        id BIGSERIAL PRIMARY KEY,
+        reward_id BIGINT NOT NULL REFERENCES referral_rewards(id),
+        kind VARCHAR(20) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        note TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_reward_adj_reward ON referral_reward_adjustments(reward_id);`);
+
+    // কনফিগ (বিদ্যমান site_settings কাঠামো); বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING।
+    // referral_tiers: আগের paid রেফারেল সংখ্যা অনুযায়ী (max = ওই টিয়ারের সর্বোচ্চ ক্রমিক, null = অসীম)।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_min_deposit', '500'),
+      ('referral_tiers', '[{"max":1,"amount":100},{"max":5,"amount":200},{"max":15,"amount":400},{"max":50,"amount":800},{"max":null,"amount":1500}]')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    // ধাপ-ভিত্তিক (slab) বোনাস কনফিগ — services/referralRewards.js; অ্যাডমিন /admin/settings থেকে সম্পাদনাযোগ্য।
+    // বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING। referral_min_deposit ওপরেই ('500') বসানো।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_slabs', '[{"min":500,"amount":75},{"min":1000,"amount":100},{"min":2000,"amount":200},{"min":5000,"amount":300},{"min":10000,"amount":500},{"min":30000,"amount":1000}]'),
+      ('referral_bonus_cap', '1000'),
+      ('referral_turnover_sports', '5'),
+      ('referral_turnover_casino', '5')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // legacy_paid ব্যাকফিল: পুরোনো সাইন-আপ-বোনাস পাওয়া (signup_bonus_paid=true) রেফারেল —
+    // এর মধ্যে আগের pending_review বোনাসের রেফারেলও (ওগুলোতেও ওই ফ্ল্যাগ true হতো) —
+    // শুধু রেকর্ড হয়। ব্যালেন্স/লেজার/bonuses কিছুই বদলায় না; নতুন পেআউট বা কাটছাঁট নেই।
+    // idempotent: UNIQUE(referred_user_id) + DO NOTHING।
+    const legacyBackfill = await pool.query(`
+      INSERT INTO referral_rewards (referred_user_id, referrer_id, status, amount, review_reason, created_at)
+      SELECT r.referred_id, r.referrer_id, 'legacy_paid',
+             COALESCE((SELECT SUM(rc.amount) FROM referral_commissions rc
+                        WHERE rc.earner_id = r.referrer_id AND rc.from_user_id = r.referred_id
+                          AND rc.reason = 'signup'), 0),
+             'legacy signup-bonus referral (V2 backfill)',
+             COALESCE(r.created_at, NOW())
+        FROM referrals r
+       WHERE r.signup_bonus_paid = true
+         AND COALESCE(r.bonus_held, false) = false
+         AND r.referrer_id IS NOT NULL AND r.referred_id IS NOT NULL
+      ON CONFLICT (referred_user_id) DO NOTHING
+    `);
+    // পুরোনো bonus_held হোল্ড-মডেল → V2 pending_review (শুধু রেকর্ড: ব্যালেন্স/লেজার/bonuses/কলাম অপরিবর্তিত, কিছু মোছা নয়)।
+    // হোল্ডের সময় কয়েন দেওয়া হয়নি, তাই legacy_paid নয়। idempotent: UNIQUE(referred_user_id) + DO NOTHING।
+    const heldBackfill = await pool.query(`
+      INSERT INTO referral_rewards (referred_user_id, referrer_id, status, amount, review_reason, created_at)
+      SELECT r.referred_id, r.referrer_id, 'pending_review', COALESCE(r.bonus_amount, 0),
+             COALESCE(NULLIF(r.hold_reason, ''), 'legacy held bonus (V2 backfill)'),
+             COALESCE(r.created_at, NOW())
+        FROM referrals r
+       WHERE r.bonus_held = true
+         AND r.referrer_id IS NOT NULL AND r.referred_id IS NOT NULL
+      ON CONFLICT (referred_user_id) DO NOTHING
+    `);
+    // আগের ব্যাকফিলে ভুলে legacy_paid হওয়া হোল্ড-রেকর্ড শুধু স্ট্যাটাসে সংশোধন (ব্যাকফিলের নিজস্ব মার্কার থাকলেই)।
+    const heldFix = await pool.query(`
+      UPDATE referral_rewards rr
+         SET status = 'pending_review', amount = COALESCE(r.bonus_amount, rr.amount),
+             review_reason = COALESCE(NULLIF(r.hold_reason, ''), 'legacy held bonus (V2 backfill)')
+        FROM referrals r
+       WHERE r.referred_id = rr.referred_user_id AND r.bonus_held = true
+         AND rr.status = 'legacy_paid' AND rr.review_reason = 'legacy signup-bonus referral (V2 backfill)'
+    `);
+    const heldTotal = await pool.query(`SELECT COUNT(*)::int AS n FROM referrals WHERE bonus_held = true`);
+    if (heldTotal.rows[0].n > 0 || heldBackfill.rowCount > 0 || heldFix.rowCount > 0) {
+      console.log(`✅ Referral V2: bonus_held রেকর্ড ${heldTotal.rows[0].n}টি → pending_review (নতুন ${heldBackfill.rowCount}, সংশোধিত ${heldFix.rowCount})`);
+    }
+    const legacyPending = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM bonuses WHERE bonus_type = 'referral' AND status = 'pending_review'`
+    );
+    console.log(`✅ Referral V2 tables ready — legacy_paid backfill: ${legacyBackfill.rowCount} নতুন সারি (পুরোনো pending_review referral bonus: ${legacyPending.rows[0].n}টি, সবই legacy_paid-এর অন্তর্ভুক্ত)`);
 
     // ==================== হট-পাথ ইনডেক্স ====================
     // `bets` টেবিলে এতদিন একটাও ইনডেক্স ছিল না, অথচ এটাই সবচেয়ে ব্যস্ত ও টাকা-সংক্রান্ত

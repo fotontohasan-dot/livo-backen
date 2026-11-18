@@ -33,34 +33,36 @@ const PAYLOADS = [
 
 describe('Stored XSS sweep (PHASE 9)', () => {
   describe('MEDIUM-8: homepage game rendering', () => {
-    test('escHtml() helper সংজ্ঞায়িত আছে', () => {
-      expect(INDEX_EJS).toMatch(/function escHtml\(v\)/);
-      expect(INDEX_EJS).toMatch(/replace\(\/</);
-      expect(INDEX_EJS).toMatch(/&amp;quot;|&quot;/);
+    // ক্যাসিনো-প্রথম হোমে গেম/ক্যাটাগরি/প্রোভাইডার এখন সার্ভারে EJS দিয়ে রেন্ডার হয় (ক্লায়েন্টে
+    // innerHTML দিয়ে নয়)। তাই আগের escHtml()-ভিত্তিক সোর্স-চেক বদলে নিচের চেকগুলো: নিরাপত্তার উদ্দেশ্য
+    // একই — গেমের কোনো ফিল্ড escape ছাড়া HTML-এ বসবে না।
+    const CARD = fs.readFileSync(path.join(ROOT, 'views/partials/home-game-card.ejs'), 'utf8');
+    const INDEX_JS = fs.readFileSync(path.join(ROOT, 'public/js/views/index.js'), 'utf8');
+
+    test('গেম কার্ড শুধু escaping <%= %> ট্যাগে গেম-ফিল্ড বসায় (কাঁচা <%- নয়)', () => {
+      expect(CARD).toMatch(/<%= g\.name %>/);
+      expect(CARD).not.toMatch(/<%-\s*g\./);
+      expect(INDEX_EJS).not.toMatch(/<%-\s*(g|c|p)\.(name|provider|category|slug|badge|thumbnail_url)/);
     });
 
-    test('game name/provider escape ছাড়া innerHTML-এ বসে না', () => {
-      expect(INDEX_EJS).not.toMatch(/game-title-premium">\$\{g\.name\}/);
-      expect(INDEX_EJS).not.toMatch(/game-provider-premium">\$\{g\.provider\}/);
-      // renderGames()-এর অপ্রাপ্য গেম-কার্ড কোড (D1) সরানো হয়েছে; এখন হোমপেজ গেম ডেটা
-      // থেকে কোনো HTML বানায় না। ভবিষ্যতে ফেরালে `${g.name}` কাঁচা বসানো এখানে ধরা পড়বে।
-      expect(INDEX_EJS).not.toMatch(/\$\{g\.(name|provider)\}/);
+    test('ক্লায়েন্ট JS গেম-ডেটা থেকে HTML বানায় না', () => {
+      expect(INDEX_JS).not.toMatch(/\$\{g\./);
+      expect(INDEX_JS).not.toMatch(/g\.(name|provider|slug|badge)/);
     });
 
-    test('slug, emoji, badge-ও escape করা হয়', () => {
-      expect(INDEX_EJS).not.toMatch(/data-slug="\$\{g\.slug\}"/);
-      expect(INDEX_EJS).not.toMatch(/game-emoji">\$\{g\.emoji\}/);
-      expect(INDEX_EJS).not.toMatch(/\$\{g\.(slug|emoji|badge)\}/);
+    test('ক্যাটাগরি/প্রোভাইডার চিপ ও অক্ষর লিংক escape হয় (<%= ব্যবহার)', () => {
+      expect(INDEX_EJS).toMatch(/<%= p\.name %>/);
+      expect(INDEX_EJS).toMatch(/<%= catLabel\(c\.name\) %>/);
+      expect(INDEX_EJS).not.toMatch(/<%-\s*(p|c)\.name/);
     });
 
-    test('provider sidebar-এর নাম escape করা হয়', () => {
-      expect(INDEX_EJS).not.toMatch(/<div class="name">\$\{p\}<\/div>/);
-      expect(INDEX_EJS).toMatch(/escHtml\(p\)/);
+    test('Recent Wins-এ ইউজার/গেমের নাম esc() দিয়ে বসে', () => {
+      expect(INDEX_JS).toMatch(/esc\(w\.user\)/);
+      expect(INDEX_JS).toMatch(/esc\(w\.game\)/);
     });
 
-    test('SERVER_GAMES এখনো JSON-escaped (regression)', () => {
-      expect(INDEX_EJS).toContain('JSON.stringify');
-      expect(INDEX_EJS).toContain('u003C');
+    test('SERVER_GAMES-এর JSON-escaped ইনলাইন ডেটা আর নেই (গেম ডেটা অ্যাট্রিবিউটে নয়)', () => {
+      expect(INDEX_EJS).not.toContain('SERVER_GAMES');
     });
   });
 

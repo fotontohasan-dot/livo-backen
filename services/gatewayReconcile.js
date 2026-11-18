@@ -7,7 +7,7 @@
 //   আসা, আর সার্ভার-টু-সার্ভার /ipn। দুটোই ব্যর্থ হতে পারে: ইউজার পেমেন্ট করেই
 //   ট্যাব বন্ধ করে দিল, আর সেই মুহূর্তে আমাদের সার্ভার ডাউন/ডিপ্লয় হচ্ছিল বলে IPN-ও
 //   হারিয়ে গেল (গেটওয়ের রিট্রাই সীমিত)। তখন টাকা কেটে নেওয়া হয়েছে অথচ রিকোয়েস্ট
-//   চিরকাল 'pending' — ইউজার কয়েন পায় না, আর অ্যাডমিনের হাতেও এটা ধরার কোনো
+//   চিরকাল 'pending' — ইউজার টাকা পায় না, আর অ্যাডমিনের হাতেও এটা ধরার কোনো
 //   স্বয়ংক্রিয় উপায় ছিল না।
 //
 //   এই জব তাই তৃতীয় ও শেষ স্তর: গেটওয়েকে নিজে থেকে জিজ্ঞেস করে "এই tran_id-র
@@ -68,6 +68,7 @@ async function reconcileOne(request) {
   const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
   const currencyMatches = paymentVerification.isExpectedCurrency(verification);
 
+  let referralPending = null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -94,6 +95,7 @@ async function reconcileOne(request) {
           `আপনার ${row.amount} টাকার ডিপোজিট যাচাই করে যোগ করা হয়েছে।`]
       );
       await client.query('COMMIT');
+      referralPending = { userId: row.user_id, depositId: row.id };
       return 'credited';
     }
 
@@ -124,6 +126,8 @@ async function reconcileOne(request) {
     return 'error';
   } finally {
     client.release();
+    // রেফারেল ইঞ্জিন ডিপোজিট COMMIT ও client.release()-এর পরে, আলাদা ট্রানজ্যাকশনে
+    if (referralPending) await require('./referralRewards').afterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 }
 

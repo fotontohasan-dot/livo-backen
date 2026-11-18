@@ -16,7 +16,7 @@ const { pool } = require('../db');
 const { t } = require('../utils/i18n');
 const { today: businessToday } = require('../utils/businessTime');
 
-const SHARE_BONUS = 20; // প্রতিদিন ২০ কয়েন
+const SHARE_BONUS = 20; // প্রতিদিন ২০ টাকা
 
 // দিনের সংজ্ঞা কেন্দ্রীয় ব্যবসায়িক টাইমজোন থেকে — আগে UTC ধরা হতো, ফলে
 // বাংলাদেশ সময় সন্ধ্যা ৬টায় "আজ" বদলে যেত এবং একই সন্ধ্যায় দুবার ক্লেইম
@@ -64,7 +64,7 @@ async function claimShare(userId, lang = 'bn') {
     );
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'শেয়ার বোনাস!', $2, 'success')`,
-      [userId, `শেয়ার করার জন্য ${SHARE_BONUS} কয়েন পেয়েছেন!`]
+      [userId, `শেয়ার করার জন্য ${SHARE_BONUS} টাকা পেয়েছেন!`]
     );
 
     await client.query('COMMIT');

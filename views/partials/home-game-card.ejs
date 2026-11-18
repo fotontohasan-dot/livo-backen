@@ -1,0 +1,12 @@
+<%# হোমের গেম কার্ড। লঞ্চ-পথ /games/launch/... লবির কার্ডের সাথে হুবহু এক; সাসপেন্ড থাকলে ক্লিকযোগ্য নয়। %>
+<% if (g.suspended) { %>
+<div class="hc-card hc-suspended" aria-disabled="true" title="<%= t.auto_suspend_badge %>">
+  <% if (g.thumbnail_url) { %><img src="<%= g.thumbnail_url %>" alt="" aria-hidden="true" loading="lazy" decoding="async" width="160" height="160"><% } else { %><div class="hc-thumb-fallback">🎲</div><% } %>
+  <div class="hc-meta"><div class="hc-name"><%= g.name %></div><div class="hc-prov"><%= g.provider %> · <strong><%= t.auto_suspend_badge %></strong></div></div>
+</div>
+<% } else { %>
+<a class="hc-card" href="/games/launch/<%= encodeURIComponent(g.provider) %>/<%= encodeURIComponent(g.provider_game_id) %>">
+  <% if (g.thumbnail_url) { %><img src="<%= g.thumbnail_url %>" alt="" aria-hidden="true" loading="lazy" decoding="async" width="160" height="160"><% } else { %><div class="hc-thumb-fallback">🎲</div><% } %>
+  <div class="hc-meta"><div class="hc-name"><%= g.name %></div><div class="hc-prov"><%= g.provider %></div></div>
+</a>
+<% } %>

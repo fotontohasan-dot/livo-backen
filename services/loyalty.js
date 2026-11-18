@@ -1,12 +1,12 @@
 // services/loyalty.js
-// লয়্যালটি পয়েন্ট — প্রতি বাজিতে পয়েন্ট জমে, পরে কয়েনে রূপান্তর করা যায়।
-// নিয়ম: প্রতি ১০০ বাজিতে ১ পয়েন্ট। ১০০ পয়েন্ট = ১০ কয়েন (রূপান্তরে)।
+// লয়্যালটি পয়েন্ট — প্রতি বাজিতে পয়েন্ট জমে, পরে টাকায় রূপান্তর করা যায়।
+// নিয়ম: প্রতি ১০০ বাজিতে ১ পয়েন্ট। ১০০ পয়েন্ট = ১০ টাকা (রূপান্তরে)।
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
 
 const POINTS_PER_100_STAKE = 1;   // প্রতি ১০০ বাজিতে ১ পয়েন্ট
-const POINT_TO_COIN = 0.1;        // ১ পয়েন্ট = ০.১ কয়েন (১০০ পয়েন্ট = ১০ কয়েন)
+const POINT_TO_COIN = 0.1;        // ১ পয়েন্ট = ০.১ টাকা (১০০ পয়েন্ট = ১০ টাকা)
 const MIN_REDEEM = 100;           // সর্বনিম্ন ১০০ পয়েন্ট রূপান্তর
 
 // ==================== বাজিতে পয়েন্ট যোগ ====================
@@ -54,7 +54,7 @@ async function getLoyalty(userId) {
   };
 }
 
-// ==================== পয়েন্ট কয়েনে রূপান্তর ====================
+// ==================== পয়েন্ট টাকায় রূপান্তর ====================
 async function redeemPoints(userId, redeemPoints, lang = 'bn') {
   const pts = parseInt(redeemPoints);
   if (isNaN(pts) || pts < MIN_REDEEM) {
@@ -90,7 +90,7 @@ async function redeemPoints(userId, redeemPoints, lang = 'bn') {
     );
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'পয়েন্ট রূপান্তর', $2, 'success')`,
-      [userId, `${pts} পয়েন্ট = ${coins} কয়েন যোগ হয়েছে!`]
+      [userId, `${pts} পয়েন্ট = ${coins} টাকা যোগ হয়েছে!`]
     );
 
     await client.query('COMMIT');

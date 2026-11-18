@@ -66,7 +66,7 @@ describe('SSLCommerz deposit callbacks', () => {
     expect(after).toBe(before);
   });
 
-  test('সঠিক val_id-তে ঠিক একবারই কয়েন ক্রেডিট হয়', async () => {
+  test('সঠিক val_id-তে ঠিক একবারই টাকা ক্রেডিট হয়', async () => {
     const u = await makeUser();
     const start = await coinsOf(u.userId);
     const { row } = await initDeposit(u, 500);
@@ -94,7 +94,7 @@ describe('SSLCommerz deposit callbacks', () => {
   });
 
   // রিগ্রেশন: val_id গেটভেতে ভ্যালিড হলেই যথেষ্ট নয় — সেটা *এই* ট্রানজেকশনেরই val_id কিনা
-  // যাচাই করতে হবে। নাহলে একটা সফল পেমেন্টের val_id বারবার রিপ্লে করে সীমাহীন কয়েন নেওয়া যেত।
+  // যাচাই করতে হবে। নাহলে একটা সফল পেমেন্টের val_id বারবার রিপ্লে করে সীমাহীন টাকা নেওয়া যেত।
   test('অন্য ট্রানজেকশনের val_id দিয়ে success রিপ্লে করা যায় না', async () => {
     const payer = await makeUser();
     const attacker = await makeUser();

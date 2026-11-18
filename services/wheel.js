@@ -1,5 +1,5 @@
 // services/wheel.js
-// লাকি হুইল — দিনে একবার ঘুরিয়ে পুরস্কার (কয়েন)।
+// লাকি হুইল — দিনে একবার ঘুরিয়ে পুরস্কার (টাকা)।
 // পুরস্কারগুলো নির্দিষ্ট, সার্ভারেই র‍্যান্ডম নির্বাচন (ক্লায়েন্ট ঠকাতে পারবে না)।
 
 const { pool } = require('../db');
@@ -64,7 +64,7 @@ async function canSpin(userId) {
 
 // weighted random — পুরস্কার নির্বাচন
 function pickPrize() {
-  // CSPRNG-ভিত্তিক weighted নির্বাচন — পুরস্কার সরাসরি কয়েনে রূপান্তরিত হয়,
+  // CSPRNG-ভিত্তিক weighted নির্বাচন — পুরস্কার সরাসরি টাকায় রূপান্তরিত হয়,
   // তাই Math.random() (predictable state) এখানে ব্যবহার করা যাবে না।
   const index = secureRandom.weightedIndex(SEGMENTS.map((seg) => seg.weight));
   return SEGMENTS[index].prize;
@@ -114,7 +114,7 @@ async function spin(userId, lang = 'bn') {
       const r = await client.query(
         `INSERT INTO notifications (user_id, title, message, type, category)
          VALUES ($1, 'লাকি হুইল!', $2, 'success', 'reward') RETURNING *`,
-        [userId, `আপনি লাকি হুইলে ${prize} কয়েন জিতেছেন!`]
+        [userId, `আপনি লাকি হুইলে ${prize} টাকা জিতেছেন!`]
       );
       notifRow = r.rows[0];
     } else {

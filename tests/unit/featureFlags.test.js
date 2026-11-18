@@ -85,7 +85,7 @@ describe('রেজিস্ট্রি ↔ বাস্তব গেট — �
   test('enforcement-এ উল্লেখ করা প্রতিটা ফাইলে সত্যিই ওই key-র গেট বসানো আছে', () => {
     // আগের টেস্টটা শুধু দেখত key-টা routes/-এর *কোথাও* আছে কিনা। ফলে
     // রেজিস্ট্রি "daily_rewards → routes/coins.js" দাবি করলেও coins.js-এ
-    // কোনো গেট না থাকা ধরা পড়ত না — বাস্তবে POST /coins/daily-bonus ১০০ কয়েন
+    // কোনো গেট না থাকা ধরা পড়ত না — বাস্তবে POST /coins/daily-bonus ১০০ টাকা
     // দিত অথচ ফ্ল্যাগ বন্ধ থাকলেও কাজ করত। এখন প্রতিটা দাবি ফাইল-ধরে যাচাই হয়।
     const mismatches = [];
     for (const f of registry.FEATURES) {

@@ -9,7 +9,7 @@
 //
 // রিড: GET /, /matches/api/live (ক্যাশড), /matches/:id, /matches/:id/markets
 // লগইন: GET /login → CSRF → POST /login (VU-র নিজের টেস্ট অ্যাকাউন্ট; প্রতি-অ্যাকাউন্ট ১০/১৫মি লিমিট মানা হয়)
-// বেট: POST /matches/:id/bet {demo:true, stake:min} — ডেমো ব্যালেন্স, আসল কয়েন/পেমেন্ট নয়; Idempotency-Key সহ
+// বেট: POST /matches/:id/bet {demo:true, stake:min} — ডেমো ব্যালেন্স, আসল টাকা/পেমেন্ট নয়; Idempotency-Key সহ
 //
 // ⚠️ বেটিং/ওয়ালেট/সেটলমেন্ট কোড অপরিবর্তিত; এখানে শুধু সার্বজনীন HTTP API ডাকা হয়।
 const { assertStagingTarget } = require('./lib/guard');

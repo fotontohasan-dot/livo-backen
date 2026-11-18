@@ -462,7 +462,7 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
 
     // অডস সার্ভার থেকেই নির্ধারিত। আগে req.body.odd সরাসরি bets.odd-এ যেত, আর
     // সেটেলমেন্ট পেআউট হিসাব করে stake * bets.odd দিয়ে — ফলে বড় odd পাঠিয়ে
-    // যেকোনো পরিমাণ কয়েন তোলা যেত। ক্লায়েন্টের পাঠানো odd এখন উপেক্ষিত।
+    // যেকোনো পরিমাণ টাকা তোলা যেত। ক্লায়েন্টের পাঠানো odd এখন উপেক্ষিত।
     if (isRunnerSuspended(m.rows[0], runner)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, code: 'RUNNER_SUSPENDED', message: 'This selection is suspended' });

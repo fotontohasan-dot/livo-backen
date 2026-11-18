@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 require('dotenv').config();
+require('./utils/normalizeRedisEnv').normalizeRedisEnv();
 const process = require('node:process');
 const sentryService = require('./services/sentry');
 const { resolveProcessRole, runsWeb, runsWorker } = require('./services/processRole');
@@ -197,6 +198,9 @@ async function startServer(opts = {}) {
 
     await connectDB();
     console.log("✅ PostgreSQL connected successfully");
+
+    // Redis maxmemory-policy সতর্কতা (শুধু লগ; বুট আটকায় না, await করা হয় না, ব্যর্থতা নীরব)
+    require('./services/redisEvictionCheck').checkRedisEvictionPolicy().catch(() => {});
 
     if (runsWeb(role)) {
       await runMigrations();

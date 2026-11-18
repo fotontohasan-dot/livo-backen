@@ -1,5 +1,6 @@
 const { pool } = require('../../db');
-const referral = require('../../services/referral');
+const engine = require('../../services/referralRewards');
+const { makeDeposit } = require('../helpers/referralDeposit');
 const { uniquePhone } = require('../helpers/app');
 
 // ==================== Phase 8: referral signup bonus ====================
@@ -73,19 +74,11 @@ async function cleanup(ids) {
 }
 
 // প্রতিটা কল নিজের client নেয় — সত্যিকারের সমান্তরাল লেনদেন
+// V2: একই যোগ্য ডিপোজিটে ইঞ্জিন সমান্তরালে ডাকা (duplicate callback/অ্যাডমিন অনুমোদনের মতো)
+let sharedDepositId = null;
 async function processOnce(referredId) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await referral.processReferralDeposit(client, referredId, DEPOSIT);
-    await client.query('COMMIT');
-    return true;
-  } catch (e) {
-    await client.query('ROLLBACK').catch(() => {});
-    return false;
-  } finally {
-    client.release();
-  }
+  const r = await engine.processReferralReward(referredId, sharedDepositId);
+  return r.outcome !== 'error';
 }
 
 describe('Phase 8 — referral signup bonus exactly-once', () => {
@@ -102,17 +95,19 @@ describe('Phase 8 — referral signup bonus exactly-once', () => {
        ON CONFLICT (referred_id) DO NOTHING`,
       [referrer, referred]
     );
+    sharedDepositId = await makeDeposit(referred, DEPOSIT, { status: 'approved' });
   });
 
   afterEach(async () => {
     await cleanup([referrer, referred]);
   });
 
-  test('atomic conditional UPDATE ব্যবহার হয়, SELECT-তারপর-UPDATE নয়', () => {
+  test('V2: UNIQUE(referred_user_id) + ON CONFLICT DO NOTHING ও রেফারার advisory lock ব্যবহার হয়', () => {
     const src = require('fs').readFileSync(
-      require('path').join(__dirname, '..', '..', 'services', 'referral.js'), 'utf8'
+      require('path').join(__dirname, '..', '..', 'services', 'referralRewards.js'), 'utf8'
     );
-    expect(src).toMatch(/WHERE referred_id = \$1 AND signup_bonus_paid = false/);
+    expect(src).toMatch(/ON CONFLICT \(referred_user_id\) DO NOTHING/);
+    expect(src).toMatch(/pg_advisory_xact_lock/);
   });
 
   test('সমান্তরাল deposit প্রক্রিয়ায় বোনাস একবারই দেওয়া হয়', async () => {
@@ -121,9 +116,10 @@ describe('Phase 8 — referral signup bonus exactly-once', () => {
     await Promise.all(Array.from({ length: WORKERS }, () => processOnce(referred)));
 
     const paid = await pool.query(
-      'SELECT signup_bonus_paid FROM referrals WHERE referred_id = $1', [referred]
+      'SELECT status FROM referral_rewards WHERE referred_user_id = $1', [referred]
     );
-    expect(paid.rows[0].signup_bonus_paid).toBe(true);
+    expect(paid.rows).toHaveLength(1);
+    expect(paid.rows[0].status).toBe('paid');
 
     // ব্যালেন্স ও commission একই স্ন্যাপশটে পড়া হয়। আলাদা query-তে পড়লে
     // মাঝখানে অন্য কমিশন/নোটিফিকেশন কাজ ঢুকে অমিল দেখাতে পারত — আগের
@@ -131,9 +127,9 @@ describe('Phase 8 — referral signup bonus exactly-once', () => {
     const snap = await pool.query(
       `SELECT u.coins,
               (SELECT COUNT(*) FROM referral_commissions
-                WHERE earner_id = u.id AND reason = 'signup') AS cnt,
+                WHERE earner_id = u.id AND reason = 'first_deposit') AS cnt,
               (SELECT COALESCE(SUM(amount), 0) FROM referral_commissions
-                WHERE earner_id = u.id AND reason = 'signup') AS total
+                WHERE earner_id = u.id AND reason = 'first_deposit') AS total
        FROM users u WHERE u.id = $1`,
       [referrer]
     );

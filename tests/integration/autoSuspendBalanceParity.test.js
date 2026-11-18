@@ -84,7 +84,7 @@ async function runScenario(kind) {
   if (SUSPENDERS[kind]) {
     await SUSPENDERS[kind]();
     expect(await autoSuspend.getMatchProviderSuspension('cricket-cricapi')).toBeTruthy();
-    // নতুন বাজি আটকায়, কয়েন কাটে না, কোনো রিওয়ার্ডও আসে না
+    // নতুন বাজি আটকায়, টাকা কাটে না, কোনো রিওয়ার্ডও আসে না
     const m3 = await makeMarket();
     const blocked = await bet(u, m3.matchId, { market_id: m3.marketId, runner: 'A', side: 'back', stake: '10' });
     expect(blocked.status).toBe(503);

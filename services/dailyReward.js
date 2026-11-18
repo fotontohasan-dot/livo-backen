@@ -102,7 +102,7 @@ async function claimDailyReward(userId, lang = 'bn') {
 
     const bonusAmount = tierRes.rows[0].bonus_amount;
 
-    // কয়েন যোগ
+    // টাকা যোগ
     await client.query(
       `UPDATE users SET coins = coins + $1 WHERE id = $2`,
       [bonusAmount, userId]
@@ -127,7 +127,7 @@ async function claimDailyReward(userId, lang = 'bn') {
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'দৈনিক রিওয়ার্ড!', $2, 'success')`,
-      [userId, `আপনি ${bonusAmount} কয়েন দৈনিক রিওয়ার্ড পেয়েছেন!`]
+      [userId, `আপনি ${bonusAmount} টাকা দৈনিক রিওয়ার্ড পেয়েছেন!`]
     );
 
     await client.query('COMMIT');

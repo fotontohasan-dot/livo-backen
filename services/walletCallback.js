@@ -265,6 +265,7 @@ function amountsEqual(a, b) { return Math.abs(Number(a) - Number(b)) < 0.005; }
  * @returns {Promise<{ outcome: string, requestId?: number }>}
  */
 async function reconcile(data, creditApprovedDeposit) {
+  let referralPending = null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -296,12 +297,15 @@ async function reconcile(data, creditApprovedDeposit) {
       [data.paymentId, note({ payer: data.payer }), request.id]);
     await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    referralPending = { userId: request.user_id, depositId: request.id };
     return { outcome: 'credited', requestId: request.id, userId: request.user_id, amount: request.amount };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
     throw err;
   } finally {
     client.release();
+    // রেফারেল ইঞ্জিন ডিপোজিট COMMIT ও client.release()-এর পরে, আলাদা ট্রানজ্যাকশনে
+    if (referralPending) await require('./referralRewards').afterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 }
 

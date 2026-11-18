@@ -1,14 +1,10 @@
 // services/referral.js
-// রেফারেল সিস্টেমের সব লজিক — প্রোগ্রেসিভ বোনাস + মাল্টি-লেভেল কমিশন।
+// রেফারেল: রেকর্ড তৈরি, মাল্টি-লেভেল কমিশন, ইউজারের পরিসংখ্যান।
 //
-// নিয়ম:
-//  প্রথম ডিপোজিট বোনাস (রেফারার কতজন সফল রেফার করেছে তার উপর প্রোগ্রেসিভ):
-//    ১ম জন        → ১০০
-//    ২–৫ জন       → ২০০ (প্রতি জন)
-//    ৬–১৫ জন      → ৪০০
-//    ১৬–৫০ জন     → ৮০০
-//    ৫০+ জন       → ১৫০০
-//  শর্ত: রেফার করা ইউজারকে ন্যূনতম ৫০০ টাকা ডিপোজিট করতে হবে।
+// রেফারেল বোনাস (রেফারারকে) এখন শুধু V2 ইঞ্জিনে — services/referralRewards.js:
+//   রেফার-করা ইউজারের প্রথম যোগ্য ডিপোজিটে (approved, ≥ ন্যূনতম) ধাপ-ভিত্তিক (slab) বোনাস, ঠিক একবার।
+//   সাইন-আপে কোনো বোনাস নেই; রেফার-করা ইউজার কোনো রেফারেল বোনাস পায় না।
+//   পুরোনো signup-বোনাস / bonus_held হোল্ড-মডেল বন্ধ (কলাম DB-তে থাকে, ব্যবহার নেই)।
 //
 //  মাল্টি-লেভেল কমিশন (আজীবন, বাজির উপর):
 //    Tier 1 (সরাসরি)  → ২.৫%
@@ -17,14 +13,8 @@
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
-const { createBonus } = require('./turnover');
-const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const rewards = require('./referralRewards');
 
-// এর উপরে risk score উঠলে রেফারেল বোনাস স্বয়ংক্রিয়ভাবে ছাড় না দিয়ে
-// অ্যাডমিন রিভিউয়ের জন্য আটকে রাখা হয়।
-const REFERRAL_REVIEW_RISK_THRESHOLD = 50;
-
-const MIN_DEPOSIT_FOR_BONUS = 500;          // বোনাস পেতে রেফারের ন্যূনতম ডিপোজিট
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
 const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
@@ -46,16 +36,6 @@ async function getCommissionRates() {
   return rates;
 }
 
-// সফল রেফার সংখ্যা অনুযায়ী প্রথম-ডিপোজিট বোনাস
-function signupBonusFor(successfulCount) {
-  // successfulCount = এই রেফারটি ধরে কতজন হলো (১ম, ২য়...)
-  if (successfulCount <= 1) return 100;
-  if (successfulCount <= 5) return 200;
-  if (successfulCount <= 15) return 400;
-  if (successfulCount <= 50) return 800;
-  return 1500;
-}
-
 // ==================== ১. রেফারেল রেকর্ড তৈরি (রেজিস্টারের সময়) ====================
 // নতুন ইউজার রেফার কোড দিয়ে রেজিস্টার করলে এটা ডাকা হবে।
 async function createReferral(client, referrerId, referredId) {
@@ -73,87 +53,10 @@ async function createReferral(client, referrerId, referredId) {
   }
 }
 
-// ==================== ২. প্রথম ডিপোজিট প্রসেস ====================
-// ডিপোজিট approve হওয়ার সময় ডাকা হবে।
-// রেফার করা ইউজার প্রথমবার (৫০০+) ডিপোজিট করলে — রেফারারকে প্রোগ্রেসিভ বোনাস।
-async function processReferralDeposit(client, referredUserId, depositAmount) {
-  try {
-    if (depositAmount < MIN_DEPOSIT_FOR_BONUS) return; // ৫০০-র কম, বোনাস নেই
+// ==================== ২. প্রথম ডিপোজিট বোনাস ====================
+// এখানে নেই — services/referralRewards.js (V2)। সব ডিপোজিট-নিশ্চিতকরণ পথ COMMIT-এর পরে
+// referralRewards.afterDepositCommit() ডাকে। পুরোনো processReferralDeposit (signup_bonus_paid/bonus_held) সরানো হয়েছে।
 
-    // আগে এখানে SELECT দিয়ে signup_bonus_paid যাচাই করে, পরে আলাদা UPDATE দিয়ে flag সেট করা হতো —
-    // দুটো ধাপের মাঝে কোনো লক ছিল না, তাই একই রেফার্ড ইউজারের দুইটা ডিপোজিট কাছাকাছি সময়ে
-    // approve হলে (দুই admin ট্যাব, বা success-redirect ও IPN-এর race) দুটোই signup_bonus_paid=false
-    // পড়ত আর দুইবার বোনাস দিত। এখন একটা atomic conditional UPDATE দিয়ে flag claim করা হয় —
-    // WHERE signup_bonus_paid=false শর্তসহ, যেটা single-statement হওয়ায় সবসময় exactly-once গ্যারান্টি দেয়,
-    // client কোনো transaction-এ থাকুক বা না থাকুক। rowCount 0 মানে অন্য কোনো concurrent কল আগেই claim করেছে।
-    const claimRes = await client.query(
-      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true
-       WHERE referred_id = $1 AND signup_bonus_paid = false
-       RETURNING id, referrer_id`,
-      [referredUserId]
-    );
-    const ref = claimRes.rows[0];
-    if (!ref) return; // কেউ রেফার করেনি, অথবা বোনাস আগেই claim হয়ে গেছে (রেস জেতেনি)
-
-    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া, এই রেফারটিসহ) — সেটাই এর অবস্থান
-    const cntRes = await client.query(
-      `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true`,
-      [ref.referrer_id]
-    );
-    const thisIsNumber = parseInt(cntRes.rows[0].count); // এই রেফারটি ধরে কতজন হলো
-
-    const bonus = signupBonusFor(thisIsNumber);
-
-    // ==================== পেআউটের আগে duplicate-account গেট ====================
-    // duplicateDetection আগে শুধু রেজিস্ট্রেশনে চলত এবং কেবল ফ্ল্যাগ বানাত।
-    // রেফারেল পেআউটই সবচেয়ে বড় প্রলোভন (৫০+ রেফারে জনপ্রতি ১৫০০ কয়েন), তাই
-    // টাকা ছাড়ার ঠিক আগে আরেকবার যাচাই — একই ডিভাইস/IP/পেমেন্ট অ্যাকাউন্ট হলে
-    // বোনাস pending_review-তে যায়, অ্যাডমিন ছাড় দিলে তবেই active হবে।
-    let flagged = false;
-    try {
-      const flag = await evaluateDuplicateAccount(referredUserId, {});
-      flagged = !!(flag && Number(flag.risk_score) >= REFERRAL_REVIEW_RISK_THRESHOLD);
-    } catch (e) {
-      console.error('referral duplicate check error:', e.message);
-    }
-
-    // রেফারারকে বোনাস কয়েন
-    // pending_review হলে কয়েন এখনই দেওয়া হয় না — অ্যাডমিন ছাড় দিলে তখন যাবে।
-    if (!flagged) {
-      await client.query(
-        `UPDATE users SET coins = coins + $1 WHERE id = $2`,
-        [bonus, ref.referrer_id]
-      );
-    }
-
-    // টার্নওভার লক — এই সারিটা না থাকলে canWithdraw() রেফারেল বোনাস আটকাতে পারে না,
-    // অর্থাৎ বোনাস তাৎক্ষণিকভাবে তোলা যায় (ভুয়া রেফার ফার্মিংয়ের মূল ফাঁক)।
-    await createBonus(client, ref.referrer_id, 'referral', bonus,
-      flagged ? { status: 'pending_review' } : {});
-    // কমিশন হিস্ট্রি (অডিট)
-    await client.query(
-      `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
-       VALUES ($1, $2, 0, $3, 'signup')`,
-      [ref.referrer_id, referredUserId, bonus]
-    );
-    // কয়েন লেনদেন
-    await client.query(
-      `INSERT INTO coin_transactions (user_id, amount, type, description)
-       VALUES ($1, $2, 'referral_bonus', 'রেফারেল প্রথম-ডিপোজিট বোনাস')`,
-      [ref.referrer_id, bonus]
-    );
-    // নোটিফিকেশন
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type)
-       VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
-      [ref.referrer_id, flagged
-        ? `আপনার রেফারেল বোনাস (${bonus} কয়েন) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
-        : `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
-    );
-  } catch (e) {
-    console.error('processReferralDeposit error:', e.message);
-  }
-}
 // ==================== ৩. মাল্টি-লেভেল কমিশন বিতরণ ====================
 // বাজি ধরার সময় ডাকা হবে (গেম ও স্পোর্টস দুই জায়গায়)।
 // বাজি যে ধরল তার উপরে ৩ ধাপ পর্যন্ত রেফারারদের কমিশন দেয়।
@@ -182,7 +85,7 @@ async function distributeCommission(bettorId, stake) {
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
-        // কমিশন কয়েন যোগ
+        // কমিশন টাকা যোগ
         await client.query(
           `UPDATE users SET coins = coins + $1 WHERE id = $2`,
           [commission, referrerId]
@@ -193,7 +96,7 @@ async function distributeCommission(bettorId, stake) {
            VALUES ($1, $2, $3, $4, 'commission')`,
           [referrerId, bettorId, level, commission]
         );
-        // কয়েন লেনদেন
+        // টাকা লেনদেন
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'referral_commission', $3)`,
@@ -215,14 +118,15 @@ async function distributeCommission(bettorId, stake) {
 }
 
 // ==================== ৪. রেফারেল পরিসংখ্যান ====================
+// সব পড়া V2 (referral_rewards) থেকে। status: paid | legacy_paid = বোনাস পাওয়া।
 async function getReferralStats(userId) {
-  // মোট রেফার, সফল (বোনাস পাওয়া) রেফার
   const totalRes = await pool.query(
     `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1`,
     [userId]
   );
+  // সফল = বোনাস পাওয়া রেফারেল (paid + legacy_paid)
   const successRes = await pool.query(
-    `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true`,
+    `SELECT COUNT(*) FROM referral_rewards WHERE referrer_id = $1 AND status IN ('paid','legacy_paid')`,
     [userId]
   );
   // মোট আয় (সব কমিশন + বোনাস)
@@ -241,32 +145,58 @@ async function getReferralStats(userId) {
   );
   // আমার টিম (যাদের সরাসরি রেফার করেছি)
   const teamRes = await pool.query(
-    `SELECT u.username, u.created_at, r.first_deposit_done, r.signup_bonus_paid
+    `SELECT u.username, u.created_at, r.first_deposit_done,
+            COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
+            rr.status AS reward_status
        FROM referrals r
        JOIN users u ON r.referred_id = u.id
+       LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
       WHERE r.referrer_id = $1
       ORDER BY r.created_at DESC LIMIT 50`,
     [userId]
   );
 
   const successCount = parseInt(successRes.rows[0].count);
+  const info = await getReferralProgramInfo();
   return {
     totalReferrals: parseInt(totalRes.rows[0].count),
     successfulReferrals: successCount,
     totalEarnings: Number(earnRes.rows[0].total),
-    nextBonus: signupBonusFor(successCount + 1),
+    // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
+    nextBonus: info.mode === 'tier' ? rewards.tierFor(successCount + 1, info.tiers).amount : null,
+    program: info,
     history: historyRes.rows,
     team: teamRes.rows
   };
 }
 
+// ইউজার-পাতা/popup-এর জন্য চলতি কনফিগ: ধাপ-ছক (পরিসরসহ), ক্যাপ, ন্যূনতম, টার্নওভার, মোড।
+async function getReferralProgramInfo() {
+  const mode = rewards.getBonusMode();
+  const minDeposit = await rewards.getMinDeposit();
+  const cap = await rewards.getBonusCap();
+  const raw = await rewards.getSlabs();
+  const slabs = raw.map((sl, i) => ({
+    min: sl.min,
+    max: i < raw.length - 1 ? raw[i + 1].min - 1 : null,
+    amount: Math.min(sl.amount, cap)
+  }));
+  const num = (v, d) => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 0 ? n : d; };
+  return {
+    mode, minDeposit, cap, slabs,
+    tiers: await rewards.getTiers(),
+    turnover: {
+      sports: num(await getSetting('referral_turnover_sports'), rewards.DEFAULT_TURNOVER.sports),
+      casino: num(await getSetting('referral_turnover_casino'), rewards.DEFAULT_TURNOVER.casino)
+    }
+  };
+}
+
 module.exports = {
   createReferral,
-  processReferralDeposit,
   distributeCommission,
   getReferralStats,
-  signupBonusFor,
+  getReferralProgramInfo,
   getCommissionRates,
-  DEFAULT_COMMISSION_RATES,
-  MIN_DEPOSIT_FOR_BONUS
+  DEFAULT_COMMISSION_RATES
 };

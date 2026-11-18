@@ -13,7 +13,8 @@ const RULES = {
   // রেফারেল বোনাস আগে সরাসরি ব্যালেন্সে যেত, `bonuses` টেবিলে কোনো সারি হতো না,
   // তাই canWithdraw() কিছুই আটকাত না — ভুয়া অ্যাকাউন্ট বানিয়ে ন্যূনতম ডিপোজিট
   // করেই বোনাস তুলে নেওয়া যেত। এখন এটাও টার্নওভার-লকড।
-  referral: { sports: 3, casino: 0 }
+  // রেফারেল বোনাস: স্পোর্টস ৫x ও ক্যাসিনো ৫x (ডিফল্ট) — site_settings referral_turnover_sports / referral_turnover_casino থেকে কনফিগযোগ্য।
+  referral: { sports: 5, casino: 5 }
 };
 
 // ==================== ১. বোনাস তৈরি ====================
@@ -26,6 +27,12 @@ async function createBonus(client, userId, type, bonusAmount, options = {}) {
 
   if (type === 'deposit') {
     rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
+  }
+  if (type === 'referral') {
+    // 0 বৈধ (ওই খাতে শর্ত নেই); অবৈধ/ফাঁকা হলে ডিফল্ট
+    const pick = (raw, dflt) => { const n = Number(raw); return raw !== null && raw !== undefined && raw !== '' && Number.isFinite(n) && n >= 0 ? n : dflt; };
+    rule.sports = pick(await getSetting('referral_turnover_sports'), rule.sports);
+    rule.casino = pick(await getSetting('referral_turnover_casino'), rule.casino);
   }
 
   const sportsReq = bonusAmount * rule.sports;
@@ -113,6 +120,11 @@ async function checkAndComplete(bonusId, db = pool) {
     const sportsOk = Number(b.sports_required) > 0 && Number(b.sports_done) >= Number(b.sports_required);
     const casinoOk = Number(b.casino_required) > 0 && Number(b.casino_done) >= Number(b.casino_required);
     done = sportsOk || casinoOk;
+  } else if (b.bonus_type === 'referral') {
+    // রেফারেল বোনাস: যে খাতে শর্ত > ০ (স্পোর্টস ও ক্যাসিনো) সব কটিই পূরণ হতে হবে — নইলে ক্যাসিনো ৫x বাকি থাকতেও লক খুলত
+    const sportsOk = Number(b.sports_required) <= 0 || Number(b.sports_done) >= Number(b.sports_required);
+    const casinoOk = Number(b.casino_required) <= 0 || Number(b.casino_done) >= Number(b.casino_required);
+    done = sportsOk && casinoOk;
   } else {
     done = Number(b.sports_done) >= Number(b.sports_required);
   }
@@ -152,7 +164,7 @@ async function canWithdraw(userId) {
 
 // ==================== ৪. বোনাস বাতিল (forfeit) ====================
 // একটাও active বোনাস থাকলে পুরো উইথড্র বন্ধ — এমনকি ইউজারের নিজের আমানতও।
-// আগে বেরোনোর কোনো পথ ছিল না। এখন ইউজার বোনাস কয়েন ফিরিয়ে দিয়ে লক খুলতে পারে।
+// আগে বেরোনোর কোনো পথ ছিল না। এখন ইউজার বোনাস টাকা ফিরিয়ে দিয়ে লক খুলতে পারে।
 async function forfeitBonuses(userId) {
   const client = await pool.connect();
   try {
