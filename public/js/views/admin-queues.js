@@ -31,7 +31,7 @@
         });
       } catch (e) { /* silent */ }
     }
-    setInterval(refreshQueueStats, 5000);
+    setInterval(function () { if (!document.hidden) refreshQueueStats(); }, 15000); // ট্যাব লুকানো থাকলে থামে; প্রতিটা পোল Redis কমান্ড খায়
 
     async function retryDlq(id) {
       const res = await fetch('/admin/queues/dead-letter/' + id + '/retry', { method: 'POST' });

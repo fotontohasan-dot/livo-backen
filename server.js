@@ -95,6 +95,8 @@ async function gracefulShutdown(signal) {
   }
   // BullMQ consumer (থাকলে) + producer Queue + shared Redis কানেকশন বন্ধ
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
+  // জমে থাকা api/activity লগ ব্যাচ DB বন্ধের আগে লেখা (BULLMQ_ENABLED=false মোড)
+  try { await require('./services/logBatcher').flushAllLogBatchers(); } catch (e) {}
   // ৩. Socket.IO ও HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
   //    (বেট/ওয়ালেট রিকোয়েস্ট শেষ হওয়ার পরেই নিচে DB pool বন্ধ হয়)
   if (runsWeb(activeRole)) {

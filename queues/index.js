@@ -10,6 +10,7 @@ const { startDeadLetterListeners, stopDeadLetterListeners } = require('./deadLet
 // PROCESS_ROLE ভাগ: web শুধু producer (enqueue) হিসেবে Redis-এ সংযুক্ত হয়,
 // worker consumer চালায়। `all` দুটোই করে (initQueueSystem — আগের আচরণ)।
 async function initQueueProducers() {
+  if (!require('./flags').bullmqEnabled()) return false; // ইচ্ছাকৃত বন্ধ — সতর্কবার্তা নয়
   const connected = await connectQueueRedis();
   if (!connected) {
     console.warn('⚠️ Queue System চালু হয়নি (Redis অনুপলব্ধ) — সব Background Job সরাসরি (inline) মোডে চলবে।');
