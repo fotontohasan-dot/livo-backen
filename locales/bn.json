@@ -2435,11 +2435,6 @@
   "promo_referral_bonus": "রেফারেল বোনাস",
   "promo_daily_cashback": "ডেইলি ক্যাশব্যাক",
   "ref_tagline": "বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)",
-  "ref_coins": "{value} কয়েন",
-  "ref_first_deposit_info": "আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করলে আপনি বোনাস পাবেন।",
-  "ref_status_pending": "⏳ অপেক্ষমাণ",
-  "ref_status_bonus_received": "✅ বোনাস পেয়েছেন",
-  "admin_status_held": "আটকানো (রিভিউ)",
   "ref_coins": "{value} টাকা",
   "ref_signup_bonus": "রেফার বোনাস",
   "ref_commission": "কমিশন (লেভেল {level})",
@@ -3532,5 +3527,9 @@
   "home_banner_next": "পরের ব্যানার",
   "home_live_matches": "লাইভ ম্যাচ",
   "home_main_nav": "প্রধান বিভাগ",
-  "home_bottom_nav": "নিচের নেভিগেশন"
+  "home_bottom_nav": "নিচের নেভিগেশন",
+  "ref_first_deposit_info": "আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করলে আপনি বোনাস পাবেন।",
+  "ref_status_pending": "⏳ অপেক্ষমাণ",
+  "ref_status_bonus_received": "✅ বোনাস পেয়েছেন",
+  "admin_status_held": "আটকানো (রিভিউ)"
 }

@@ -2435,11 +2435,6 @@
   "promo_referral_bonus": "Referral bonus",
   "promo_daily_cashback": "Daily cashback",
   "ref_tagline": "Bonus on your friend's first deposit + lifetime commission (2.5% / 1.5% / 0.8%)",
-  "ref_coins": "{value} coins",
-  "ref_first_deposit_info": "You will get a bonus when your referred friend makes their first deposit.",
-  "ref_status_pending": "⏳ Pending",
-  "ref_status_bonus_received": "✅ Bonus received",
-  "admin_status_held": "Held (review)",
   "ref_coins": "{value} BDT",
   "ref_signup_bonus": "Referral bonus",
   "ref_commission": "Commission (level {level})",
@@ -3532,5 +3527,9 @@
   "home_banner_next": "Next banner",
   "home_live_matches": "Live matches",
   "home_main_nav": "Main categories",
-  "home_bottom_nav": "Bottom navigation"
+  "home_bottom_nav": "Bottom navigation",
+  "ref_first_deposit_info": "You will get a bonus when your referred friend makes their first deposit.",
+  "ref_status_pending": "⏳ Pending",
+  "ref_status_bonus_received": "✅ Bonus received",
+  "admin_status_held": "Held (review)"
 }
