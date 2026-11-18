@@ -292,7 +292,6 @@ async function getReferralStats(userId) {
     `SELECT u.username, u.created_at, r.first_deposit_done,
             COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
             rr.status AS reward_status
-    `SELECT u.username, u.created_at, r.first_deposit_done, r.signup_bonus_paid, r.bonus_held
        FROM referrals r
        JOIN users u ON r.referred_id = u.id
        LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
