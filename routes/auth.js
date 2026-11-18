@@ -24,6 +24,7 @@ const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require
 const { getIpRule } = require('../services/ipRules');
 const { recordDeviceLogin, parseUserAgent, revokeAllOtherSessions } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const homeCasino = require('../services/homeCasino');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
@@ -153,24 +154,18 @@ async function recordLogin(req, userId, vpnInfo = null) {
 
 router.get('/', async (req, res) => {
   try {
-    let dbGames = [];
+    // ক্যাসিনো-প্রথম হোম: গেম/ক্যাটাগরি/প্রোভাইডার/ব্যানার services/homeCasino.js থেকে
+    // (শুধু পড়া; ফিল্টার সার্ভার-সাইডে)। ত্রুটিতে খালি অবস্থায় রেন্ডার — হোম ভাঙে না।
+    let casino;
     try {
-      dbGames = await cache.getOrSet('homepage:games', 60, async () => {
-        const gamesResult = await pool.query(
-          `SELECT name, slug, emoji, category AS type, provider, badge
-           FROM games WHERE is_active = true ORDER BY sort_order ASC, id ASC`
-        );
-        return gamesResult.rows;
-      });
+      casino = await homeCasino.getHomeCasino(req.query);
     } catch (gErr) {
-      console.error('Homepage games fetch error:', gErr.message);
-      dbGames = [];
+      console.error('Homepage casino fetch error:', gErr.message);
+      casino = homeCasino.emptyHomeCasino(req.query);
     }
-    // PHASE 1: ইন-হাউস গেম সরে যাওয়ায় "কোন স্লাগ খেলা যায়" বলে আলাদা কোনো
-    // কোড-সাইড তালিকা আর নেই। গেম খেলা যাবে কি না তা সম্পূর্ণভাবে games
-    // টেবিলের সারি দিয়েই নির্ধারিত — টেবিলে থাকা মানেই sync হয়ে আসা,
-    // সক্রিয় প্রোভাইডার গেম।
-    res.render('index', { user: req.session.user || null, dbGames });
+    // গেম খেলা যাবে কি না তা games টেবিলের সারি + প্রোভাইডার সাসপেন্ড অবস্থা দিয়ে নির্ধারিত;
+    // লঞ্চ-পথ /games/launch/:provider/:gameId অপরিবর্তিত।
+    res.render('index', { user: req.session.user || null, casino });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');

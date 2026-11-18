@@ -1,0 +1,12 @@
+<%# হোমের গেম কার্ড। লঞ্চ-পথ লবির মতোই (/games/launch/:provider/:gameId); সাসপেন্ড থাকলে "সাময়িকভাবে বন্ধ"। %>
+<% if (g.suspended) { %>
+<div class="cs-card cs-suspended" aria-disabled="true" title="<%= t.auto_suspend_badge %>">
+  <% if (g.thumbnail_url) { %><img src="<%= g.thumbnail_url %>" alt="" aria-hidden="true" loading="lazy" decoding="async" width="160" height="120"><% } else { %><div class="cs-thumb-fallback">🎲</div><% } %>
+  <div class="cs-meta"><div class="cs-name"><%= g.name %></div><div class="cs-prov"><%= g.provider %> · <strong><%= t.auto_suspend_badge %></strong></div></div>
+</div>
+<% } else { %>
+<a class="cs-card" href="/games/launch/<%= encodeURIComponent(g.provider) %>/<%= encodeURIComponent(g.provider_game_id) %>" aria-label="<%= g.name %> — <%= g.provider %>">
+  <% if (g.thumbnail_url) { %><img src="<%= g.thumbnail_url %>" alt="" aria-hidden="true" loading="lazy" decoding="async" width="160" height="120"><% } else { %><div class="cs-thumb-fallback">🎲</div><% } %>
+  <div class="cs-meta"><div class="cs-name"><%= g.name %></div><div class="cs-prov"><%= g.provider %></div></div>
+</a>
+<% } %>

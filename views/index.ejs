@@ -347,7 +347,144 @@ body.light-mode .promo-banner {
      না দেখায় এবং অ্যাডমিন প্যানেল থেকে তৈরি নোটিশ এখানে রিয়েল-টাইমে আসে। -->
 <%- include('partials/announcements') %>
 
-<!-- ===== Large FA999-style Promotional Welcome Banner ===== -->
+<%
+  const c = casino;
+  const f = c.filters;
+  const url = function (over) {
+    const p = Object.assign({ q: f.q, category: f.category, provider: f.provider, letter: f.letter }, over || {});
+    const parts = [];
+    ['q', 'category', 'provider', 'letter', 'page'].forEach(function (k) { if (p[k]) parts.push(k + '=' + encodeURIComponent(p[k])); });
+    return '/' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const catLabel = function (x) { return (x.key && t['hc_cat_' + x.key]) || x.name; };
+%>
+
+<!-- ===== মূল ন্যাভিগেশন: ক্যাসিনো, লাইভ ক্যাসিনো, ক্রিকেট, স্পোর্টস, তারপর বাকি ট্যাব ===== -->
+<style nonce="<%= cspNonce %>">
+  .main-cat-nav {
+    display: flex; gap: 8px; padding: 4px 12px 14px;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .main-cat-nav::-webkit-scrollbar { display: none; }
+  .main-cat-item {
+    flex: 0 0 auto; min-width: 62px; min-height: 62px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    padding: 9px 10px; border-radius: 14px; text-decoration: none;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1;
+    text-align: center; transition: background .2s, color .2s, border-color .2s;
+  }
+  .main-cat-item i { font-size: 17px; }
+  .main-cat-item:active { background: rgba(255,255,255,0.09); }
+  .main-cat-item.is-primary {
+    background: var(--grad-gold); color: #1a1a1a; border-color: transparent;
+  }
+  @media (min-width: 768px) {
+    .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
+    .main-cat-item { min-width: 88px; font-size: 12px; }
+    .main-cat-item i { font-size: 20px; }
+  }
+</style>
+<nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
+  <a href="/#casinoHome" class="main-cat-item is-primary"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
+  <a href="<%= c.liveCategory ? url({ category: c.liveCategory, q: '', provider: '', letter: '' }) + '#allGames' : '/#casinoHome' %>" class="main-cat-item"><i class="fas fa-video"></i><span><%= t.cat_live_casino %></span></a>
+  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
+  <a href="/sports" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
+  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
+  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span><%= t.cat_live_matches %></span></a>
+  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span><%= t.cat_tournaments %></span></a>
+  <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span><%= t.cat_leaderboard %></span></a>
+  <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span><%= t.cat_promotions %></span></a>
+</nav>
+
+<%- include('partials/flash') %>
+
+<style nonce="<%= cspNonce %>">
+  /* ===== ক্যাসিনো-প্রথম লেআউট: মোবাইল = এক কলাম, ডেস্কটপ = বাম ক্যাটাগরি | মূল | ডান ম্যাচ ===== */
+  .cs-layout { display: grid; gap: 12px; padding: 0 12px 16px; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "cats" "top" "matches" "all"; }
+  @media (min-width: 1024px) {
+    .cs-layout { grid-template-columns: 210px minmax(0, 1fr) 290px; align-items: start;
+      grid-template-areas: "cats top matches" "cats all matches"; max-width: 1480px; margin: 0 auto; }
+  }
+  .cs-cats { grid-area: cats; }
+  .cs-top { grid-area: top; min-width: 0; }
+  .cs-matches { grid-area: matches; min-width: 0; }
+  .cs-all { grid-area: all; min-width: 0; }
+  .cs-matches .home-hub { margin: 0; }
+  @media (min-width: 1024px) { .cs-matches { position: sticky; top: 8px; } }
+
+  /* ক্যাটাগরি: মোবাইলে অনুভূমিক চিপ, ডেস্কটপে উল্লম্ব তালিকা */
+  .cs-cat-list { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0; padding: 0; list-style: none; }
+  .cs-cat-list::-webkit-scrollbar { display: none; }
+  @media (min-width: 1024px) {
+    .cs-cats { background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 14px; padding: 8px; position: sticky; top: 8px; }
+    .cs-cat-list { flex-direction: column; overflow: visible; gap: 4px; }
+  }
+  .cs-chip { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; box-sizing: border-box;
+    min-height: 36px; padding: 7px 14px; border-radius: 20px; text-decoration: none; font-size: 12.5px; font-weight: 700;
+    color: var(--text-muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); white-space: nowrap; }
+  .cs-chip small { opacity: .7; font-weight: 600; }
+  .cs-chip:hover { color: var(--text-main); }
+  .cs-chip:focus-visible, .cs-card:focus-visible, .cs-az a:focus-visible, .cs-btn:focus-visible, .cs-search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .cs-chip.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  @media (min-width: 1024px) { .cs-cats .cs-chip { border-radius: 10px; width: 100%; } }
+
+  /* ব্যানার স্লাইডার (শুধু CSS scroll-snap, কোনো JS লাইব্রেরি নয়) */
+  .cs-banners { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; border-radius: 14px; }
+  .cs-banners::-webkit-scrollbar { display: none; }
+  .cs-banner { flex: 0 0 100%; scroll-snap-align: start; display: block; border-radius: 14px; overflow: hidden; background: var(--bg-surface); }
+  .cs-banner img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 6; object-fit: cover; }
+
+  .cs-search { display: flex; gap: 8px; margin: 12px 0; }
+  .cs-search input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border-glass); background: var(--bg-surface); color: var(--text-main); font-size: 14px; }
+  .cs-btn { padding: 10px 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center;
+    background: var(--grad-gold) !important; color: #000 !important; }
+  .cs-btn.ghost { background: rgba(255,255,255,.06) !important; color: var(--text-main) !important; border: 1px solid var(--border-glass); }
+  .cs-sec-title { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; font-size: 15px; font-weight: 800; }
+  .cs-sec-title a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; }
+  .cs-h-scroll { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .cs-h-scroll::-webkit-scrollbar { display: none; }
+  .cs-h-scroll .cs-card { flex: 0 0 132px; }
+  .cs-az { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0; padding: 0; list-style: none; }
+  .cs-az::-webkit-scrollbar { display: none; }
+  @media (min-width: 768px) { .cs-az { flex-wrap: wrap; overflow-x: visible; } }
+  .cs-az a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 800;
+    color: var(--text-muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+  .cs-az a.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .cs-card { display: block; text-decoration: none; color: var(--text-main); background: var(--bg-card, var(--bg-surface)); border: 1px solid var(--border-glass); border-radius: 12px; overflow: hidden; }
+  .cs-card img, .cs-thumb-fallback { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 28px; background: rgba(255,255,255,.04); }
+  .cs-meta { padding: 7px 9px 9px; }
+  .cs-name { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-prov { font-size: 10.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-suspended { opacity: .55; cursor: not-allowed; filter: grayscale(.7); }
+  .cs-empty { grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+  .cs-pager { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+  .cs-block { margin-top: 12px; }
+</style>
+
+<div class="cs-layout" id="casinoHome">
+  <!-- ক্যাসিনো ক্যাটাগরি: ডেস্কটপে বাঁ সাইডবার, মোবাইলে অনুভূমিক চিপ (শুধু DB-তে থাকা, খালি ক্যাটাগরি আসে না) -->
+  <nav class="cs-cats" aria-label="<%= t.hc_categories %>">
+    <ul class="cs-cat-list">
+      <li><a class="cs-chip <%= !f.category ? 'active' : '' %>" href="<%= url({ category: '', page: '' }) %>#allGames" <%- !f.category ? 'aria-current="true"' : '' %> aria-label="<%= t.all %>"><span><%= t.all %></span></a></li>
+      <% c.categories.forEach(function (cat) { %>
+      <li><a class="cs-chip <%= f.category === cat.name ? 'active' : '' %>" href="<%= url({ category: cat.name, page: '' }) %>#allGames" <%- f.category === cat.name ? 'aria-current="true"' : '' %> aria-label="<%= catLabel(cat) %>"><span><%= catLabel(cat) %></span> <small><%= cat.count %></small></a></li>
+      <% }); %>
+    </ul>
+  </nav>
+
+  <div class="cs-top">
+    <!-- (১) প্রোমো ব্যানার স্লাইডার: বিদ্যমান promotions টেবিল; না থাকলে আগের স্ট্যাটিক ওয়েলকাম ব্যানার -->
+    <% if (c.banners.length) { %>
+    <div class="cs-banners" role="region" aria-label="<%= t.hc_promo_banners %>" tabindex="0">
+      <% c.banners.forEach(function (b, i) { %>
+      <% if (b.link) { %><a class="cs-banner" href="<%= b.link %>" aria-label="<%= b.title || t.hc_promo_banners %>"><img src="<%= b.image %>" alt="<%= b.title %>" <%- i === 0 ? 'loading="eager"' : 'loading="lazy"' %> decoding="async" width="960" height="360"></a>
+      <% } else { %><div class="cs-banner"><img src="<%= b.image %>" alt="<%= b.title %>" <%- i === 0 ? 'loading="eager"' : 'loading="lazy"' %> decoding="async" width="960" height="360"></div><% } %>
+      <% }); %>
+    </div>
+    <% } else { %>
 <div class="promo-banner">
   <div class="promo-banner-content">
     <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
@@ -366,7 +503,125 @@ body.light-mode .promo-banner {
   <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg"
        alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
 </div>
+    <% } %>
 
+    <!-- (২) গেম সার্চ -->
+    <form class="cs-search" method="get" action="/" role="search" aria-label="<%= t.hc_search_label %>">
+      <% if (f.category) { %><input type="hidden" name="category" value="<%= f.category %>"><% } %>
+      <% if (f.provider) { %><input type="hidden" name="provider" value="<%= f.provider %>"><% } %>
+      <% if (f.letter) { %><input type="hidden" name="letter" value="<%= f.letter %>"><% } %>
+      <input type="search" name="q" value="<%= f.q %>" maxlength="60" placeholder="<%= t.hc_search_ph %>" aria-label="<%= t.hc_search_label %>">
+      <button type="submit" class="cs-btn"><%= t.hc_search_btn %></button>
+    </form>
+
+    <!-- (৩) প্রোভাইডার ফিল্টার -->
+    <% if (c.providers.length) { %>
+    <div class="cs-block">
+      <ul class="cs-cat-list" aria-label="<%= t.hc_providers %>">
+        <li><a class="cs-chip <%= !f.provider ? 'active' : '' %>" href="<%= url({ provider: '', page: '' }) %>#allGames" aria-label="<%= t.hc_providers %>: <%= t.all %>"><span><%= t.all %></span></a></li>
+        <% c.providers.forEach(function (p) { %>
+        <li><a class="cs-chip <%= f.provider === p.name ? 'active' : '' %>" href="<%= url({ provider: p.name, page: '' }) %>#allGames" <%- f.provider === p.name ? 'aria-current="true"' : '' %> aria-label="<%= t.hc_providers %>: <%= p.name %>"><span><%= p.name %></span></a></li>
+        <% }); %>
+      </ul>
+    </div>
+    <% } %>
+
+    <!-- (৪) A-Z ইনডেক্স (শুধু ইংরেজি নামের প্রথম অক্ষর; যে অক্ষরে গেম আছে সেগুলোই) -->
+    <% if (c.letters.length) { %>
+    <div class="cs-block">
+      <ul class="cs-az" aria-label="<%= t.hc_az %>">
+        <% c.letters.forEach(function (l) { %>
+        <li><a class="<%= f.letter === l ? 'active' : '' %>" href="<%= url({ letter: f.letter === l ? '' : l, page: '' }) %>#allGames" <%- f.letter === l ? 'aria-current="true"' : '' %> aria-label="<%= t.hc_letter_label.replace('{l}', l) %>"><%= l %></a></li>
+        <% }); %>
+      </ul>
+    </div>
+    <% } %>
+
+    <!-- (৫) জনপ্রিয়, নতুন, প্রতি ক্যাটাগরির সারি (ফিল্টার সক্রিয় থাকলে লুকানো — নিচের গ্রিডে ফল) -->
+    <% if (!c.filtered) { %>
+      <% if (c.popular.length) { %>
+      <div class="cs-sec-title"><span><%= t.hc_popular %></span><a href="/#allGames" aria-label="<%= t.hc_popular %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% c.popular.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
+      <% } %>
+      <% if (c.fresh.length) { %>
+      <div class="cs-sec-title"><span><%= t.hc_new %></span><a href="/#allGames" aria-label="<%= t.hc_new %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% c.fresh.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
+      <% } %>
+      <% c.rowsByCat.forEach(function (row) { %>
+      <div class="cs-sec-title"><span><%= catLabel(row) %></span><a href="<%= url({ category: row.name, q: '', provider: '', letter: '', page: '' }) %>#allGames" aria-label="<%= catLabel(row) %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% row.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
+      <% }); %>
+    <% } %>
+  </div>
+
+  <!-- লাইভ ম্যাচ: ডেস্কটপে ডান সংকীর্ণ সাইডবার (সর্বোচ্চ ৮), মোবাইলে ক্যাসিনো সেকশনের নিচে ছোট সারি (সর্বোচ্চ ৫)।
+       ক্লিক-পথ (/matches/:id) ও বাজি আচরণ অপরিবর্তিত; ডেটা আগের মতোই /matches/api/live। -->
+  <aside class="cs-matches" aria-label="<%= t.hc_live_matches %>">
+<section class="home-hub" id="homeHub"
+         data-max-desktop="<%= c.matchCaps.sidebar %>" data-max-mobile="<%= c.matchCaps.mobile %>"
+         data-empty="<%= t.hub_no_matches || 'No matches in this view' %>"
+         data-more="<%= t.hub_view_all || 'View all matches' %>"
+         data-competitions="<%= t.hub_competitions || 'Competitions' %>">
+  <div class="hh-head"><h3><%= t.hc_live_matches %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
+  <div class="hh-tabs" id="hhTabs">
+    <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
+    <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
+    <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
+    <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
+  </div>
+  <div class="hh-list" id="hhList"></div>
+</section>
+  </aside>
+
+  <!-- (৬) সব গেম — A-Z ক্রম, আইডেম্পোটেন্ট পেজিনেশন (একই URL = একই ফল) -->
+  <section class="cs-all" id="allGames" aria-label="<%= t.hc_all_games %>">
+    <div class="cs-sec-title">
+      <span><%= c.filtered ? t.hc_results : t.hc_all_games %></span>
+      <% if (c.filtered) { %><a href="/#allGames"><%= t.hc_clear %></a><% } %>
+    </div>
+    <div class="cs-grid">
+      <% if (!c.grid.games.length) { %><div class="cs-empty"><%= t.no_games_found %></div><% } %>
+      <% c.grid.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %>
+    </div>
+    <% if (c.grid.page > 1 || c.grid.hasMore) { %>
+    <div class="cs-pager">
+      <% if (c.grid.page > 1) { %><a class="cs-btn ghost" rel="prev" href="<%= url({ page: c.grid.page > 2 ? c.grid.page - 1 : '' }) %>#allGames"><%= t.hc_prev %></a><% } %>
+      <% if (c.grid.hasMore) { %><a class="cs-btn" rel="next" href="<%= url({ page: c.grid.page + 1 }) %>#allGames"><%= t.hc_more %></a><% } %>
+    </div>
+    <% } %>
+  </section>
+</div>
+<style nonce="<%= cspNonce %>">
+  .home-hub { margin: 4px 12px 14px; padding: 12px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-glass); }
+  .hh-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; }
+  .hh-head h3 { margin: 0; font-size: 15px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .hh-tabs { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 10px; padding-bottom: 2px; }
+  .hh-tabs::-webkit-scrollbar { display: none; }
+  /* style.css-এর গ্লোবাল `button { background:#f42a41 !important; color:#fff !important }` এই ট্যাবগুলোকে
+     লাল করে active অবস্থা মুছে দিত; তাই বেশি specificity + !important দিয়ে হাবের নিজস্ব রং ফেরানো হলো। */
+  .home-hub .hh-tab, .home-hub .hh-select { flex: 0 0 auto; box-sizing: border-box; min-height: 34px; padding: 7px 16px; border-radius: 20px; font-family: inherit; font-weight: 700; font-size: 12px; line-height: 1.2; white-space: nowrap; cursor: pointer; background: rgba(255,255,255,.04) !important; border: 1px solid rgba(255,255,255,.08) !important; color: var(--text-muted) !important; }
+  .home-hub .hh-tab:hover { background: rgba(255,255,255,.09) !important; color: var(--text-main, #fff) !important; }
+  .home-hub .hh-tab.active, .home-hub .hh-tab.active:hover { background: var(--grad-gold) !important; color: #000 !important; border-color: transparent !important; }
+  .home-hub .hh-select { max-width: 200px; text-overflow: ellipsis; }
+  @media (max-width: 480px) {
+    .home-hub { margin: 4px 8px 12px; padding: 10px; }
+    .home-hub .hh-tab, .home-hub .hh-select { padding: 7px 12px; }
+    .home-hub .hh-select { max-width: 150px; }
+  }
+  .hh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  .hh-row { display: block; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); text-decoration: none; color: inherit; }
+  .hh-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-muted); }
+  .hh-league { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .hh-live { background: #dc2626; color: #fff; font-weight: 800; padding: 1px 8px; border-radius: 8px; animation: livedot 1.4s infinite; }
+  .hh-team { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; font-weight: 700; }
+  .hh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hh-score { color: var(--gold); }
+  .hh-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; flex-shrink: 0; }
+  .hh-logo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  .hh-empty, .hh-more { grid-column: 1 / -1; text-align: center; padding: 14px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+</style>
+<script src="/js/views/home-matches.js" defer></script>
 <!-- ===== 3D Hero Particles Background ===== -->
 <div id="hero-3d" style="position:absolute; top:0; left:0; right:0; height:400px; z-index:-1;"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -399,242 +654,6 @@ body.light-mode .promo-banner {
     <div class="shortcut-label"><%= t.rebate %></div>
   </a>
 </div>
-
-<!-- ===== Main Category Navigation (সাইটের প্রধান বিভাগ) ===== -->
-<!--
-  কেন যোগ করা হলো: হোমপেজে আগে শুধু গেম-গ্রিড ফিল্টার করার ট্যাব ছিল (Hot/Slots/Live/
-  Sports/Poker) — ওগুলো ক্যাসিনো গেমের ক্যাটাগরি, আসল স্পোর্টস নয়। ফলে ফুটবল, ক্রিকেট,
-  লাইভ ম্যাচ, টুর্নামেন্ট বা বেটিং — কোনোটাই হোমপেজ থেকে খুঁজে পাওয়া যেত না।
-  এখানে প্রতিটা লিংক বাস্তবে বিদ্যমান রুটে যায় (সবগুলো যাচাই করা হয়েছে); কোনো ডেড
-  বাটন নেই এবং আইকনের পাশাপাশি টেক্সট লেবেলও আছে।
--->
-<style nonce="<%= cspNonce %>">
-  .main-cat-nav {
-    display: flex; gap: 8px; padding: 4px 12px 14px;
-    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-  }
-  .main-cat-nav::-webkit-scrollbar { display: none; }
-  .main-cat-item {
-    flex: 0 0 auto; min-width: 62px; min-height: 62px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-    padding: 9px 10px; border-radius: 14px; text-decoration: none;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1;
-    text-align: center; transition: background .2s, color .2s, border-color .2s;
-  }
-  .main-cat-item i { font-size: 17px; }
-  .main-cat-item:active { background: rgba(255,255,255,0.09); }
-  .main-cat-item.is-primary {
-    background: var(--grad-gold); color: #1a1a1a; border-color: transparent;
-  }
-  @media (min-width: 768px) {
-    .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
-    .main-cat-item { min-width: 88px; font-size: 12px; }
-    .main-cat-item i { font-size: 20px; }
-  }
-</style>
-<nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
-  <a href="/sports" class="main-cat-item is-primary"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
-  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
-  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
-  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span><%= t.cat_live_matches %></span></a>
-  <a href="#mainGridWrap" class="main-cat-item"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
-  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span><%= t.cat_tournaments %></span></a>
-  <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span><%= t.cat_leaderboard %></span></a>
-  <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span><%= t.cat_promotions %></span></a>
-</nav>
-
-<!-- হোমপেজ থেকে লাইভ/আসন্ন ম্যাচের তালিকা সরানো হয়েছে।
-     নতুন UX: ইউজার প্রথমে খেলা বেছে নেয় (উপরের ক্যাটাগরি ন্যাভ থেকে Football/Cricket),
-     তারপর সেই খেলার Live ও Upcoming ম্যাচ দেখে। ম্যাচ রেন্ডার করার কোড এখন শুধু
-     views/matches.ejs-এ, যেটা /matches/football ও /matches/cricket দুটোই সার্ভ করে। -->
-
-<!-- ===== Match Hub: In-Play / Today / Tomorrow / Competitions (client-side filtering, no reloads) ===== -->
-<section class="home-hub" id="homeHub"
-         data-empty="<%= t.hub_no_matches || 'No matches in this view' %>"
-         data-more="<%= t.hub_view_all || 'View all matches' %>"
-         data-competitions="<%= t.hub_competitions || 'Competitions' %>">
-  <div class="hh-head"><h3><%= t.hub_title || 'Sports' %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
-  <div class="hh-tabs" id="hhTabs">
-    <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
-    <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
-    <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
-    <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
-  </div>
-  <div class="hh-list" id="hhList"></div>
-</section>
-<style nonce="<%= cspNonce %>">
-  .home-hub { margin: 4px 12px 14px; padding: 12px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-glass); }
-  .hh-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; }
-  .hh-head h3 { margin: 0; font-size: 15px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
-  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; white-space: nowrap; }
-  .hh-tabs { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 10px; padding-bottom: 2px; }
-  .hh-tabs::-webkit-scrollbar { display: none; }
-  /* style.css-এর গ্লোবাল `button { background:#f42a41 !important; color:#fff !important }` এই ট্যাবগুলোকে
-     লাল করে active অবস্থা মুছে দিত; তাই বেশি specificity + !important দিয়ে হাবের নিজস্ব রং ফেরানো হলো। */
-  .home-hub .hh-tab, .home-hub .hh-select { flex: 0 0 auto; box-sizing: border-box; min-height: 34px; padding: 7px 16px; border-radius: 20px; font-family: inherit; font-weight: 700; font-size: 12px; line-height: 1.2; white-space: nowrap; cursor: pointer; background: rgba(255,255,255,.04) !important; border: 1px solid rgba(255,255,255,.08) !important; color: var(--text-muted) !important; }
-  .home-hub .hh-tab:hover { background: rgba(255,255,255,.09) !important; color: var(--text-main, #fff) !important; }
-  .home-hub .hh-tab.active, .home-hub .hh-tab.active:hover { background: var(--grad-gold) !important; color: #000 !important; border-color: transparent !important; }
-  .home-hub .hh-select { max-width: 200px; text-overflow: ellipsis; }
-  @media (max-width: 480px) {
-    .home-hub { margin: 4px 8px 12px; padding: 10px; }
-    .home-hub .hh-tab, .home-hub .hh-select { padding: 7px 12px; }
-    .home-hub .hh-select { max-width: 150px; }
-  }
-  .hh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
-  .hh-row { display: block; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); text-decoration: none; color: inherit; }
-  .hh-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-muted); }
-  .hh-league { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
-  .hh-live { background: #dc2626; color: #fff; font-weight: 800; padding: 1px 8px; border-radius: 8px; animation: livedot 1.4s infinite; }
-  .hh-team { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; font-weight: 700; }
-  .hh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hh-score { color: var(--gold); }
-  .hh-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; flex-shrink: 0; }
-  .hh-logo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
-  .hh-empty, .hh-more { grid-column: 1 / -1; text-align: center; padding: 14px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
-</style>
-<script src="/js/views/home-matches.js" defer></script>
-
-<!-- জনপ্রিয় গেমের হাইলাইট স্ট্রিপ সরানো হয়েছে (ইউজারের অনুরোধে)।
-     নিচের ক্যাটাগরি ট্যাব + গেম গ্রিড থেকে একই গেমগুলো এখনো পাওয়া যায়,
-     তাই কোনো গেম দুর্গম হয়ে যায়নি। -->
-
-<!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker, Favorites, Recent) ===== -->
-<div class="horizontal-nav-container" id="categoryTabs">
-  <div class="nav-tab-item active" data-category="all">
-    <i class="fas fa-border-all"></i> <%= t.all %>
-  </div>
-  <div class="nav-tab-item" data-category="hot">
-    <i class="fas fa-fire"></i> <%= t.cat_hot %>
-  </div>
-  <div class="nav-tab-item" data-category="slots">
-    <i class="fas fa-gamepad"></i> <%= t.cat_slots %>
-  </div>
-  <div class="nav-tab-item" data-category="live">
-    <i class="fas fa-video"></i> <%= t.cat_live %>
-  </div>
-  <div class="nav-tab-item" data-category="sports">
-    <i class="fas fa-running"></i> <%= t.cat_sports %>
-  </div>
-  <div class="nav-tab-item" data-category="poker">
-    <i class="fas fa-heart"></i> <%= t.cat_poker %>
-  </div>
-  <div class="nav-tab-item" data-category="favorites">
-    <i class="fas fa-star"></i> <%= t.cat_favorites %>
-  </div>
-  <div class="nav-tab-item" data-category="recent">
-    <i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %>
-  </div>
-</div>
-
-<!-- ===== Layout Switcher ===== -->
-<div class="dz48-7">
-  <span class="dz48-8"><%= t.layout_label %></span>
-  <button type="button" class="layout-btn" data-layout="compact" title="<%= t.layout_compact %>"><i class="fas fa-table-cells"></i></button>
-  <button type="button" class="layout-btn active" data-layout="standard" title="<%= t.layout_standard %>"><i class="fas fa-table-cells-large"></i></button>
-  <button type="button" class="layout-btn" data-layout="list" title="<%= t.layout_list %>"><i class="fas fa-list"></i></button>
-</div>
-
-<style nonce="<%= cspNonce %>">
-  .layout-btn {
-    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
-    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
-  }
-  .layout-btn.active { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
-
-  /* ===== Secondary Filter Pills (All/Hot/Favorites/Recent) — Slots/Live/Sports/Poker ক্যাটাগরির ভেতরে ===== */
-  .secondary-tabs-container {
-    display: flex; gap: 8px; padding: 0 12px 12px 12px; overflow-x: auto; scrollbar-width: none;
-  }
-  .secondary-tabs-container::-webkit-scrollbar { display: none; }
-  .secondary-tab-item {
-    flex: 0 0 auto; padding: 7px 16px; border-radius: 20px;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    color: var(--text-muted); font-weight: 700; font-size: 12px; cursor: pointer;
-    display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
-  }
-  .secondary-tab-item.active {
-    background: var(--grad-gold); color: #000 !important; border-color: transparent;
-    box-shadow: 0 3px 10px rgba(201, 162, 39,0.35);
-  }
-  .secondary-tab-item.active i { color: #000; }
-
-  /* ===== Catalog Mode: বাম পাশে প্রোভাইডার কলাম, ডান পাশে গেম গ্রিড ===== */
-  #mainGridWrap { display: flex; gap: 10px; padding: 0 12px; }
-  #providerSidebar {
-    display: none; flex-direction: column; width: 78px; flex-shrink: 0; gap: 6px;
-  }
-  .provider-scroll-btn {
-    width: 100%; padding: 6px 0; border: none; border-radius: 8px; cursor: pointer;
-    background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 13px;
-    display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;
-  }
-  .provider-scroll-btn:active { background: var(--grad-gold); color: #000; }
-  #catalogProviderList {
-    display: flex; flex-direction: column; gap: 8px;
-    height: 420px; overflow-y: scroll; scrollbar-width: none; scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
-  }
-  #catalogProviderList::-webkit-scrollbar { display: none; }
-  .catalog-provider-item {
-    background: var(--bg-surface); border: 1px solid var(--border-glass);
-    border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column;
-    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0;
-  }
-  .catalog-provider-item.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201, 162, 39,0.25); }
-  .catalog-provider-item img { width: 100%; max-height: 28px; object-fit: contain; border-radius: 4px; }
-  .catalog-provider-item .fallback {
-    width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center;
-    justify-content: center; color: #fff; font-size: 9px; font-weight: 900;
-  }
-  .catalog-provider-item .name { font-size: 9.5px; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.15; }
-  #gameContainer { padding: 0 !important; flex: 1; min-width: 0; }
-
-  .game-grid-premium.layout-compact { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
-  .game-grid-premium.layout-compact .game-thumb-wrapper { font-size: 28px !important; }
-  .game-grid-premium.layout-compact .game-title-premium { font-size: 11px !important; }
-
-  .game-grid-premium.layout-list { display: flex !important; flex-direction: column; gap: 8px; }
-  .game-grid-premium.layout-list .game-card-premium { flex-direction: row !important; align-items: center; }
-  .game-grid-premium.layout-list .game-thumb-wrapper { width: 70px; aspect-ratio: 1/1 !important; flex: 0 0 70px; }
-  .game-grid-premium.layout-list .game-info-premium { flex: 1; }
-
-  .fav-star {
-    position: absolute; top: 6px; left: 6px; z-index: 3; font-size: 15px;
-    color: rgba(255,255,255,0.55); text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-  }
-  .fav-star.active { color: #FFD700; }
-</style>
-
-<!-- ===== Search Bar ===== -->
-<div class="dz48-9">
-  <div class="dz48-10">
-    <input type="text" id="gameSearch" class="form-input dz48-11" placeholder="<%= t.search_placeholder %>">
-    <i class="fas fa-search dz48-12"></i>
-  </div>
-</div>
-
-<%- include('partials/flash') %>
-
-<!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
-<div class="secondary-tabs-container sp26-1" id="secondaryTabs">
-  <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
-  <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> <%= t.cat_favorites %></div>
-  <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %></div>
-</div>
-
-<!-- ===== High-Fidelity Premium Game Grid (বাম পাশে প্রোভাইডার কলাম সহ, Slots/Live/Sports/Poker-এ) ===== -->
-<div id="mainGridWrap">
-  <div id="providerSidebar">
-    <button type="button" id="providerScrollUp" class="provider-scroll-btn"><i class="fas fa-chevron-up"></i></button>
-    <div id="catalogProviderList"></div>
-    <button type="button" id="providerScrollDown" class="provider-scroll-btn"><i class="fas fa-chevron-down"></i></button>
-  </div>
-  <div class="game-grid-premium" id="gameContainer"></div>
-</div>
-
-<!-- ===== 3D Card Tilt Effect ===== -->
-<script src="/js/views/index-card-tilt.js"></script>
 
 <!-- ===== Mega Jackpot + Recent Big Wins ===== -->
 <style nonce="<%= cspNonce %>">
@@ -860,19 +879,7 @@ body.light-mode .promo-banner {
 <!-- ===== Footer ===== -->
 <%- include('partials/footer') %>
 
-<%- include('partials/bottom-nav') %>
+<%- include('partials/bottom-nav', { variant: 'casino' }) %>
 <%- include('partials/floating-promo') %>
 
-<script type="application/json" id="indexConfig"><%- jsonScriptSafe({
-  games: (typeof dbGames !== 'undefined' && dbGames) ? dbGames : [],
-  allLabel: t.all,
-  noGamesFound: t.no_games_found
-}) %></script>
-
-<!-- চ্যাটবেসের ফ্লোটিং bubble এখান থেকে সরানো হলো — এটা bottom navigation
-     bar-এর "Support" আইকনের উপর বসে পুরো নেভ বার ঢেকে দিচ্ছিল (Chatbase
-     bubble-এর নিজস্ব উচ্চ z-index সাইট-ওয়াইড সব কিছুর উপরে থাকে, এবং
-     bottom-nav-এর উচ্চতা হিসাব করে না)। AI চ্যাট এখন /chat পেজেই
-     (profile/chat.ejs) embedded iframe হিসেবে আছে — bottom nav-এর
-     "Support" আইকন দিয়েই যেতে হবে, হোমপেজে আলাদা bubble দরকার নেই। -->
 </body></html>

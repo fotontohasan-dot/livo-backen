@@ -86,6 +86,37 @@
   }
 </style>
 
+<%# variant 'casino' = হোমের নতুন বটম-বার (হোম, ক্যাসিনো, স্পোর্টস, ওয়ালেট, প্রোফাইল); বাকি পাতায় আগের বার অপরিবর্তিত %>
+<% if (locals.variant === 'casino') { %>
+<nav class="pub-bottom-nav" id="pubBottomNav" aria-label="<%= t.hc_main_nav %>">
+  <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
+    <i class="fas fa-house"></i>
+    <span><%= t.nav_home %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/games" class="pub-nav-item <%= locals.currentPage === 'games' ? 'active' : '' %>">
+    <i class="fas fa-dice"></i>
+    <span><%= t.nav_casino %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/sports" class="pub-nav-item <%= ['sports','football','cricket','matches'].includes(locals.currentPage) ? 'active' : '' %>">
+    <i class="fas fa-futbol"></i>
+    <span><%= t.nav_sports %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/coins" class="pub-nav-item <%= locals.currentPage === 'coins' ? 'active' : '' %>">
+    <i class="fas fa-wallet"></i>
+    <span><%= t.nav_wallet %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>">
+    <i class="fas fa-circle-user"></i>
+    <span class="pub-master-dot" data-badge="master-dot"></span>
+    <span><%= t.nav_profile %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+</nav>
+<% } else { %>
 <nav class="pub-bottom-nav" id="pubBottomNav">
   <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-house"></i>
@@ -123,4 +154,5 @@
     <span class="pub-active-bar"></span>
   </a>
 </nav>
+<% } %>
 

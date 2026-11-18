@@ -1173,6 +1173,17 @@ async function applyMigrations(pool) {
       CREATE INDEX IF NOT EXISTS idx_games_lobby
         ON games(category, is_active, admin_disabled, sort_order);
     `);
+    // হোম (ক্যাসিনো-প্রথম) ফিল্টারের জন্য: প্রোভাইডার ফিল্টার ও A-Z অক্ষর/নাম-ক্রম। শুধু ইনডেক্স, ডেটা অক্ষত।
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_home_provider
+        ON games(provider, sort_order, name)
+        WHERE is_active = true AND admin_disabled = false;
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_home_letter
+        ON games((UPPER(LEFT(LTRIM(name), 1))), name, id)
+        WHERE is_active = true AND admin_disabled = false;
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS provider_sync_log (
