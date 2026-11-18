@@ -114,7 +114,9 @@ describe('ভাষা পছন্দ ডেটাবেসে সংরক্�
     // সম্পূর্ণ নতুন এজেন্ট = নতুন সেশন কুকি, কোনো session.lang নেই
     const { agent, token } = await getCsrfAgent('/login');
     await agent.post('/login').set('User-Agent', REALISTIC_UA).type('form')
-      .send({ username, password: 'SecurePass123', _csrf: token });
+      // লগইন হ্যান্ডলার `identifier` ফিল্ড পড়ে (`username` নয়) — আগে ভুল ফিল্ড যাওয়ায় লগইন নীরবে ব্যর্থ হতো এবং
+      // টেস্ট শুধু পুরনো হোমপেজের একটা HTML কমেন্টে "Deposit" শব্দ থাকায় পাস করত।
+      .send({ identifier: username, password: 'SecurePass123', _csrf: token });
     const res = await agent.get('/');
     expect(res.status).toBe(200);
     // ভাষা-নির্ভর একটা key দিয়ে যাচাই — bn ও en মান আলাদা হতে হবে,

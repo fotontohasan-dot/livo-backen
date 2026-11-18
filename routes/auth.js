@@ -24,6 +24,7 @@ const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require
 const { getIpRule } = require('../services/ipRules');
 const { recordDeviceLogin, parseUserAgent, revokeAllOtherSessions } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const homeCasino = require('../services/homeCasino');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
@@ -153,24 +154,13 @@ async function recordLogin(req, userId, vpnInfo = null) {
 
 router.get('/', async (req, res) => {
   try {
-    let dbGames = [];
-    try {
-      dbGames = await cache.getOrSet('homepage:games', 60, async () => {
-        const gamesResult = await pool.query(
-          `SELECT name, slug, emoji, category AS type, provider, badge
-           FROM games WHERE is_active = true ORDER BY sort_order ASC, id ASC`
-        );
-        return gamesResult.rows;
-      });
-    } catch (gErr) {
-      console.error('Homepage games fetch error:', gErr.message);
-      dbGames = [];
-    }
-    // PHASE 1: ইন-হাউস গেম সরে যাওয়ায় "কোন স্লাগ খেলা যায়" বলে আলাদা কোনো
-    // কোড-সাইড তালিকা আর নেই। গেম খেলা যাবে কি না তা সম্পূর্ণভাবে games
-    // টেবিলের সারি দিয়েই নির্ধারিত — টেবিলে থাকা মানেই sync হয়ে আসা,
-    // সক্রিয় প্রোভাইডার গেম।
-    res.render('index', { user: req.session.user || null, dbGames });
+    // ক্যাসিনো-প্রথম হোম: ফিল্টার (ক্যাটাগরি/প্রোভাইডার/A-Z/সার্চ) সার্ভার-সাইডে; ডেটা-পড়া
+    // services/homeCasino.js-এ। ব্যর্থ হলে সেখানেই খালি-কিন্তু-বৈধ অবস্থা ফেরে, তাই হোম 500 দেয় না।
+    const [casino, banners] = await Promise.all([
+      homeCasino.getHomeCasino(req.query),
+      homeCasino.getBanners(),
+    ]);
+    res.render('index', { user: req.session.user || null, casino, banners, homeCasino, currentPage: 'home', bottomNavVariant: 'casino' });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');

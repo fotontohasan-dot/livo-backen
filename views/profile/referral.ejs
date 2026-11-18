@@ -84,6 +84,7 @@
     <div class="dz76-13"><%= t.next_referral_reward %></div>
     <div class="dz76-14"><%= stats.nextBonus %> টাকা</div>
     <div class="dz76-9"><%= t.referral_condition %></div>
+    <div class="dz76-9"><%= t('ref_first_deposit_info') %></div>
   </div>
 
   <!-- রেফারেল কোড -->
@@ -119,12 +120,10 @@
             <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
           </div>
           <div>
-            <% if (member.signup_bonus_paid) { %>
-              <span class="dz76-25"><%= t('successful') %></span>
-            <% } else if (member.first_deposit_done) { %>
-              <span class="dz76-26"><%= t('deposited') %></span>
+            <% if (member.signup_bonus_paid && !member.bonus_held) { %>
+              <span class="dz76-25"><%= t('ref_status_bonus_received') %></span>
             <% } else { %>
-              <span class="dz76-27"><%= t('awaiting') %></span>
+              <span class="dz76-27"><%= t('ref_status_pending') %></span>
             <% } %>
           </div>
         </div>

@@ -39,7 +39,8 @@
       <div class="grid grid-4 dz27-1">
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_referrals') %></div><div class="stat-number"><%= summary.totalReferrals %></div></div>
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_bonus_paid') %></div><div class="stat-number dz27-2"><%= summary.bonusPaidCount %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_status_pending') %></div><div class="stat-number dz27-3"><%= summary.totalReferrals - summary.bonusPaidCount %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_pending') %></div><div class="stat-number dz27-3"><%= summary.totalReferrals - summary.bonusPaidCount - (summary.heldCount || 0) %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_held') %></div><div class="stat-number"><%= summary.heldCount || 0 %></div></div>
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_commission_paid') %></div><div class="stat-number">৳ <%= Number(summary.totalCommissionPaid).toLocaleString('en-US') %></div></div>
       </div>
 
