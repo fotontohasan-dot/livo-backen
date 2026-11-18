@@ -8,6 +8,26 @@
 const { RedisStore } = require('connect-redis');
 const Redis = require('ioredis');
 
+// rolling:true হলে express-session প্রতি রিকোয়েস্টে store.touch() ডাকে → connect-redis প্রতিবার EXPIRE পাঠায়।
+// SESSION_TOUCH_THROTTLE_S (ডিফল্ট ০ = বন্ধ) দিলে একই সেশনের EXPIRE সর্বোচ্চ এত সেকেন্ডে একবার যায়।
+// সেশনের মেয়াদ ৩০ দিন, তাই ১ ঘণ্টা (৩৬০০) দেরি নিরাপদ; Redis কমান্ড প্রতি রিকোয়েস্টে ১টা কমে।
+const TOUCH_THROTTLE_MS = Math.max(0, parseInt(process.env.SESSION_TOUCH_THROTTLE_S || '0', 10)) * 1000;
+const touchedAt = new Map(); // key -> শেষ EXPIRE-এর সময়
+const TOUCH_MAP_MAX = 20000;
+
+function shouldSkipTouch(key) {
+  if (TOUCH_THROTTLE_MS <= 0) return false;
+  const now = Date.now();
+  const last = touchedAt.get(key);
+  if (last && now - last < TOUCH_THROTTLE_MS) return true;
+  if (touchedAt.size >= TOUCH_MAP_MAX) {
+    for (const [k, t] of touchedAt) if (now - t >= TOUCH_THROTTLE_MS) touchedAt.delete(k);
+    if (touchedAt.size >= TOUCH_MAP_MAX) touchedAt.clear();
+  }
+  touchedAt.set(key, now);
+  return false;
+}
+
 function adaptIoredis(c) {
   return {
     get: (key) => c.get(key),
@@ -16,7 +36,7 @@ function adaptIoredis(c) {
       if (exp && exp.type && exp.value != null) return c.set(key, val, exp.type, exp.value);
       return c.set(key, val);
     },
-    expire: (key, seconds) => c.expire(key, seconds),
+    expire: (key, seconds) => (shouldSkipTouch(key) ? Promise.resolve(1) : c.expire(key, seconds)),
     del: (keys) => (Array.isArray(keys) ? (keys.length ? c.del(...keys) : 0) : c.del(keys)),
     mGet: (keys) => c.mget(...keys),
     // connect-redis: client.scanIterator({ MATCH, COUNT }) → keys-এর ব্যাচ yield করে
@@ -51,4 +71,4 @@ function destroySessionById(sid) {
   });
 }
 
-module.exports = { createRedisSessionStore, adaptIoredis, setActiveSessionStore, getActiveSessionStore, destroySessionById };
+module.exports = { shouldSkipTouch, createRedisSessionStore, adaptIoredis, setActiveSessionStore, getActiveSessionStore, destroySessionById };

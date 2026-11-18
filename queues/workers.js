@@ -2,6 +2,7 @@
 const { Worker } = require('bullmq');
 const { connection } = require('./connection');
 const { QUEUE_NAMES } = require('./definitions');
+const { workerTuning } = require('./flags');
 
 const { processEmailJob } = require('./processors/email');
 const { processNotificationJob } = require('./processors/notification');
@@ -23,7 +24,7 @@ function startWorkers() {
   if (!connection) return [];
   if (workers.length) return workers; // একই প্রসেসে দ্বিতীয়বার consumer চালু হবে না
   workers = WORKER_CONFIG.map(({ name, processor, concurrency }) => {
-    const worker = new Worker(name, processor, { connection, concurrency });
+    const worker = new Worker(name, processor, { connection, concurrency, ...workerTuning() });
 
     worker.on('completed', (job) => {
       console.log(`✅ [Queue:${name}] job #${job.id} (${job.name}) সম্পন্ন হয়েছে`);

@@ -61,6 +61,7 @@ async function gracefulShutdown(signal) {
   try { await require('./services/queue').stopWorkerAndDrain(); } catch (e) {}
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
 
+  try { await require('./services/logBatcher').flushAllLogBatchers(); } catch (e) {}
   // ৩. Redis ও DB কানেকশন বন্ধ
   try {
     const cache = require('./services/cache');

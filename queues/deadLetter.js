@@ -7,6 +7,7 @@ const { QueueEvents } = require('bullmq');
 const { connection } = require('./connection');
 const { pool } = require('../db');
 const { QUEUE_NAMES, getQueue } = require('./definitions');
+const { queueEventsTuning } = require('./flags');
 
 let queueEventsList = [];
 
@@ -15,7 +16,7 @@ function startDeadLetterListeners() {
   if (queueEventsList.length) return; // duplicate listener আটকানো
 
   queueEventsList = Object.values(QUEUE_NAMES).map((name) => {
-    const qe = new QueueEvents(name, { connection });
+    const qe = new QueueEvents(name, { connection, ...queueEventsTuning() });
 
     qe.on('failed', async ({ jobId, failedReason }) => {
       try {

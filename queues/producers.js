@@ -5,6 +5,7 @@
 
 const { QUEUE_NAMES, getQueue } = require('./definitions');
 const { isQueueEnabled } = require('./connection');
+const { bullmqEnabled } = require('./flags');
 
 async function addJob(queueName, jobName, data, opts = {}) {
   const queue = getQueue(queueName);
@@ -42,6 +43,10 @@ async function enqueueNotification(type, payload, opts = {}) {
 
 // ==================== ACTIVITY LOG ====================
 async function enqueueActivityLog(payload, opts = {}) {
+  if (!bullmqEnabled()) { // BullMQ বন্ধ: Redis ছাড়াই Postgres-এ ব্যাচ করে লেখা
+    const ok = require('../services/logBatcher').getActivityLogBatcher().add(payload);
+    return { queued: false, batched: ok, jobId: null };
+  }
   const job = await addJob(QUEUE_NAMES.ACTIVITY_LOG, 'log', payload, opts).catch((err) => {
     console.error('⚠️ enqueueActivityLog ব্যর্থ, সরাসরি DB-তে লেখা হচ্ছে:', err.message);
     return null;
@@ -80,6 +85,10 @@ function getApiLogQueueStats() {
 }
 
 async function enqueueApiLog(payload, opts = {}) {
+  if (!bullmqEnabled()) { // BullMQ বন্ধ: Redis ছাড়াই Postgres-এ ব্যাচ করে লেখা
+    const ok = require('../services/logBatcher').getApiLogBatcher().add(payload);
+    return ok ? { queued: false, batched: true, jobId: null } : { queued: false, dropped: 'batch_buffer_full', jobId: null };
+  }
   const queue = getQueue(QUEUE_NAMES.API_LOG);
   if (queue && isQueueEnabled()) {
     refreshApiLogDepth(queue); // await নেই — শেষ জানা গভীরতা দিয়েই সিদ্ধান্ত

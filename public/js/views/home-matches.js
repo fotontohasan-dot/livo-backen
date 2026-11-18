@@ -120,7 +120,7 @@
   leagueSel.addEventListener('change', function () { league = leagueSel.value; render(); });
 
   load();
-  setInterval(load, 30000);
+  setInterval(function () { if (!document.hidden) load(); }, 30000);
   if (typeof io === 'function') {
     try {
       var s = window.livoSocket(), t = null;
