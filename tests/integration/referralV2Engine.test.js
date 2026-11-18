@@ -38,30 +38,34 @@ describe('কনফিগ ও টিয়ার', () => {
     expect(engine.tierFor(51).tier).toBe(5);
   });
 
-  test('ডিফল্ট কনফিগ: ন্যূনতম ৫০০ ও টিয়ার settings-এ সিডেড', async () => {
+  test('ডিফল্ট কনফিগ: ন্যূনতম ৫০০, টিয়ার ও slab settings-এ সিডেড; ডিফল্ট মোড slab', async () => {
     expect(await engine.getMinDeposit()).toBe(500);
     expect(await engine.getTiers()).toEqual(engine.DEFAULT_TIERS);
+    expect(await engine.getSlabs()).toEqual(engine.DEFAULT_SLABS);
+    expect(await engine.getBonusCap()).toBe(1000);
+    expect(engine.getBonusMode({})).toBe('slab');
+    expect(engine.getBonusMode({ REFERRAL_BONUS_MODE: 'tier' })).toBe('tier');
     expect(engine.parseTiers('not json')).toBeNull();
     expect(engine.parseTiers('[{"max":5,"amount":10}]')).toBeNull(); // শেষ টিয়ারে max থাকলে অবৈধ
   });
 });
 
 describe('পেআউট নিয়ম', () => {
-  test('৫০০-তে রেফারার বোনাস পায়: কয়েন, লেজার, রেকর্ড, ৩x স্পোর্টস/০x ক্যাসিনো ওয়েজারিং', async () => {
+  test('৫০০-তে রেফারার বোনাস পায় (slab ৭৫): কয়েন, লেজার, রেকর্ড, ৫x স্পোর্টস/৫x ক্যাসিনো ওয়েজারিং', async () => {
     const { referrer, referred } = await pair();
     const dep = await depositAndApprove(referred, 500);
 
-    expect(await coins(referrer)).toBe(100);
+    expect(await coins(referrer)).toBe(75);
     const rw = await reward(referred);
     expect(rw.status).toBe('paid');
     expect(rw.tier).toBe(1);
-    expect(Number(rw.amount)).toBe(100);
+    expect(Number(rw.amount)).toBe(75);
     expect(Number(rw.qualifying_deposit_id)).toBe(dep);
 
     const bonus = (await pool.query(`SELECT * FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [referrer])).rows;
     expect(bonus).toHaveLength(1);
-    expect(Number(bonus[0].sports_required)).toBe(300);
-    expect(Number(bonus[0].casino_required)).toBe(0);
+    expect(Number(bonus[0].sports_required)).toBe(375);
+    expect(Number(bonus[0].casino_required)).toBe(375);
     expect(bonus[0].status).toBe('active');
 
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);
@@ -89,7 +93,7 @@ describe('পেআউট নিয়ম', () => {
     expect(await reward(referred)).toBeNull();
 
     const big = await depositAndApprove(referred, 700);
-    expect(await coins(referrer)).toBe(100);
+    expect(await coins(referrer)).toBe(75);
     const rw = await reward(referred);
     expect(rw.status).toBe('paid');
     expect(Number(rw.qualifying_deposit_id)).toBe(big);
@@ -105,7 +109,9 @@ describe('পেআউট নিয়ম', () => {
     expect(await reward(referred)).toBeNull();
   });
 
-  test('টিয়ার ক্রম: ১০০, ২০০×৪, ৪০০×২; legacy_paid গোনা হয় না', async () => {
+  test('টিয়ার ক্রম (REFERRAL_BONUS_MODE=tier): ১০০, ২০০×৪, ৪০০×২; legacy_paid গোনা হয় না', async () => {
+    process.env.REFERRAL_BONUS_MODE = 'tier';
+    try {
     const referrer = await user('rf');
     // অন্য এক রেফার্ডের legacy_paid রেকর্ড — টিয়ার গণনায় আসবে না
     const legacyReferred = await user('lg');
@@ -124,9 +130,12 @@ describe('পেআউট নিয়ম', () => {
     expect(got).toEqual([100, 200, 200, 200, 200, 400, 400]);
     expect(await coins(referrer)).toBe(100 + 800 + 800);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referrer_id=$1 AND status='paid'`, [referrer])).toBe(7);
+    } finally { delete process.env.REFERRAL_BONUS_MODE; }
   });
 
-  test('একই রেফারারের ৫টি সমান্তরাল ডিপোজিটে টিয়ার রেস নেই (১০০, ২০০×৪)', async () => {
+  test('একই রেফারারের ৫টি সমান্তরাল ডিপোজিটে টিয়ার রেস নেই (tier মোড: ১০০, ২০০×৪)', async () => {
+    process.env.REFERRAL_BONUS_MODE = 'tier';
+    try {
     const referrer = await user('rf');
     const deps = [];
     for (let i = 0; i < 5; i++) {
@@ -142,6 +151,7 @@ describe('পেআউট নিয়ম', () => {
     expect(rows.map(r => Number(r.amount)).sort((a, b) => a - b)).toEqual([100, 200, 200, 200, 200]);
     expect(rows.map(r => r.tier)).toEqual([1, 2, 2, 2, 2]);
     expect(await coins(referrer)).toBe(900);
+    } finally { delete process.env.REFERRAL_BONUS_MODE; }
   });
 
   test('একই ডিপোজিটে সমান্তরাল অ্যাডমিন অনুমোদন ও ডুপ্লিকেট ইঞ্জিন কল — পেআউট একবারই', async () => {
@@ -167,7 +177,7 @@ describe('পেআউট নিয়ম', () => {
     ]);
     expect([a.outcome, b.outcome].sort()).toEqual(['already_processed', 'credited']);
     expect((await approve(dep)).success).toBe(false);
-    expect(await coins(referrer)).toBe(100);
+    expect(await coins(referrer)).toBe(75); // slab ৫০০–৯৯৯
     expect(await coins(referred)).toBe(800);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referred_user_id=$1 AND status='paid'`, [referred])).toBe(1);
   });
@@ -230,7 +240,7 @@ describe('জালিয়াতি-গেট', () => {
     const rw = await reward(referred);
     expect(rw.status).toBe('paid');
     expect(rw.evidence.ip_match_note).toBeTruthy();
-    expect(await coins(referrer)).toBe(100);
+    expect(await coins(referrer)).toBe(75);
   });
 
   test('একই device_fingerprint (রেফারার↔রেফার্ড) হলে pending_review; শুধু একই UA-হ্যাশ signature-এ নয়', async () => {
@@ -286,7 +296,7 @@ describe('ত্রুটি ও legacy', () => {
     const res = await engine.retryPending();
     expect(res.some(x => x.outcome === 'paid')).toBe(true);
     expect((await reward(referred)).status).toBe('paid');
-    expect(await coins(referrer)).toBe(100);
+    expect(await coins(referrer)).toBe(75);
   });
 
   test('legacy_paid ব্যাকফিল: পুরোনো paid রেফারেল রেকর্ড হয়, ব্যালেন্স/লেজার অপরিবর্তিত, পুনরায় চালালে নিরাপদ', async () => {

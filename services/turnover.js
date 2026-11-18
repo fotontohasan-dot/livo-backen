@@ -120,6 +120,11 @@ async function checkAndComplete(bonusId, db = pool) {
     const sportsOk = Number(b.sports_required) > 0 && Number(b.sports_done) >= Number(b.sports_required);
     const casinoOk = Number(b.casino_required) > 0 && Number(b.casino_done) >= Number(b.casino_required);
     done = sportsOk || casinoOk;
+  } else if (b.bonus_type === 'referral') {
+    // রেফারেল বোনাস: যে খাতে শর্ত > ০ (স্পোর্টস ও ক্যাসিনো) সব কটিই পূরণ হতে হবে — নইলে ক্যাসিনো ৫x বাকি থাকতেও লক খুলত
+    const sportsOk = Number(b.sports_required) <= 0 || Number(b.sports_done) >= Number(b.sports_required);
+    const casinoOk = Number(b.casino_required) <= 0 || Number(b.casino_done) >= Number(b.casino_required);
+    done = sportsOk && casinoOk;
   } else {
     done = Number(b.sports_done) >= Number(b.sports_required);
   }
