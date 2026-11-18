@@ -8,7 +8,8 @@
   var listEl = document.getElementById('hhList');
   var tabsEl = document.getElementById('hhTabs');
   var leagueSel = document.getElementById('hhLeague');
-  var MAX_ROWS = 24;
+  // সাইডবারে সর্বোচ্চ সারি: ভিউ থেকে data-max (ডিফল্ট ৮, কখনো ৮-এর বেশি নয়)
+  var MAX_ROWS = Math.min(Math.max(parseInt(root.getAttribute('data-max'), 10) || 8, 1), 8);
   var ALL = [];
   var filter = null;      // null = pick a default once data arrives
   var league = '';

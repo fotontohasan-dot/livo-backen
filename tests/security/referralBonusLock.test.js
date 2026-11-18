@@ -93,7 +93,7 @@ describe('রেফারেল বোনাসে টার্নওভার �
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await processReferralDeposit(client, referredId, 100);   // ৫০০-র নিচে
+      await processReferralDeposit(client, referredId, 50);    // ন্যূনতম (১০০)-র নিচে
       await client.query('COMMIT');
     } finally {
       client.release();

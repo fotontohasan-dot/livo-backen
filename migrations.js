@@ -410,6 +410,12 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referrer ON referrals(referrer_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referred ON referrals(referred_id);`);
 
+    // রেফারেল বোনাস: রেফার-করা ইউজারের প্রথম নিশ্চিত ডিপোজিটে রেফারারকে। আটকানো (অ্যাডমিন রিভিউ) অবস্থা ও
+    // পরিমাণ রেকর্ড। idempotent; ব্যালেন্স/সেটেলমেন্টের সাথে সম্পর্ক নেই।
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_held BOOLEAN NOT NULL DEFAULT false;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS hold_reason TEXT;`);
+    await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_amount NUMERIC(12,2);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referral_commissions (
         id SERIAL PRIMARY KEY,
@@ -1166,6 +1172,15 @@ async function applyMigrations(pool) {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_games_lobby
         ON games(category, is_active, admin_disabled, sort_order);
+    `);
+    // হোমের প্রোভাইডার ফিল্টার ও A-Z (ইংরেজি নামের প্রথম অক্ষর) ফিল্টারের জন্য ইনডেক্স
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_provider_lobby
+        ON games(provider, is_active, admin_disabled, sort_order);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_name_letter
+        ON games((UPPER(LEFT(name, 1))), is_active, admin_disabled);
     `);
 
     await pool.query(`

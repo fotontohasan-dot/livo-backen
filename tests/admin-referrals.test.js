@@ -12,6 +12,15 @@ async function registerUser() {
   return { agent, username, userId: row.id };
 }
 
+// registerUser() সব ইউজারকে একই টেস্ট-IP/ডিভাইসে বানায়। নতুন নিয়মে রেফারার ও রেফার-করা ইউজার একই IP/ডিভাইসে হলে
+// বোনাস আটকে যায় (সেটার টেস্ট referralFirstDeposit.test.js-এ)। বোনাস-দেওয়ার পথ যাচাইয়ের টেস্টে বাস্তব দুই ইউজারের মতো
+// আলাদা নেটওয়ার্ক দেখাতে রেফার-করা ইউজারের লগইন-IP/ডিভাইস আলাদা করা হয়।
+async function separateNetwork(userId) {
+  const tag = 'sep-' + userId;
+  await pool.query('UPDATE login_logs SET ip = $2, device_fingerprint = $3 WHERE user_id = $1', [userId, '198.51.100.' + ((userId % 250) + 1), tag]);
+  await pool.query('UPDATE device_sessions SET device_signature = $2 WHERE user_id = $1', [userId, tag]);
+}
+
 async function makeAdminAgent() {
   const { agent, username, userId } = await registerUser();
   await pool.query("UPDATE users SET role='admin' WHERE id=$1", [userId]);
@@ -49,11 +58,12 @@ describe('Admin Referral Management (/admin/referrals)', () => {
   test('আসল রেফারেল ডেটা তালিকায় দেখা যায় — রেফারার, রেফার্ড ইউজার, বোনাস স্ট্যাটাস, কমিশন', async () => {
     const { userId: referrerId, username: referrerUsername } = await registerUser();
     const { userId: referredId, username: referredUsername } = await registerUser();
+    await separateNetwork(referredId);
     await createReferral(null, referrerId, referredId);
 
     const client = await pool.connect();
     await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 1000); // ≥ MIN_DEPOSIT_FOR_BONUS
+    await processReferralDeposit(client, referredId, 1000); // ≥ ন্যূনতম (REFERRAL_MIN_DEPOSIT, ডিফল্ট ১০০)
     await client.query('COMMIT');
     client.release();
 
@@ -69,14 +79,14 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     expect(dbRow.rows[0].first_deposit_done).toBe(true);
   });
 
-  test('৫০০ টাকার কম ডিপোজিটে বোনাস দেওয়া হয় না, পেজে "পেন্ডিং" দেখায়', async () => {
+  test('ন্যূনতম (১০০)-র কম ডিপোজিটে বোনাস দেওয়া হয় না, পেজে "পেন্ডিং" দেখায়', async () => {
     const { userId: referrerId } = await registerUser();
     const { userId: referredId, username: referredUsername } = await registerUser();
     await createReferral(null, referrerId, referredId);
 
     const client = await pool.connect();
     await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 100); // < MIN_DEPOSIT_FOR_BONUS (500)
+    await processReferralDeposit(client, referredId, 50); // < ন্যূনতম (১০০)
     await client.query('COMMIT');
     client.release();
 
@@ -110,6 +120,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
   test('status=bonus_paid ফিল্টার শুধু বোনাস-প্রদত্ত রেফারেল দেখায়', async () => {
     const { userId: paidReferrerId } = await registerUser();
     const { userId: paidReferredId, username: paidUsername } = await registerUser();
+    await separateNetwork(paidReferredId);
     await createReferral(null, paidReferrerId, paidReferredId);
     const client = await pool.connect();
     await client.query('BEGIN');
@@ -163,6 +174,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
   test('একই রেফার্ড ইউজারের দুইটা সমসাময়িক (concurrent) qualifying ডিপোজিট রেফারারকে মাত্র একবারই signup বোনাস দেয়', async () => {
     const { userId: referrerId } = await registerUser();
     const { userId: referredId } = await registerUser();
+    await separateNetwork(referredId);
     await createReferral(null, referrerId, referredId);
 
     const before = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
