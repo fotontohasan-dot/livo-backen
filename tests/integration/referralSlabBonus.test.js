@@ -77,7 +77,7 @@ describe('প্রতি ধাপের সীমা-মান (আসল appr
     expect(await count(`SELECT COUNT(*) FROM bonuses WHERE user_id=$1`, [referrer])).toBe(0);
   });
 
-  const paid = [[500, 75, 1], [999, 75, 1], [1000, 100, 2], [4999, 200, 3], [5000, 300, 4],
+  const paid = [[500, 75, 1], [999, 75, 1], [1000, 100, 2], [1999, 100, 2], [2000, 200, 3], [4999, 200, 3], [5000, 300, 4],
     [9999, 300, 4], [10000, 500, 5], [29999, 500, 5], [30000, 1000, 6], [50000, 1000, 6]];
   test.each(paid)('%i → %i টাকা (ধাপ %i), ৫x/৫x টার্নওভার, আলাদা bonuses সারি', async (amount, bonus, slab) => {
     const { referrer, referred } = await pair();
