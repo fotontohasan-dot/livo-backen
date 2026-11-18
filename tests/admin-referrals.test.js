@@ -1,7 +1,9 @@
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
 const { pool } = require('../db');
 const rbac = require('../services/rbac');
-const { createReferral, processReferralDeposit } = require('../services/referral');
+const { createReferral } = require('../services/referral');
+const { runEngine, makeDeposit } = require('./helpers/referralDeposit');
+const engine = require('../services/referralRewards');
 
 async function registerUser() {
   const { agent, token } = await getCsrfAgent('/register');
@@ -61,11 +63,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     await separateNetwork(referredId);
     await createReferral(null, referrerId, referredId);
 
-    const client = await pool.connect();
-    await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 1000); // ≥ ন্যূনতম (REFERRAL_MIN_DEPOSIT, ডিফল্ট ১০০)
-    await client.query('COMMIT');
-    client.release();
+    await runEngine(referredId, 1000); // ≥ ন্যূনতম ডিপোজিট (৫০০)
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals');
@@ -74,9 +72,10 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     expect(res.text).toContain(referredUsername);
     expect(res.text).toContain('বোনাস প্রদত্ত');
 
-    const dbRow = await pool.query('SELECT signup_bonus_paid, first_deposit_done FROM referrals WHERE referrer_id=$1 AND referred_id=$2', [referrerId, referredId]);
-    expect(dbRow.rows[0].signup_bonus_paid).toBe(true);
+    const dbRow = await pool.query('SELECT first_deposit_done FROM referrals WHERE referrer_id=$1 AND referred_id=$2', [referrerId, referredId]);
     expect(dbRow.rows[0].first_deposit_done).toBe(true);
+    const rwRow = await pool.query('SELECT status FROM referral_rewards WHERE referred_user_id=$1', [referredId]);
+    expect(rwRow.rows[0].status).toBe('paid');
   });
 
   test('ন্যূনতম (১০০)-র কম ডিপোজিটে বোনাস দেওয়া হয় না, পেজে "পেন্ডিং" দেখায়', async () => {
@@ -84,11 +83,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const { userId: referredId, username: referredUsername } = await registerUser();
     await createReferral(null, referrerId, referredId);
 
-    const client = await pool.connect();
-    await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 50); // < ন্যূনতম (১০০)
-    await client.query('COMMIT');
-    client.release();
+    await runEngine(referredId, 100); // < ন্যূনতম ডিপোজিট (৫০০)
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals?search=' + referredUsername);
@@ -122,11 +117,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const { userId: paidReferredId, username: paidUsername } = await registerUser();
     await separateNetwork(paidReferredId);
     await createReferral(null, paidReferrerId, paidReferredId);
-    const client = await pool.connect();
-    await client.query('BEGIN');
-    await processReferralDeposit(client, paidReferredId, 1000);
-    await client.query('COMMIT');
-    client.release();
+    await runEngine(paidReferredId, 1000);
 
     const { userId: pendingReferrerId } = await registerUser();
     const { userId: pendingReferredId, username: pendingUsername } = await registerUser();
@@ -183,19 +174,12 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     // দুইটা আলাদা connection, প্রতিটা নিজের সম্পূর্ণ BEGIN..COMMIT transaction-এ — যেমন
     // admin bulk-approve, SSLCommerz success-redirect ও IPN callback প্রতিটা নিজের সম্পূর্ণ
     // transaction-এ processReferralDeposit ডাকে (creditApprovedDeposit-এর মতো)
-    async function runInOwnTransaction(amount) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        await processReferralDeposit(client, referredId, amount);
-        await client.query('COMMIT');
-      } finally {
-        client.release();
-      }
-    }
+    // V2: প্রতিটা ডিপোজিটের জন্য আলাদা ইঞ্জিন-ট্রানজ্যাকশন (আলাদা connection)
+    const dep1 = await makeDeposit(referredId, 1000, { status: 'approved' });
+    const dep2 = await makeDeposit(referredId, 1500, { status: 'approved' });
     await Promise.all([
-      runInOwnTransaction(1000),
-      runInOwnTransaction(1500)
+      engine.processReferralReward(referredId, dep1),
+      engine.processReferralReward(referredId, dep2)
     ]);
 
     const after = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
@@ -203,11 +187,12 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     // ১ম রেফারেলের বোনাস সবসময় ১০০ টাকা (signupBonusFor(1) === 100) — দুইবার দিলে ২০০ হতো
     expect(coinsAfter - coinsBefore).toBe(100);
 
-    const refRow = await pool.query('SELECT signup_bonus_paid FROM referrals WHERE referrer_id=$1 AND referred_id=$2', [referrerId, referredId]);
-    expect(refRow.rows[0].signup_bonus_paid).toBe(true);
+    const refRow = await pool.query('SELECT status FROM referral_rewards WHERE referrer_id=$1 AND referred_user_id=$2', [referrerId, referredId]);
+    expect(refRow.rows).toHaveLength(1);
+    expect(refRow.rows[0].status).toBe('paid');
 
     const commissionCount = await pool.query(
-      `SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1 AND from_user_id=$2 AND reason='signup'`,
+      `SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1 AND from_user_id=$2 AND reason='first_deposit'`,
       [referrerId, referredId]
     );
     expect(parseInt(commissionCount.rows[0].count)).toBe(1);

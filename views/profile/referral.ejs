@@ -141,7 +141,7 @@
         <div class="dz76-30">
           <div>
             <div class="dz76-31">
-              <%= h.reason === 'signup' ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
+              <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
             </div>
             <div class="dz76-24">
               <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>

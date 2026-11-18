@@ -21,7 +21,9 @@ const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const { createBonus } = require('./turnover');
 const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const { tierFor, getTiers, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
+const MIN_DEPOSIT_FOR_BONUS = DEFAULT_MIN_DEPOSIT; // ডিফল্ট; আসল মান settings.referral_min_deposit (referralRewards.getMinDeposit)
 // এর উপরে risk score উঠলে রেফারেল বোনাস স্বয়ংক্রিয়ভাবে ছাড় না দিয়ে
 // অ্যাডমিন রিভিউয়ের জন্য আটকে রাখা হয়।
 const REFERRAL_REVIEW_RISK_THRESHOLD = 50;
@@ -54,14 +56,9 @@ async function getCommissionRates() {
   return rates;
 }
 
-// সফল রেফার সংখ্যা অনুযায়ী প্রথম-ডিপোজিট বোনাস
+// ডিফল্ট টিয়ার অনুযায়ী বোনাস (কনফিগযোগ্য মান: referralRewards.getTiers())
 function signupBonusFor(successfulCount) {
-  // successfulCount = এই রেফারটি ধরে কতজন হলো (১ম, ২য়...)
-  if (successfulCount <= 1) return 100;
-  if (successfulCount <= 5) return 200;
-  if (successfulCount <= 15) return 400;
-  if (successfulCount <= 50) return 800;
-  return 1500;
+  return tierFor(successfulCount, DEFAULT_TIERS).amount;
 }
 
 // ==================== ১. রেফারেল রেকর্ড তৈরি (রেজিস্টারের সময়) ====================
@@ -272,8 +269,9 @@ async function getReferralStats(userId) {
     `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1`,
     [userId]
   );
+  // সফল = V2 রেফারেল 'paid' (legacy_paid আলাদা — টিয়ারে গোনা হয় না)
   const successRes = await pool.query(
-    `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true AND bonus_held = false`,
+    `SELECT COUNT(*) FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
     [userId]
   );
   // মোট আয় (সব কমিশন + বোনাস)
@@ -292,9 +290,13 @@ async function getReferralStats(userId) {
   );
   // আমার টিম (যাদের সরাসরি রেফার করেছি)
   const teamRes = await pool.query(
-    `SELECT u.username, u.created_at, r.first_deposit_done, r.signup_bonus_paid, r.bonus_held
+    `SELECT u.username, u.created_at, r.first_deposit_done,
+            COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
+            (rr.status = 'pending_review') AS bonus_held,
+            rr.status AS reward_status
        FROM referrals r
        JOIN users u ON r.referred_id = u.id
+       LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
       WHERE r.referrer_id = $1
       ORDER BY r.created_at DESC LIMIT 50`,
     [userId]
@@ -305,7 +307,7 @@ async function getReferralStats(userId) {
     totalReferrals: parseInt(totalRes.rows[0].count),
     successfulReferrals: successCount,
     totalEarnings: Number(earnRes.rows[0].total),
-    nextBonus: signupBonusFor(successCount + 1),
+    nextBonus: tierFor(successCount + 1, await getTiers()).amount,
     history: historyRes.rows,
     team: teamRes.rows
   };
@@ -321,5 +323,6 @@ module.exports = {
   signupBonusFor,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES,
+  MIN_DEPOSIT_FOR_BONUS,
   SITE_MIN_DEPOSIT
 };

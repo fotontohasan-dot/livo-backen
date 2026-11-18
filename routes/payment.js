@@ -3,7 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
 const { createBonus, canWithdraw } = require('../services/turnover');
-const { processReferralDeposit } = require('../services/referral');
+const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
 const rbac = require('../services/rbac');
@@ -845,7 +845,7 @@ async function creditApprovedDeposit(client, request) {
         await createBonus(client, request.user_id, 'deposit', bonusGiven);
       }
     }
-    await processReferralDeposit(client, request.user_id, request.amount);
+    // রেফারেল বোনাস এখানে নয় — ডিপোজিট COMMIT-এর পরে আলাদা ট্রানজ্যাকশনে (services/referralRewards.js)।
   }
 
   await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
@@ -868,6 +868,7 @@ async function creditApprovedDeposit(client, request) {
 // একক রুট ও বাল্ক রুট দুটোই এই একই ফাংশন কল করে।
 async function approvePaymentRequestById(id) {
   const client = await pool.connect();
+  let referralPending = null; // ইঞ্জিন চলে client.release()-এর পরে (দুটো connection একসাথে ধরে pool আটকানো এড়াতে)
   try {
     await client.query('BEGIN');
     const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
@@ -878,6 +879,7 @@ async function approvePaymentRequestById(id) {
     }
     const extra = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    if (request.type === 'deposit') referralPending = { userId: request.user_id, depositId: request.id };
     return { success: true, request, ...extra };
   } catch (err) {
     await client.query('ROLLBACK');
@@ -885,6 +887,7 @@ async function approvePaymentRequestById(id) {
     return { success: false, reason: 'error', error: err.message };
   } finally {
     client.release();
+    if (referralPending) await referralAfterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 }
 
@@ -1086,6 +1089,7 @@ router.post('/sslcommerz/init', isAuth, requireFeature('deposit'), paymentLimite
 // SSLCommerz পেমেন্ট সফল হলে ইউজারের ব্রাউজার এখানে রিডাইরেক্ট হয়ে আসে
 router.post('/sslcommerz/success', async (req, res) => {
   const { tran_id, val_id } = req.body;
+  let referralPending = null; // ইঞ্জিন client.release()-এর পরে চলে
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1129,6 +1133,7 @@ router.post('/sslcommerz/success', async (req, res) => {
     );
     await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    referralPending = { userId: request.user_id, depositId: request.id };
 
     if (req.session.user) {
       const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
@@ -1143,6 +1148,7 @@ router.post('/sslcommerz/success', async (req, res) => {
     res.redirect('/payment/deposit');
   } finally {
     client.release();
+    if (referralPending) await referralAfterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 });
 
@@ -1210,6 +1216,8 @@ router.post('/sslcommerz/cancel', async (req, res) => {
 // সার্ভার-টু-সার্ভার IPN — ব্যাকআপ হিসেবে, যদি ইউজারের ব্রাউজার success_url এ ফিরে না আসে
 router.post('/sslcommerz/ipn', async (req, res) => {
   const { tran_id, val_id } = req.body;
+  let credited = false;
+  let referralPending = null; // ইঞ্জিন client.release()-এর পরে চলে
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1237,8 +1245,10 @@ router.post('/sslcommerz/ipn', async (req, res) => {
         [val_id, JSON.stringify(verification), request.id]
       );
       await creditApprovedDeposit(client, request);
+      credited = true;
     }
     await client.query('COMMIT');
+    if (credited) referralPending = { userId: request.user_id, depositId: request.id };
     res.sendStatus(200);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1252,6 +1262,7 @@ router.post('/sslcommerz/ipn', async (req, res) => {
     res.sendStatus(500);
   } finally {
     client.release();
+    if (referralPending) await referralAfterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 });
 

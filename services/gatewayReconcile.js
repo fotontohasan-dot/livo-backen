@@ -68,6 +68,7 @@ async function reconcileOne(request) {
   const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
   const currencyMatches = paymentVerification.isExpectedCurrency(verification);
 
+  let referralPending = null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -94,6 +95,7 @@ async function reconcileOne(request) {
           `আপনার ${row.amount} টাকার ডিপোজিট যাচাই করে যোগ করা হয়েছে।`]
       );
       await client.query('COMMIT');
+      referralPending = { userId: row.user_id, depositId: row.id };
       return 'credited';
     }
 
@@ -124,6 +126,8 @@ async function reconcileOne(request) {
     return 'error';
   } finally {
     client.release();
+    // রেফারেল ইঞ্জিন ডিপোজিট COMMIT ও client.release()-এর পরে, আলাদা ট্রানজ্যাকশনে
+    if (referralPending) await require('./referralRewards').afterDepositCommit(referralPending.userId, referralPending.depositId);
   }
 }
 

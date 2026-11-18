@@ -2084,6 +2084,75 @@ async function applyMigrations(pool) {
     `);
     console.log("✅ Referral Contest Payout Tracking table ready");
 
+    // ==================== Referral V2: referral_rewards ====================
+    // docs/REFERRAL_V2_DESIGN.md। শুধু additive (IF NOT EXISTS) — পুরোনো referrals /
+    // referral_commissions / bonuses অপরিবর্তিত। রোলব্যাক: ওই ডকের "Rollback" অংশ।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_rewards (
+        id BIGSERIAL PRIMARY KEY,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id),
+        referrer_id INTEGER NOT NULL REFERENCES users(id),
+        status VARCHAR(20) NOT NULL,
+        tier SMALLINT,
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        qualifying_deposit_id INTEGER REFERENCES payment_requests(id),
+        review_reason TEXT,
+        evidence JSONB,
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMPTZ,
+        paid_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT referral_rewards_referred_uniq UNIQUE (referred_user_id),
+        CONSTRAINT referral_rewards_status_chk CHECK (status IN
+          ('pending_review','paid','rejected','reversed','legacy_paid','retry_pending'))
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_referrer_status ON referral_rewards(referrer_id, status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_status ON referral_rewards(status);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_reward_adjustments (
+        id BIGSERIAL PRIMARY KEY,
+        reward_id BIGINT NOT NULL REFERENCES referral_rewards(id),
+        kind VARCHAR(20) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        note TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_reward_adj_reward ON referral_reward_adjustments(reward_id);`);
+
+    // কনফিগ (বিদ্যমান site_settings কাঠামো); বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING।
+    // referral_tiers: আগের paid রেফারেল সংখ্যা অনুযায়ী (max = ওই টিয়ারের সর্বোচ্চ ক্রমিক, null = অসীম)।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_min_deposit', '500'),
+      ('referral_tiers', '[{"max":1,"amount":100},{"max":5,"amount":200},{"max":15,"amount":400},{"max":50,"amount":800},{"max":null,"amount":1500}]')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // legacy_paid ব্যাকফিল: পুরোনো সাইন-আপ-বোনাস পাওয়া (signup_bonus_paid=true) রেফারেল —
+    // এর মধ্যে আগের pending_review বোনাসের রেফারেলও (ওগুলোতেও ওই ফ্ল্যাগ true হতো) —
+    // শুধু রেকর্ড হয়। ব্যালেন্স/লেজার/bonuses কিছুই বদলায় না; নতুন পেআউট বা কাটছাঁট নেই।
+    // idempotent: UNIQUE(referred_user_id) + DO NOTHING।
+    const legacyBackfill = await pool.query(`
+      INSERT INTO referral_rewards (referred_user_id, referrer_id, status, amount, review_reason, created_at)
+      SELECT r.referred_id, r.referrer_id, 'legacy_paid',
+             COALESCE((SELECT SUM(rc.amount) FROM referral_commissions rc
+                        WHERE rc.earner_id = r.referrer_id AND rc.from_user_id = r.referred_id
+                          AND rc.reason = 'signup'), 0),
+             'legacy signup-bonus referral (V2 backfill)',
+             COALESCE(r.created_at, NOW())
+        FROM referrals r
+       WHERE r.signup_bonus_paid = true
+         AND r.referrer_id IS NOT NULL AND r.referred_id IS NOT NULL
+      ON CONFLICT (referred_user_id) DO NOTHING
+    `);
+    const legacyPending = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM bonuses WHERE bonus_type = 'referral' AND status = 'pending_review'`
+    );
+    console.log(`✅ Referral V2 tables ready — legacy_paid backfill: ${legacyBackfill.rowCount} নতুন সারি (পুরোনো pending_review referral bonus: ${legacyPending.rows[0].n}টি, সবই legacy_paid-এর অন্তর্ভুক্ত)`);
+
     // ==================== হট-পাথ ইনডেক্স ====================
     // `bets` টেবিলে এতদিন একটাও ইনডেক্স ছিল না, অথচ এটাই সবচেয়ে ব্যস্ত ও টাকা-সংক্রান্ত
     // টেবিলগুলোর একটা। যেসব কোয়েরি প্রতিবার পুরো টেবিল স্ক্যান করত:
