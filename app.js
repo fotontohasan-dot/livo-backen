@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./utils/normalizeRedisEnv').normalizeRedisEnv();
 const process = require('node:process');
 
 // ==================== Environment Variable ভ্যালিডেশন ====================
@@ -521,7 +522,9 @@ const generalLimiter = rateLimit({
   keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:general:')
+  // RATE_LIMIT_GENERAL_STORE=memory: এই সবচেয়ে ব্যস্ত (প্রতি রিকোয়েস্টে) লিমিটার প্রতি-ইনস্ট্যান্স মেমরিতে চলে — Redis কমান্ড খরচ নেই।
+  // লগইন/রেজিস্ট্রেশন/আর্থিক/পেমেন্ট লিমিটার সবসময় Redis-এ থাকে। ডিফল্ট: redis (আগের আচরণ)।
+  store: process.env.RATE_LIMIT_GENERAL_STORE === 'memory' ? undefined : new RedisRateLimitStore('rl:general:')
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট

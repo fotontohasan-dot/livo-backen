@@ -77,7 +77,7 @@ async function addVipTurnover(userId, amount) {
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type)
          VALUES ($1, 'VIP আপগ্রেড!', $2, 'success')`,
-        [userId, `অভিনন্দন! আপনি VIP ${name} (লেভেল ${newLevel}) হয়েছেন।${bonus > 0 ? ' বোনাস: ' + bonus + ' কয়েন।' : ''}`]
+        [userId, `অভিনন্দন! আপনি VIP ${name} (লেভেল ${newLevel}) হয়েছেন।${bonus > 0 ? ' বোনাস: ' + bonus + ' টাকা।' : ''}`]
       );
     }
   } catch (e) {

@@ -81,7 +81,7 @@ async function notifyAdmins(title, message) {
 //  ১ম ডিপোজিট: ১০০%
 //  ২য় ডিপোজিট এবং তার পর সব সাধারণ দিনের ডিপোজিট: ৫০%
 //  শুক্রবার (১ম ডিপোজিটের পর যেকোনো ডিপোজিট): ৮০% (রিলোড)
-//  সর্বোচ্চ বোনাস ১৫০০০ কয়েন
+//  সর্বোচ্চ বোনাস ১৫০০০ টাকা
 function bonusPercentFor(depositCountBefore, isFriday) {
   if (depositCountBefore === 0) return 100;   // প্রথম ডিপোজিট
   if (isFriday) return 80;                      // শুক্রবার রিলোড
@@ -501,7 +501,7 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
   try {
     // ব্যালেন্স আর PIN স্ট্যাটাস আলাদা করে আনা হয়। আগে দুটো একসাথে
     // `SELECT coins, withdraw_pin_hash` দিয়ে আনা হতো আর ব্যর্থ হলে একটা
-    // fallback ০ কয়েন বসিয়ে দিত — অর্থাৎ ব্যালেন্স আনা না গেলেও পেজটা
+    // fallback ০ টাকা বসিয়ে দিত — অর্থাৎ ব্যালেন্স আনা না গেলেও পেজটা
     // "৳ ০.০০" দেখিয়ে রেন্ডার হয়ে যেত। টাকার পেজে এটা সবচেয়ে খারাপ
     // ধরনের নীরব ব্যর্থতা, তাই এখন এরর উপরের catch-এ যায়।
     //

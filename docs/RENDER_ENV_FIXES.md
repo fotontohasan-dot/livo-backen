@@ -2,7 +2,7 @@
 
 | লগ সতর্কতা | সমাধান |
 |---|---|
-| `DATABASE_SSL_INSECURE চালু` | ভ্যারিয়েবলটি মুছুন। কানেক্ট না হলে Render Postgres-এর CA সার্টিফিকেট `DATABASE_CA_CERT`-এ বসান, অথবা Render-এর Internal Database URL ব্যবহার করুন। মুছে ডিপ্লয় করে `PostgreSQL connected` লগ দেখুন; ব্যর্থ হলে আবার চালু করে আমাকে জানান। |
+| `DATABASE_SSL_INSECURE চালু` | প্রোডাকশনে এটা চালু থাকলে বুটই ব্যর্থ হয় (staging-এ শুধু সতর্কতা); বিস্তারিত docs/DATABASE_TLS.md। ভ্যারিয়েবলটি মুছুন। কানেক্ট না হলে Render Postgres-এর CA সার্টিফিকেট `DATABASE_CA_CERT`-এ বসান, অথবা Render-এর Internal Database URL ব্যবহার করুন। মুছে ডিপ্লয় করে `PostgreSQL connected` লগ দেখুন; ব্যর্থ হলে আবার চালু করে আমাকে জানান। |
 | `TELEGRAM_ADMIN_USER_IDS` নেই | আপনার Telegram numeric user id দিন (@userinfobot থেকে পাবেন)। একাধিক হলে কমা দিয়ে। |
 | `REDIS_URL` নেই | Render → New → Key Value (Redis) বানিয়ে Internal URL `REDIS_URL`-এ দিন। না দিলে অ্যাপ DB ফলব্যাকে চলে (একক ইনস্ট্যান্সে সমস্যা নেই)। |
 | `METRICS_TOKEN` নেই | Prometheus/মনিটরিং না চালালে ঐচ্ছিক। চালালে: `openssl rand -hex 24` দিয়ে টোকেন বানিয়ে বসান। |

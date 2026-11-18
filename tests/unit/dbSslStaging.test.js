@@ -25,4 +25,13 @@ describe('resolveSslConfig', () => {
     process.env.NODE_ENV = 'production'; process.env.APP_ENV = 'staging'; process.env.DATABASE_SSL = 'false';
     expect(resolveSslConfig()).toBe(false);
   });
+  test('প্রোডাকশন (staging নয়) + DATABASE_SSL_INSECURE=true → বুট ব্যর্থ (throw)', () => {
+    process.env.NODE_ENV = 'production'; process.env.DATABASE_SSL_INSECURE = 'true';
+    expect(() => resolveSslConfig()).toThrow(/DATABASE_SSL_INSECURE/);
+  });
+  test('staging + DATABASE_SSL_INSECURE=true → শুধু সতর্কতা, throw নয়', () => {
+    process.env.NODE_ENV = 'production'; process.env.APP_ENV = 'staging'; process.env.DATABASE_SSL_INSECURE = 'true';
+    expect(resolveSslConfig()).toEqual({ rejectUnauthorized: false });
+    expect(console.warn).toHaveBeenCalled();
+  });
 });

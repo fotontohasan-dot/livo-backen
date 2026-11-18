@@ -104,7 +104,7 @@ describe('লেখার পথের তালিকা বাঁধা (ন�
   test('bank_cards-এ INSERT/UPDATE শুধু routes/profile.js (ভ্যালিডেটরসহ) ও migrations/ক্লিনআপ স্ক্রিপ্টে', () => {
     const root = path.join(__dirname, '../..');
     const hits = walk(root).filter((f) => /(INSERT\s+INTO|UPDATE)\s+bank_cards/i.test(fs.readFileSync(f, 'utf8'))).map((f) => path.relative(root, f)).sort();
-    expect(hits).toEqual(['migrations.js', 'routes/profile.js', 'scripts/cleanupBankCardHolderName.js'].filter((f) => hits.includes(f)));
+    expect(hits).toEqual(['migrations.js', 'routes/profile.js', 'scripts/cleanupBankCardHolderName.js', 'scripts/stagingCleanupProof.js'].filter((f) => hits.includes(f)));
     const prof = fs.readFileSync(path.join(root, 'routes/profile.js'), 'utf8');
     expect((prof.match(/INSERT INTO bank_cards/g) || []).length).toBe(2);
     expect((prof.match(/validateHolderName\(holder_name\)/g) || []).length).toBe(2);

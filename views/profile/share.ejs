@@ -51,7 +51,7 @@
     <div class="im62-2">📤</div>
     <div class="dz61-5"><%= t('shr_heading') %></div>
     <div class="dz61-6">
-      প্রতিদিন <%= t('prof_share') %> করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
+      প্রতিদিন <%= t('prof_share') %> করে <strong><%= share ? share.bonus : 20 %> টাকা</strong> পান
     </div>
   </div>
 
@@ -86,7 +86,7 @@
       <div class="dz61-17"><%= t('shr_after_share') %></div>
       <form class="im62-4" action="/profile/share/claim" method="POST">
         <button type="submit" class="btn btn-primary im62-5">
-          🎁 <%= t('prof_share') %> বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
+          🎁 <%= t('prof_share') %> বোনাস নিন (<%= share ? share.bonus : 20 %> টাকা)
         </button>
       </form>
     <% } %>

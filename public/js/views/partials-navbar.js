@@ -97,7 +97,7 @@ window.refreshBalance = refreshBalance;
     if (!document.hidden) refreshBalance();
   });
   // প্রতি ৩০ সেকেন্ডে একবার
-  setInterval(refreshBalance, 30000);
+  setInterval(function () { if (!document.hidden) refreshBalance(); }, 60000);
 })();
 
 // নেভবারের বাটন — আগে ইনলাইন onclick ছিল (docs/CSP.md ধাপ ২)।

@@ -136,7 +136,7 @@ async function settleTournament(tournamentId, options = {}) {
           `INSERT INTO notifications (user_id, title, message, type)
            VALUES ($1, $2, $3, 'success')`,
           [a.userId, 'টুর্নামেন্ট পুরস্কার',
-            `${tournament.name || 'টুর্নামেন্ট'} — আপনার র‍্যাঙ্ক ${a.rank}, পুরস্কার ${a.amount} কয়েন।`]
+            `${tournament.name || 'টুর্নামেন্ট'} — আপনার র‍্যাঙ্ক ${a.rank}, পুরস্কার ${a.amount} টাকা।`]
         );
       }
       await client.query(
@@ -218,7 +218,7 @@ async function cancelTournament(tournamentId) {
       await client.query(
         `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
         [p.user_id, 'টুর্নামেন্ট বাতিল',
-          `${tournament.name || 'টুর্নামেন্ট'} বাতিল হয়েছে — ${fee} কয়েন এন্ট্রি ফি ফেরত দেওয়া হয়েছে।`]
+          `${tournament.name || 'টুর্নামেন্ট'} বাতিল হয়েছে — ${fee} টাকা এন্ট্রি ফি ফেরত দেওয়া হয়েছে।`]
       );
       refunded += fee; refundCount++;
     }

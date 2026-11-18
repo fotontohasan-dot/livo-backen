@@ -106,7 +106,7 @@ describe('চ্যাট হিস্টোরি — সার্ভার-স
   });
 });
 
-describe('কয়েন ট্রানজেকশন হিস্টোরি — সার্ভার-সাইড বাউন্ড', () => {
+describe('টাকা ট্রানজেকশন হিস্টোরি — সার্ভার-সাইড বাউন্ড', () => {
   test('/coins/history-এ LIMIT প্রয়োগ হয় (আগে পুরো হিস্ট্রি আনবাউন্ডেড আসত)', () => {
     const src = fs.readFileSync(path.join(ROOT, 'routes', 'coins.js'), 'utf8');
     expect(src).toMatch(/FROM coin_transactions WHERE user_id=\$1 ORDER BY created_at DESC LIMIT 500/);

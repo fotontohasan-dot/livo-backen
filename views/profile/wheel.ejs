@@ -71,7 +71,7 @@
     </div>
   <% } else if (!(status && status.canSpin)) { %>
     <div class="dz69-6">
-      ✅ <%= t('whl_done') %><% if (status && status.prize) { %> — পেয়েছেন <strong class="dz69-7"><%= status.prize %> কয়েন</strong><% } %>।<br>
+      ✅ <%= t('whl_done') %><% if (status && status.prize) { %> — পেয়েছেন <strong class="dz69-7"><%= status.prize %> টাকা</strong><% } %>।<br>
       <%= t('whl_come_back') %>
     </div>
   <% } %>
@@ -85,7 +85,7 @@
       <% history.forEach(function(h) { %>
         <div class="dz69-11">
           <span class="dz69-12"><%= h.spin_date %></span>
-          <span class="dz69-13">+<%= h.prize %> কয়েন</span>
+          <span class="dz69-13">+<%= h.prize %> টাকা</span>
         </div>
       <% }); %>
     <% } else { %>

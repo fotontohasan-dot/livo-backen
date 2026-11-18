@@ -119,9 +119,9 @@ describe('ফিচার ফ্ল্যাগ — সার্ভার-সা
     });
   });
 
-  describe('অডিটে পাওয়া ফাঁক — কয়েন-প্রদানকারী ও ব্রাউজিং রুট', () => {
-    test('daily_rewards OFF হলে /coins/daily-bonus কয়েন দেয় না', async () => {
-      // Phase 2 অডিটে পাওয়া: এই রুট ১০০ কয়েন দিত কিন্তু ফ্ল্যাগ দেখত না।
+  describe('অডিটে পাওয়া ফাঁক — টাকা-প্রদানকারী ও ব্রাউজিং রুট', () => {
+    test('daily_rewards OFF হলে /coins/daily-bonus টাকা দেয় না', async () => {
+      // Phase 2 অডিটে পাওয়া: এই রুট ১০০ টাকা দিত কিন্তু ফ্ল্যাগ দেখত না।
       await setFlag('daily_rewards', false);
       const res = await agent.post('/coins/daily-bonus')
         .set('Accept', 'application/json').send({});

@@ -1,12 +1,12 @@
 // services/streak.js
 // উইন স্ট্রিক বোনাস — পরপর ক্যাসিনো গেম জিতলে স্ট্রিক বাড়ে, হারলে ০।
-// নির্দিষ্ট স্ট্রিকে পৌঁছালে অতিরিক্ত বোনাস কয়েন।
+// নির্দিষ্ট স্ট্রিকে পৌঁছালে অতিরিক্ত বোনাস টাকা।
 
 const { pool } = require('../db');
 
 // পুরনো নিয়ম (ফিক্সড): 3win=50, 5win=150, 7win=400, 10win=1000 — বাতিল
 // এরপর ২০% (১০০ বাজিতে ২০ বোনাস) → ৫% (১০০ বাজিতে ৫ বোনাস) → এখন ০.০৫%
-// (১০০ কয়েন বাজিতে ০.০৫ কয়েন বোনাস)। coins কলাম NUMERIC(14,2), তাই ফ্র্যাকশনাল
+// (১০০ টাকা বাজিতে ০.০৫ টাকা বোনাস)। coins কলাম NUMERIC(14,2), তাই ফ্র্যাকশনাল
 // মান নিরাপদে সাপোর্ট করে — তাই আর Math.round দিয়ে পূর্ণসংখ্যায় বৃত্তাকার করা
 // হয় না, শুধু ২ দশমিক ঘরে রাউন্ড করা হয়।
 // Bonus = Min(Max(বাজি × 0.05%, ০.০৫), ৫)
@@ -70,7 +70,7 @@ async function recordGameResult(userId, won, betAmount) {
         await client.query(
           `INSERT INTO notifications (user_id, title, message, type)
            VALUES ($1, 'উইন স্ট্রিক!', $2, 'success')`,
-          [userId, `🔥 ${streak} টানা জয়! আপনি ${bonus} কয়েন বোনাস পেয়েছেন!`]
+          [userId, `🔥 ${streak} টানা জয়! আপনি ${bonus} টাকা বোনাস পেয়েছেন!`]
         );
         await client.query('COMMIT');
         return { streak, bonus, milestone: streak };
@@ -121,7 +121,7 @@ async function getStreak(userId) {
     nextMilestone: next,
     nextMultiplier: STREAK_PERCENT,
     milestones,
-    nextBonusNote: `বাজির ০.০৫% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
+    nextBonusNote: `বাজির ০.০৫% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} টাকা)`,
     interval: STREAK_INTERVAL,
     minBonus: STREAK_MIN_BONUS,
     maxBonus: STREAK_MAX_BONUS,

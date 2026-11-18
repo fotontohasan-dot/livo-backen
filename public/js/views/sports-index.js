@@ -117,6 +117,6 @@
     }
 
     load();
-    setInterval(load, 30000);
+    setInterval(function () { if (!document.hidden) load(); }, 30000);
   })();
 })();

@@ -89,12 +89,16 @@
 <%# variant 'casino' = হোমের নতুন বটম-বার (হোম, ক্যাসিনো, স্পোর্টস, ওয়ালেট, প্রোফাইল); বাকি পাতায় আগের বার অপরিবর্তিত %>
 <% if (locals.variant === 'casino') { %>
 <nav class="pub-bottom-nav" id="pubBottomNav" aria-label="<%= t.hc_main_nav %>">
+<%# হোমের ক্যাসিনো-প্রথম বার (হোম, ক্যাসিনো, স্পোর্টস, ওয়ালেট, প্রোফাইল) — অন্য সব পেজে আগের বারই থাকে %>
+<% if (locals.bottomNavVariant === 'casino') { %>
+<nav class="pub-bottom-nav" id="pubBottomNav" aria-label="<%= t.home_bottom_nav %>">
   <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-house"></i>
     <span><%= t.nav_home %></span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/games" class="pub-nav-item <%= locals.currentPage === 'games' ? 'active' : '' %>">
+  <a href="/games" class="pub-nav-item <%= locals.currentPage === 'casino' ? 'active' : '' %>">
     <i class="fas fa-dice"></i>
     <span><%= t.nav_casino %></span>
     <span class="pub-active-bar"></span>
@@ -105,6 +109,7 @@
     <span class="pub-active-bar"></span>
   </a>
   <a href="/coins" class="pub-nav-item <%= locals.currentPage === 'coins' ? 'active' : '' %>">
+  <a href="/payment/wallet" class="pub-nav-item <%= locals.currentPage === 'wallet' ? 'active' : '' %>">
     <i class="fas fa-wallet"></i>
     <span><%= t.nav_wallet %></span>
     <span class="pub-active-bar"></span>

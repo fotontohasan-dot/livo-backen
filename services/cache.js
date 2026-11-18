@@ -33,6 +33,36 @@ const FALLTHROUGH_QUEUE_MAX = Math.max(1, parseInt(process.env.CACHE_FALLTHROUGH
 const LOCAL_TTL_SECONDS = parseInt(process.env.CACHE_LOCAL_FALLBACK_TTL_SECONDS || '5', 10);
 const LOCAL_MAX = parseInt(process.env.CACHE_LOCAL_FALLBACK_MAX || '500', 10);
 
+// L1: in-process ছোট ক্যাশ — getOrSet-এর সামনে। Redis (Upstash) কমান্ড বাঁচায়: প্রতি রিকোয়েস্টে settings/feature-flag/role/ip_rule
+// Redis-এ না গিয়ে মেমরি থেকে আসে। ডিফল্ট ০ = বন্ধ (আগের আচরণ)। সুপারিশ: CACHE_L1_TTL_SECONDS=10 থেকে 30।
+// নোট: del()/delByPattern() এই প্রসেসের L1 সাথে সাথে মোছে; অন্য ইনস্ট্যান্সে পরিবর্তন দেখতে সর্বোচ্চ এই TTL পর্যন্ত দেরি হতে পারে।
+// মান JSON স্ট্রিং হিসেবে রাখা হয় — caller অবজেক্ট বদলালেও ক্যাশ দূষিত হয় না।
+const L1_TTL_MS = Math.max(0, parseInt(process.env.CACHE_L1_TTL_SECONDS || '0', 10)) * 1000;
+const L1_MAX = Math.max(10, parseInt(process.env.CACHE_L1_MAX || '500', 10));
+const l1 = new Map(); // key -> { raw, expires }
+
+function l1Get(key) {
+  const e = l1.get(key);
+  if (!e) return undefined;
+  if (e.expires <= Date.now()) { l1.delete(key); return undefined; }
+  return JSON.parse(e.raw);
+}
+function l1Set(key, value, ttlSeconds) {
+  if (value === undefined || value === null) return;
+  const ttlMs = Math.min(L1_TTL_MS, (ttlSeconds || 0) > 0 ? ttlSeconds * 1000 : L1_TTL_MS);
+  if (ttlMs <= 0) return;
+  let raw;
+  try { raw = JSON.stringify(value); } catch (e) { return; }
+  if (raw === undefined) return;
+  if (l1.size >= L1_MAX && !l1.has(key)) l1.delete(l1.keys().next().value);
+  l1.set(key, { raw, expires: Date.now() + ttlMs });
+}
+function l1DeleteByPattern(pattern) {
+  if (!l1.size) return;
+  const re = new RegExp('^' + pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+  for (const k of [...l1.keys()]) if (re.test(k)) l1.delete(k);
+}
+
 const state = {
   client: null,
   connected: false,
@@ -257,6 +287,7 @@ async function set(key, value, ttlSeconds) {
 /** নির্দিষ্ট key(s) মুছে ফেলে — আপডেটের পর ক্যাশ invalidate করতে ব্যবহার হয়। */
 async function del(...keys) {
   for (const k of keys) localFallback.delete(k); // আউটেজের সময়কার in-process কপিও বাতিল
+  for (const k of keys) l1.delete(k);
   if (!isAvailable() || !keys.length) return false;
   try {
     await state.client.del(...keys.map(prefixed));
@@ -269,6 +300,7 @@ async function del(...keys) {
 
 /** prefix-ভিত্তিক bulk invalidate (যেমন 'profile:*') — SCAN ব্যবহার করে, KEYS ব্যবহার করে না (production-safe, ব্লক করে না)। */
 async function delByPattern(pattern) {
+  l1DeleteByPattern(pattern);
   if (localFallback.size) {
     const re = new RegExp('^' + pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
     for (const k of [...localFallback.keys()]) if (re.test(k)) localFallback.delete(k);
@@ -299,6 +331,15 @@ async function delByPattern(pattern) {
  * অর্থাৎ ফিচারটি কখনো ভাঙে না, শুধু ক্যাশের সুবিধা পাওয়া যায় না।
  */
 async function getOrSet(key, ttlSeconds, fetchFn) {
+  if (L1_TTL_MS <= 0) return getOrSetL2(key, ttlSeconds, fetchFn);
+  const hit = l1Get(key);
+  if (hit !== undefined) return hit;
+  const value = await getOrSetL2(key, ttlSeconds, fetchFn);
+  l1Set(key, value, ttlSeconds);
+  return value;
+}
+
+async function getOrSetL2(key, ttlSeconds, fetchFn) {
   // Redis কনফিগার করা আছে কিন্তু এখন ডাউন: fail-open (DB-তে পড়ো), কিন্তু in-process সীমার ভেতর দিয়ে — DB flood এড়াতে।
   // Redis বন্ধ/অকনফিগার্ড (state.client নেই) হলে আগের মতোই সরাসরি fetchFn — কোনো ক্যাশিং/থ্রটলিং নয়।
   if (state.client && !isAvailable()) return guardedFallthrough(key, ttlSeconds, fetchFn);

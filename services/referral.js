@@ -169,7 +169,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
     const bonus = signupBonusFor(thisIsNumber);
     await client.query(`UPDATE referrals SET bonus_amount = $1 WHERE id = $2`, [bonus, ref.id]);
 
-    // রেফারারকে বোনাস কয়েন — আটকানো হলে এখন নয়
+    // রেফারারকে বোনাস টাকা — আটকানো হলে এখন নয়
     if (!held) {
       await client.query(
         `UPDATE users SET coins = coins + $1 WHERE id = $2`,
@@ -181,7 +181,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
     await createBonus(client, ref.referrer_id, 'referral', bonus,
       held ? { status: 'pending_review' } : {});
     if (!held) {
-      // কমিশন হিস্ট্রি (অডিট) ও কয়েন লেনদেন — শুধু যখন সত্যিই দেওয়া হলো
+      // কমিশন হিস্ট্রি (অডিট) ও টাকা লেনদেন — শুধু যখন সত্যিই দেওয়া হলো
       await client.query(
         `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
          VALUES ($1, $2, 0, $3, 'signup')`,
@@ -198,8 +198,8 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
       [ref.referrer_id, held
-        ? `আপনার রেফারেল বোনাস (${bonus} কয়েন) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
-        : `আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করেছে! আপনি ${bonus} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
+        ? `আপনার রেফারেল বোনাস (${bonus} টাকা) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
+        : `আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করেছে! আপনি ${bonus} টাকা বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
     );
   } catch (e) {
     console.error('processReferralDeposit error:', e.message);
@@ -233,7 +233,7 @@ async function distributeCommission(bettorId, stake) {
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
-        // কমিশন কয়েন যোগ
+        // কমিশন টাকা যোগ
         await client.query(
           `UPDATE users SET coins = coins + $1 WHERE id = $2`,
           [commission, referrerId]
@@ -244,7 +244,7 @@ async function distributeCommission(bettorId, stake) {
            VALUES ($1, $2, $3, $4, 'commission')`,
           [referrerId, bettorId, level, commission]
         );
-        // কয়েন লেনদেন
+        // টাকা লেনদেন
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'referral_commission', $3)`,

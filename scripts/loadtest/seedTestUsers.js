@@ -3,7 +3,7 @@
 //
 //   LOADTEST_DB_URL=postgres://… LOADTEST_PASSWORD=… node scripts/loadtest/seedTestUsers.js [--count 500] [--cleanup]
 //
-// • ইউজারনেম `loadtest_0001…` ; coins = 0 (আসল কয়েন নেই), demo_balance বড় — বেট শুধু demo:true-তে (http.js)।
+// • ইউজারনেম `loadtest_0001…` ; coins = 0 (আসল টাকা নেই), demo_balance বড় — বেট শুধু demo:true-তে (http.js)।
 // • পাসওয়ার্ড রিপোতে নেই: LOADTEST_PASSWORD env থেকে আসে, bcrypt হ্যাশ হয়ে DB-তে যায়। লগে ছাপা হয় না।
 // • ফোন নম্বর কাল্পনিক (019 + ৮ অঙ্ক, `0190…` রেঞ্জ) — আসল কারো নম্বর নয়; কোনো SMS/ইমেইল পাঠানো হয় না।
 // • --cleanup: prefix-মিলে যাওয়া ইউজার ও তাদের ডেমো বেট/লেনদেন মোছে (production-এ চালানো যাবে না — একই guard)।

@@ -4,13 +4,14 @@
 // শুধু Queue System বন্ধ থাকবে এবং সরাসরি (non-queued) fallback দিয়ে কাজ চলবে।
 
 const IORedis = require('ioredis');
+const { bullmqEnabled } = require('./flags');
 
 const REDIS_URL = process.env.REDIS_URL || '';
 
 let connection = null;
 let redisAvailable = false;
 
-if (REDIS_URL) {
+if (REDIS_URL && bullmqEnabled()) {
   try {
     connection = new IORedis(REDIS_URL, {
       // BullMQ-এর জন্য আবশ্যক — নাহলে blocking commands (BRPOPLPUSH ইত্যাদি) নিজে থেকে
@@ -40,6 +41,8 @@ if (REDIS_URL) {
     console.error('⚠️ Redis client তৈরি করতে গিয়ে সমস্যা হয়েছে — Queue System বন্ধ থাকবে:', err.message);
     connection = null;
   }
+} else if (REDIS_URL && !bullmqEnabled()) {
+  console.log('ℹ️ BULLMQ_ENABLED=false — BullMQ বন্ধ (Redis কমান্ড খরচ নেই); api/activity লগ ব্যাচ করে Postgres-এ লেখা হবে।');
 } else {
   console.warn('⚠️ REDIS_URL সেট করা নেই। Background Queue System বন্ধ থাকবে — সব জব সরাসরি (inline) চালানো হবে।');
 }

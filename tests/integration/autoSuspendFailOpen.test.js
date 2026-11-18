@@ -89,7 +89,7 @@ describe('সার্ভিস স্তর: পড়া ব্যর্থ �
 });
 
 describe('বাজির রুট (আসল Postgres)', () => {
-  test('সাসপেন্ড-অবস্থা পড়া ব্যর্থ → বাজি চলে (200, বাজি তৈরি, কয়েন কাটে); warn মান ছাড়া; মেট্রিক বাড়ে', async () => {
+  test('সাসপেন্ড-অবস্থা পড়া ব্যর্থ → বাজি চলে (200, বাজি তৈরি, টাকা কাটে); warn মান ছাড়া; মেট্রিক বাড়ে', async () => {
     const u = await makeUser(1000);
     const m = await makeMarket();
     await setSuspended();            // DB-তে আসলে সাসপেন্ড — কিন্তু পড়া যাচ্ছে না, তাই ফেইল-ওপেন
@@ -111,7 +111,7 @@ describe('বাজির রুট (আসল Postgres)', () => {
     expect(after).toBeGreaterThan(before); // মেট্রিক বেড়েছে
   });
 
-  test('পড়া সফল ও সাসপেন্ড থাকলে → 503 STALE_ODDS (suspended: true), বাজি/কয়েন-কাটা নেই', async () => {
+  test('পড়া সফল ও সাসপেন্ড থাকলে → 503 STALE_ODDS (suspended: true), বাজি/টাকা-কাটা নেই', async () => {
     const u = await makeUser(1000);
     const m = await makeMarket();
     await setSuspended();

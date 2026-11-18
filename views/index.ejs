@@ -1,5 +1,25 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
+<%
+  // ক্যাসিনো-প্রথম হোম। ফিল্টার সার্ভার-সাইডে (সাধারণ GET লিংক) — JS বন্ধ থাকলেও কাজ করে।
+  const f = casino.filters;
+  const facets = casino.facets;
+  function homeHref(o) {
+    const p = new URLSearchParams();
+    const m = Object.assign({ cat: f.category, provider: f.provider, q: f.q, letter: f.letter }, o || {});
+    Object.keys(m).forEach(function (k) { if (m[k]) p.set(k, m[k]); });
+    const qs = p.toString();
+    return '/' + (qs ? '?' + qs : '') + '#casino';
+  }
+  function catLabel(name) {
+    const k = homeCasino.categoryLabelKey(name);
+    return k ? t[k] : name;
+  }
+  const liveCat = facets.categories.find(function (c) { return /live/i.test(c.name); });
+  const liveHref = liveCat ? '/?cat=' + encodeURIComponent(liveCat.name) + '#casino' : '/games';
+  const showRails = !casino.filtered && f.page === 1;
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+%>
 
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
@@ -365,29 +385,114 @@ body.light-mode .promo-banner {
     display: flex; gap: 8px; padding: 4px 12px 14px;
     overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
   }
+  @keyframes livedot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .3; transform: scale(1.4); } }
+  <%- include('partials/home-shortcut-css') %>
+  /* ===== প্রধান ন্যাভ (অনুভূমিক স্ক্রলযোগ্য চিপ) ===== */
+  .main-cat-nav { display: flex; gap: 8px; padding: 4px 12px 12px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .main-cat-nav::-webkit-scrollbar { display: none; }
-  .main-cat-item {
-    flex: 0 0 auto; min-width: 62px; min-height: 62px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-    padding: 9px 10px; border-radius: 14px; text-decoration: none;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1;
-    text-align: center; transition: background .2s, color .2s, border-color .2s;
-  }
+  .main-cat-item { flex: 0 0 auto; min-width: 62px; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 9px 10px; border-radius: 14px; text-decoration: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1; text-align: center; transition: background .2s, color .2s, border-color .2s; }
   .main-cat-item i { font-size: 17px; }
   .main-cat-item:active { background: rgba(255,255,255,0.09); }
-  .main-cat-item.is-primary {
-    background: var(--grad-gold); color: #1a1a1a; border-color: transparent;
-  }
+  .main-cat-item.is-primary { background: var(--grad-gold); color: #1a1a1a; border-color: transparent; }
+  .main-cat-item:focus-visible, .cat-chip:focus-visible, .prov-chip:focus-visible, .az-link:focus-visible, .hc-card:focus-visible, .hb-btn:focus-visible, .hc-more:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   @media (min-width: 768px) {
     .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
     .main-cat-item { min-width: 88px; font-size: 12px; }
     .main-cat-item i { font-size: 20px; }
   }
+
+  /* ===== শেল: মোবাইলে এক কলাম, ডেস্কটপে বাঁ-সাইডবার | মূল | ডান-সাইডবার ===== */
+  .home-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 0 84px; }
+  .home-cats { min-width: 0; }
+  .home-main { min-width: 0; }
+  .home-matches { min-width: 0; }
+  @media (min-width: 1024px) {
+    .home-shell { grid-template-columns: 210px minmax(0, 1fr) 290px; align-items: start; padding: 0 16px 24px; }
+    .home-cats, .home-matches { position: sticky; top: 70px; max-height: calc(100vh - 90px); overflow-y: auto; }
+    .pub-bottom-nav { display: none; }
+  }
+
+  /* ===== ক্যাটাগরি: মোবাইলে অনুভূমিক চিপ, ডেস্কটপে উল্লম্ব তালিকা ===== */
+  .home-cat-nav { display: flex; gap: 8px; padding: 0 12px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .home-cat-nav::-webkit-scrollbar { display: none; }
+  .cat-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .cat-chip small { opacity: .7; font-weight: 600; }
+  .cat-chip.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  @media (min-width: 1024px) {
+    .home-cat-nav { flex-direction: column; padding: 0; overflow: visible; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 14px; padding: 8px; }
+    .cat-chip { border-radius: 10px; justify-content: space-between; border: 0; background: transparent; }
+    .cat-chip.active { background: var(--gold-soft, rgba(201,162,39,.18)); color: var(--text-accent); }
+  }
+
+  /* ===== প্রোমো স্লাইডার ===== */
+  .hb { position: relative; margin: 0 12px 12px; border-radius: 14px; overflow: hidden; background: var(--bg-card); }
+  .hb-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
+  .hb-track::-webkit-scrollbar { display: none; }
+  .hb-slide { flex: 0 0 100%; scroll-snap-align: start; display: block; aspect-ratio: 21 / 8; min-height: 110px; }
+  .hb-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hb-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.55) !important; color: #fff !important; cursor: pointer; z-index: 2; }
+  .hb-prev { left: 8px; } .hb-next { right: 8px; }
+  .promo-banner { background: linear-gradient(135deg, #1C1E22 0%, #0F1012 100%); border: 1px solid rgba(201,162,39,.3); position: relative; overflow: hidden; margin: 0 12px 12px; border-radius: 14px; }
+  .promo-banner-content { padding: 16px 14px; min-height: 120px; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2; }
+  .promo-banner-badge { background: var(--grad-gold); color: #000; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 20px; align-self: flex-start; text-transform: uppercase; }
+  .promo-banner-title { font-family: 'Teko', sans-serif; font-size: 28px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px; text-transform: uppercase; }
+  .promo-banner-desc { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
+  .promo-banner-cta { display: inline-block; background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px; text-decoration: none; }
+  .promo-banner-art { position: absolute; right: 0; top: 0; height: 100%; width: auto; opacity: .85; }
+
+  /* ===== সার্চ, প্রোভাইডার, A-Z ===== */
+  .home-search { display: flex; gap: 8px; padding: 0 12px 10px; }
+  .home-search input[type=search] { flex: 1; min-width: 0; padding: 10px 16px; border-radius: 30px; background: rgba(255,255,255,.04); border: 1px solid rgba(201,162,39,.2); color: var(--text-main); }
+  .home-search button { border-radius: 30px; padding: 0 18px; font-weight: 800; font-size: 12px; cursor: pointer; }
+  .home-chips { display: flex; gap: 8px; padding: 0 12px 10px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .home-chips::-webkit-scrollbar { display: none; }
+  .prov-chip { flex: 0 0 auto; padding: 6px 14px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .prov-chip.active { border-color: var(--gold); color: var(--text-accent); box-shadow: 0 0 0 2px rgba(201,162,39,.2); }
+  .az-index { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
+  .az-link { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 800; text-decoration: none; color: var(--text-main); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+  .az-link.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .az-link.is-empty { opacity: .3; cursor: default; }
+  .home-label { font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 0 12px 6px; text-transform: uppercase; letter-spacing: .4px; }
+
+  /* ===== গেম সারি ও গ্রিড ===== */
+  .hc-section { margin: 0 0 14px; }
+  .hc-head { display: flex; justify-content: space-between; align-items: center; padding: 0 12px 8px; }
+  .hc-head h2 { margin: 0; font-size: 15px; }
+  .hc-head a { font-size: 12px; font-weight: 700; color: var(--gold); text-decoration: none; }
+  .hc-rail { display: flex; gap: 10px; overflow-x: auto; padding: 0 12px 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hc-rail::-webkit-scrollbar { display: none; }
+  .hc-rail .hc-card { flex: 0 0 120px; }
+  .hc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 12px; }
+  @media (min-width: 640px) { .hc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (min-width: 1024px) { .hc-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 12px; } .hc-rail .hc-card { flex-basis: 140px; } }
+  .hc-card { display: block; text-decoration: none; color: inherit; border-radius: 12px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-glass); }
+  .hc-card img, .hc-thumb-fallback { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+  .hc-thumb-fallback { display: flex; align-items: center; justify-content: center; font-size: 30px; background: rgba(255,255,255,.04); }
+  .hc-meta { padding: 6px 8px 8px; }
+  .hc-name { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hc-prov { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hc-suspended { opacity: .5; filter: grayscale(.7); pointer-events: none; }
+  .hc-empty { padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .hc-more { display: block; margin: 14px 12px 0; padding: 11px; text-align: center; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-glass); color: var(--gold); font-weight: 800; font-size: 13px; text-decoration: none; }
+
+  /* ===== লাইভ ম্যাচ: ডেস্কটপে ডান সংকীর্ণ সাইডবার, মোবাইলে ক্যাসিনোর নিচে ছোট সারি ===== */
+  <%- include('partials/home-hub-css') %>
+  @media (max-width: 1023px) {
+    .home-hub .hh-list { display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; }
+    .home-hub .hh-row { flex: 0 0 230px; }
+    .home-hub .hh-empty, .home-hub .hh-more { flex: 0 0 100%; }
+  }
+  @media (min-width: 1024px) { .home-hub { margin: 0; } .hh-list { grid-template-columns: 1fr; } }
 </style>
+<%- include('partials/announcements') %>
+
+<%- include('partials/flash') %>
+
 <nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
   <a href="/#casinoHome" class="main-cat-item is-primary"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
   <a href="<%= c.liveCategory ? url({ category: c.liveCategory, q: '', provider: '', letter: '' }) + '#allGames' : '/#casinoHome' %>" class="main-cat-item"><i class="fas fa-video"></i><span><%= t.cat_live_casino %></span></a>
+  <a href="/games" class="main-cat-item is-primary"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
+  <a href="<%= liveHref %>" class="main-cat-item"><i class="fas fa-video"></i><span><%= t.cat_live_casino %></span></a>
   <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
   <a href="/sports" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
   <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
@@ -654,6 +759,113 @@ body.light-mode .promo-banner {
     <div class="shortcut-label"><%= t.rebate %></div>
   </a>
 </div>
+<div class="home-shell" id="casino">
+  <aside class="home-cats">
+    <nav class="home-cat-nav" id="categoryTabs" aria-label="<%= t.home_casino_categories %>">
+      <a class="cat-chip <%= !f.category ? 'active' : '' %>" href="<%= homeHref({ cat: '', provider: '', q: '', letter: '' }) %>"><%= t.all %></a>
+      <% facets.categories.forEach(function (c) { %>
+        <a class="cat-chip <%= f.category === c.name ? 'active' : '' %>" href="<%= homeHref({ cat: c.name, provider: '', q: '', letter: '' }) %>" aria-label="<%= catLabel(c.name) %> (<%= c.count %>)"><span><%= catLabel(c.name) %></span> <small><%= c.count %></small></a>
+      <% }); %>
+    </nav>
+  </aside>
+
+  <main class="home-main">
+    <% if (banners && banners.length) { %>
+    <section class="hb" aria-roledescription="carousel" aria-label="<%= t.home_banners %>">
+      <div class="hb-track" id="homeBanners" tabindex="0">
+        <% banners.forEach(function (b, i) { %>
+          <% if (b.link_url) { %><a class="hb-slide" href="<%= b.link_url %>"><img src="<%= b.image_url %>" alt="<%= b.title %>" <%= i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' %> decoding="async"></a>
+          <% } else { %><div class="hb-slide"><img src="<%= b.image_url %>" alt="<%= b.title %>" <%= i === 0 ? 'loading=eager' : 'loading=lazy' %> decoding="async"></div><% } %>
+        <% }); %>
+      </div>
+      <% if (banners.length > 1) { %>
+      <button type="button" class="hb-btn hb-prev" id="hbPrev" aria-label="<%= t.home_banner_prev %>"><i class="fas fa-chevron-left"></i></button>
+      <button type="button" class="hb-btn hb-next" id="hbNext" aria-label="<%= t.home_banner_next %>"><i class="fas fa-chevron-right"></i></button>
+      <% } %>
+    </section>
+    <% } else { %>
+    <div class="promo-banner">
+      <div class="promo-banner-content">
+        <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
+        <h1 class="promo-banner-title">100% Welcome Bonus</h1>
+        <p class="promo-banner-desc"><%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.</p>
+        <div><a href="/payment/deposit" class="promo-banner-cta"><%= t.get_now %></a></div>
+      </div>
+      <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg" alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
+    </div>
+    <% } %>
+
+    <%- include('partials/home-shortcuts') %>
+
+    <form class="home-search" role="search" method="get" action="/#casino">
+      <% if (f.category) { %><input type="hidden" name="cat" value="<%= f.category %>"><% } %>
+      <% if (f.provider) { %><input type="hidden" name="provider" value="<%= f.provider %>"><% } %>
+      <% if (f.letter) { %><input type="hidden" name="letter" value="<%= f.letter %>"><% } %>
+      <input type="search" id="gameSearch" name="q" value="<%= f.q %>" maxlength="60" placeholder="<%= t.search_placeholder %>" aria-label="<%= t.home_search_label %>">
+      <button type="submit"><%= t.home_search_button %></button>
+    </form>
+
+    <% if (facets.providers.length) { %>
+    <div class="home-label"><%= t.home_providers %></div>
+    <nav class="home-chips" id="providerChips" aria-label="<%= t.home_providers %>">
+      <a class="prov-chip <%= !f.provider ? 'active' : '' %>" href="<%= homeHref({ provider: '' }) %>"><%= t.all %></a>
+      <% facets.providers.forEach(function (p) { %>
+        <a class="prov-chip <%= f.provider === p.name ? 'active' : '' %>" href="<%= homeHref({ provider: f.provider === p.name ? '' : p.name }) %>" aria-label="<%= p.name %> (<%= p.count %>)"><%= p.name %></a>
+      <% }); %>
+    </nav>
+    <% } %>
+
+    <div class="home-label"><%= t.home_az_index %></div>
+    <nav class="az-index" id="azIndex" aria-label="<%= t.home_az_index %>">
+      <% letters.forEach(function (L) { %>
+        <% if (facets.letters.indexOf(L) === -1) { %><span class="az-link is-empty" aria-disabled="true"><%= L %></span>
+        <% } else { %><a class="az-link <%= f.letter === L ? 'active' : '' %>" href="<%= homeHref({ letter: f.letter === L ? '' : L }) %>" aria-label="<%= L %>"<%- f.letter === L ? ' aria-current="true"' : '' %>><%= L %></a><% } %>
+      <% }); %>
+    </nav>
+    <% if (casino.filtered) { %><div class="home-label"><a class="hc-more" href="/#casino"><%= t.home_clear_filters %></a></div><% } %>
+
+    <% if (showRails) { %>
+      <% [['popular', t.home_popular, casino.rails.popular], ['new', t.home_new, casino.rails.new]].forEach(function (r) { if (r[2].length) { %>
+      <section class="hc-section" aria-label="<%= r[1] %>">
+        <div class="hc-head"><h2><%= r[1] %></h2><a href="#allGames"><%= t.home_see_all %></a></div>
+        <div class="hc-rail"><% r[2].forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %></div>
+      </section>
+      <% } }); %>
+      <% facets.categories.forEach(function (c) { const list = casino.rails.byCategory[c.name] || []; if (!list.length) return; %>
+      <section class="hc-section" aria-label="<%= catLabel(c.name) %>">
+        <div class="hc-head"><h2><%= catLabel(c.name) %></h2><a href="<%= homeHref({ cat: c.name }) %>"><%= t.home_see_all %></a></div>
+        <div class="hc-rail"><% list.forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %></div>
+      </section>
+      <% }); %>
+    <% } %>
+
+    <section class="hc-section" id="allGames" aria-label="<%= t.home_all_games %>">
+      <div class="hc-head"><h2><%= t.home_all_games %></h2></div>
+      <div class="hc-grid" id="gameContainer">
+        <% casino.page.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %>
+      </div>
+      <% if (!casino.page.games.length) { %><div class="hc-empty"><%= t.no_games_found %></div><% } %>
+      <% if (casino.page.hasMore) { %><a class="hc-more" rel="next" href="<%= homeHref({}).replace('#casino', '') + (homeHref({}).indexOf('?') === -1 ? '?' : '&') %>page=<%= f.page + 1 %>#allGames"><%= t.load_more %></a><% } %>
+    </section>
+  </main>
+
+  <aside class="home-matches" aria-label="<%= t.home_live_matches %>">
+    <section class="home-hub" id="homeHub" data-max="8"
+         data-empty="<%= t.hub_no_matches || 'No matches in this view' %>"
+         data-more="<%= t.hub_view_all || 'View all matches' %>"
+         data-competitions="<%= t.hub_competitions || 'Competitions' %>">
+      <div class="hh-head"><h3><%= t.home_live_matches %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
+      <div class="hh-tabs" id="hhTabs">
+        <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
+        <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
+        <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
+        <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
+      </div>
+      <div class="hh-list" id="hhList"></div>
+    </section>
+  </aside>
+</div>
+<script src="/js/views/home-matches.js" defer></script>
 
 <!-- ===== Mega Jackpot + Recent Big Wins ===== -->
 <style nonce="<%= cspNonce %>">
@@ -763,121 +975,8 @@ body.light-mode .promo-banner {
 </div>
 <script src="/js/views/index.js"></script>
 
-<!-- ===== Why Choose Us / Benefits ===== -->
-<style nonce="<%= cspNonce %>">
-.why-us-section { padding: 34px 14px 12px; }
-.why-us-heading { text-align: center; margin-bottom: 24px; }
-.why-us-heading h2 {
-  font-family: 'Teko', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.4px;
-  background: linear-gradient(135deg, var(--text-main) 40%, var(--gold-hover) 90%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  margin: 0 0 6px;
-}
-.why-us-heading p { font-size: 12.5px; color: var(--text-muted); margin: 0; }
-.why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-.why-us-card {
-  position: relative;
-  background: var(--grad-surface);
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-glass); border-radius: 18px; padding: 22px 16px; text-align: center;
-  overflow: hidden;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-.why-us-card::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--grad-gold);
-  opacity: 0; transition: opacity 0.25s ease;
-}
-.why-us-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(201, 162, 39,0.5);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(201, 162, 39,0.08);
-}
-.why-us-card:hover::before { opacity: 1; }
-.why-us-icon {
-  width: 54px; height: 54px; border-radius: 16px; margin: 0 auto 14px;
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-  background: linear-gradient(135deg, rgba(201, 162, 39,0.22) 0%, rgba(201, 162, 39,0.06) 100%);
-  border: 1px solid rgba(201, 162, 39,0.25);
-  color: var(--gold-hover);
-}
-.why-us-card h3 { font-size: 14.5px; font-weight: 800; color: var(--text-main); margin: 0 0 7px; letter-spacing: 0.2px; }
-.why-us-card p { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin: 0; }
-
-@media (min-width: 640px) {
-  .why-us-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; }
-  .why-us-card { padding: 28px 18px; }
-}
-</style>
-<div class="why-us-section">
-  <div class="why-us-heading">
-    <h2><%= t.why_bet420_title %></h2>
-    <p><%= t.why_bet420_subtitle %></p>
-  </div>
-  <div class="why-us-grid">
-    <div class="why-us-card">
-      <div class="why-us-icon"><i class="fas fa-bolt"></i></div>
-      <h3><%= t.feature_fast_withdraw %></h3>
-      <p><%= t.feature_fast_withdraw_desc %></p>
-    </div>
-    <div class="why-us-card">
-      <div class="why-us-icon"><i class="fas fa-chart-line"></i></div>
-      <h3><%= t.feature_live_prediction %></h3>
-      <p><%= t.feature_live_prediction_desc %></p>
-    </div>
-    <div class="why-us-card">
-      <div class="why-us-icon"><i class="fas fa-headset"></i></div>
-      <h3><%= t.feature_support %></h3>
-      <p><%= t.feature_support_desc %></p>
-    </div>
-    <div class="why-us-card">
-      <div class="why-us-icon"><i class="fas fa-gift"></i></div>
-      <h3><%= t.feature_bonus %></h3>
-      <p><%= t.feature_bonus_desc %></p>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Trust Badges ===== -->
-<style nonce="<%= cspNonce %>">
-.trust-badges-section { padding: 30px 14px 14px; }
-.trust-badges-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.trust-badge-item {
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);
-  border-radius: 14px; padding: 14px;
-  transition: border-color 0.2s ease;
-}
-.trust-badge-item:hover { border-color: rgba(201, 162, 39,0.3); }
-.trust-badge-item i { font-size: 18px; color: #3ddc84; flex-shrink: 0; width: 22px; text-align: center; }
-.trust-badge-item .label { font-size: 12px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
-.trust-badge-item .sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-
-@media (min-width: 640px) { .trust-badges-grid { grid-template-columns: repeat(4, 1fr); } }
-</style>
-<div class="trust-badges-section">
-  <div class="trust-badges-grid">
-    <div class="trust-badge-item">
-      <i class="fas fa-shield-halved"></i>
-      <div><div class="label"><%= t.trust_secure_payment %></div><div class="sub"><%= t.trust_ssl %></div></div>
-    </div>
-    <div class="trust-badge-item">
-      <i class="fas fa-headset"></i>
-      <div><div class="label"><%= t.feature_support %></div><div class="sub"><%= t.trust_always_here %></div></div>
-    </div>
-    <div class="trust-badge-item">
-      <i class="fas fa-certificate"></i>
-      <div><div class="label"><%= t.trust_licensed %></div><div class="sub">Curacao Licensed</div></div>
-    </div>
-    <div class="trust-badge-item">
-      <i class="fas fa-bolt"></i>
-      <div><div class="label"><%= t.feature_fast_withdraw %></div><div class="sub"><%= t.trust_within_5_min %></div></div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== Footer ===== -->
-<%- include('partials/footer') %>
+<%- include('partials/footer', { showHomeFeatures: true }) %>
 
 <%- include('partials/bottom-nav', { variant: 'casino' }) %>
 <%- include('partials/floating-promo') %>

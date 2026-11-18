@@ -128,7 +128,7 @@ describe('ডুপ্লিকেট ক্লেইম সুরক্ষা �
     await cleanup(userId);
   });
 
-  test('যোগ্য কার্যক্রম ছাড়া ক্লেইম করা যায় না এবং কোনো কয়েন যোগ হয় না', async () => {
+  test('যোগ্য কার্যক্রম ছাড়া ক্লেইম করা যায় না এবং কোনো টাকা যোগ হয় না', async () => {
     const u = await pool.query(
       `INSERT INTO users (username, phone, password, coins)
        VALUES ('rpnoq_'||floor(random()*1e9), '019'||floor(random()*1e8), 'x', 500) RETURNING id`

@@ -27,7 +27,7 @@ function updateAdminNavBadges() {
   }).catch(function(){});
 }
 updateAdminNavBadges();
-setInterval(updateAdminNavBadges, 20000);
+setInterval(function () { if (!document.hidden) updateAdminNavBadges(); }, 30000);
 
 // সাইডবার টগল — আগে তিনটে partial-এ ইনলাইন onclick ছিল (header.ejs,
 // admin/partials/header.ejs, এই ফাইল)। ফাংশনটা এখানেই সংজ্ঞায়িত, তাই
