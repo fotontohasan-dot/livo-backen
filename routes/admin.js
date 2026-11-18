@@ -2201,12 +2201,11 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       params.push(`%${search}%`);
       conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
     }
-    // V2: বোনাস-অবস্থা referral_rewards থেকে (paid/legacy_paid = বোনাস পাওয়া; বাকি সব pending)
+    // V2: বোনাস-অবস্থা referral_rewards থেকে — paid/legacy_paid = বোনাস পাওয়া;
+    // pending_review = আটকানো (আগের "held"), অ্যাডমিন রিভিউয়ের অপেক্ষায়; বাকি সব pending।
     if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
-    if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid'))");
-    if (status === 'bonus_paid') conditions.push('r.signup_bonus_paid = true AND r.bonus_held = false');
-    if (status === 'held') conditions.push('r.bonus_held = true');
-    if (status === 'pending') conditions.push('r.signup_bonus_paid = false');
+    if (status === 'held') conditions.push("rr.status = 'pending_review'");
+    if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid','pending_review'))");
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -2221,9 +2220,8 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
 
     const summaryRes = await pool.query(`
       SELECT COUNT(*) AS total_referrals,
-             (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count
-             COUNT(*) FILTER (WHERE signup_bonus_paid = true AND bonus_held = false) AS bonus_paid_count,
-             COUNT(*) FILTER (WHERE bonus_held = true) AS held_count
+             (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
+             (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count
       FROM referrals
     `);
     const commissionSummaryRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM referral_commissions`);
@@ -2231,8 +2229,8 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     params.push(limit, offset);
     const referrals = await pool.query(
       `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done,
-              COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid, rr.status AS reward_status, r.created_at,
-      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done, r.signup_bonus_paid, r.bonus_held, r.hold_reason, r.created_at,
+              COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid, rr.status AS reward_status,
+              (rr.status = 'pending_review') AS bonus_held, rr.review_reason AS hold_reason, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
               COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned

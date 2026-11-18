@@ -19,6 +19,8 @@
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
 const { tierFor, getTiers, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 const MIN_DEPOSIT_FOR_BONUS = DEFAULT_MIN_DEPOSIT; // ডিফল্ট; আসল মান settings.referral_min_deposit (referralRewards.getMinDeposit)
@@ -270,7 +272,6 @@ async function getReferralStats(userId) {
   // সফল = V2 রেফারেল 'paid' (legacy_paid আলাদা — টিয়ারে গোনা হয় না)
   const successRes = await pool.query(
     `SELECT COUNT(*) FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
-    `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true AND bonus_held = false`,
     [userId]
   );
   // মোট আয় (সব কমিশন + বোনাস)
@@ -291,8 +292,8 @@ async function getReferralStats(userId) {
   const teamRes = await pool.query(
     `SELECT u.username, u.created_at, r.first_deposit_done,
             COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
+            (rr.status = 'pending_review') AS bonus_held,
             rr.status AS reward_status
-    `SELECT u.username, u.created_at, r.first_deposit_done, r.signup_bonus_paid, r.bonus_held
        FROM referrals r
        JOIN users u ON r.referred_id = u.id
        LEFT JOIN referral_rewards rr ON rr.referred_user_id = r.referred_id
@@ -322,5 +323,6 @@ module.exports = {
   signupBonusFor,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES,
+  MIN_DEPOSIT_FOR_BONUS,
   SITE_MIN_DEPOSIT
 };

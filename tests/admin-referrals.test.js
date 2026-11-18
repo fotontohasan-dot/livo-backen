@@ -64,11 +64,6 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     await createReferral(null, referrerId, referredId);
 
     await runEngine(referredId, 1000); // ≥ ন্যূনতম ডিপোজিট (৫০০)
-    const client = await pool.connect();
-    await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 1000); // ≥ ন্যূনতম (REFERRAL_MIN_DEPOSIT, ডিফল্ট ১০০)
-    await client.query('COMMIT');
-    client.release();
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals');
@@ -89,11 +84,6 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     await createReferral(null, referrerId, referredId);
 
     await runEngine(referredId, 100); // < ন্যূনতম ডিপোজিট (৫০০)
-    const client = await pool.connect();
-    await client.query('BEGIN');
-    await processReferralDeposit(client, referredId, 50); // < ন্যূনতম (১০০)
-    await client.query('COMMIT');
-    client.release();
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals?search=' + referredUsername);
