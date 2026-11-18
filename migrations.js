@@ -2130,6 +2130,16 @@ async function applyMigrations(pool) {
       ('referral_tiers', '[{"max":1,"amount":100},{"max":5,"amount":200},{"max":15,"amount":400},{"max":50,"amount":800},{"max":null,"amount":1500}]')
       ON CONFLICT (key) DO NOTHING;
     `);
+    // ধাপ-ভিত্তিক (slab) বোনাস কনফিগ — services/referralRewards.js; অ্যাডমিন /admin/settings থেকে সম্পাদনাযোগ্য।
+    // বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING। referral_min_deposit ওপরেই ('500') বসানো।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_slabs', '[{"min":500,"amount":75},{"min":1000,"amount":100},{"min":2000,"amount":200},{"min":5000,"amount":300},{"min":10000,"amount":500},{"min":30000,"amount":1000}]'),
+      ('referral_bonus_cap', '1000'),
+      ('referral_turnover_sports', '5'),
+      ('referral_turnover_casino', '5')
+      ON CONFLICT (key) DO NOTHING;
+    `);
 
     // legacy_paid ব্যাকফিল: পুরোনো সাইন-আপ-বোনাস পাওয়া (signup_bonus_paid=true) রেফারেল —
     // এর মধ্যে আগের pending_review বোনাসের রেফারেলও (ওগুলোতেও ওই ফ্ল্যাগ true হতো) —
@@ -2145,9 +2155,35 @@ async function applyMigrations(pool) {
              COALESCE(r.created_at, NOW())
         FROM referrals r
        WHERE r.signup_bonus_paid = true
+         AND COALESCE(r.bonus_held, false) = false
          AND r.referrer_id IS NOT NULL AND r.referred_id IS NOT NULL
       ON CONFLICT (referred_user_id) DO NOTHING
     `);
+    // পুরোনো bonus_held হোল্ড-মডেল → V2 pending_review (শুধু রেকর্ড: ব্যালেন্স/লেজার/bonuses/কলাম অপরিবর্তিত, কিছু মোছা নয়)।
+    // হোল্ডের সময় কয়েন দেওয়া হয়নি, তাই legacy_paid নয়। idempotent: UNIQUE(referred_user_id) + DO NOTHING।
+    const heldBackfill = await pool.query(`
+      INSERT INTO referral_rewards (referred_user_id, referrer_id, status, amount, review_reason, created_at)
+      SELECT r.referred_id, r.referrer_id, 'pending_review', COALESCE(r.bonus_amount, 0),
+             COALESCE(NULLIF(r.hold_reason, ''), 'legacy held bonus (V2 backfill)'),
+             COALESCE(r.created_at, NOW())
+        FROM referrals r
+       WHERE r.bonus_held = true
+         AND r.referrer_id IS NOT NULL AND r.referred_id IS NOT NULL
+      ON CONFLICT (referred_user_id) DO NOTHING
+    `);
+    // আগের ব্যাকফিলে ভুলে legacy_paid হওয়া হোল্ড-রেকর্ড শুধু স্ট্যাটাসে সংশোধন (ব্যাকফিলের নিজস্ব মার্কার থাকলেই)।
+    const heldFix = await pool.query(`
+      UPDATE referral_rewards rr
+         SET status = 'pending_review', amount = COALESCE(r.bonus_amount, rr.amount),
+             review_reason = COALESCE(NULLIF(r.hold_reason, ''), 'legacy held bonus (V2 backfill)')
+        FROM referrals r
+       WHERE r.referred_id = rr.referred_user_id AND r.bonus_held = true
+         AND rr.status = 'legacy_paid' AND rr.review_reason = 'legacy signup-bonus referral (V2 backfill)'
+    `);
+    const heldTotal = await pool.query(`SELECT COUNT(*)::int AS n FROM referrals WHERE bonus_held = true`);
+    if (heldTotal.rows[0].n > 0 || heldBackfill.rowCount > 0 || heldFix.rowCount > 0) {
+      console.log(`✅ Referral V2: bonus_held রেকর্ড ${heldTotal.rows[0].n}টি → pending_review (নতুন ${heldBackfill.rowCount}, সংশোধিত ${heldFix.rowCount})`);
+    }
     const legacyPending = await pool.query(
       `SELECT COUNT(*)::int AS n FROM bonuses WHERE bonus_type = 'referral' AND status = 'pending_review'`
     );

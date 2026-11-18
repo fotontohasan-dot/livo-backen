@@ -648,7 +648,7 @@ router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => 
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
-      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: 100, history: [], team: [] },
+      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: null, program: null, history: [], team: [] },
       baseUrl
     });
   }

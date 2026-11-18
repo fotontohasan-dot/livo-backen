@@ -17,7 +17,7 @@
     if (navigator.share) {
       navigator.share({
         title: cfg.siteName + ' তে যোগ দিন!',
-        text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: ' + cfg.referralCode + ' — ১০০ এক্সট্রা টাকা পাবেন!',
+        text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: ' + cfg.referralCode,
         url: window.location.origin + '/register?ref=' + encodeURIComponent(cfg.referralCode)
       });
     }
