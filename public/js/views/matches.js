@@ -296,7 +296,7 @@
   fetchMatches();
 
   // Refresh every 30 seconds (backup if socket fails)
-  setInterval(fetchMatches, 30000);
+  setInterval(function () { if (!document.hidden) fetchMatches(); }, 30000);
 
   // ম্যাচ কার্ডে ক্লিক করলে বিস্তারিত পেজে যায়, কিন্তু কার্ডের ভেতরের <a>
   // ক্লিক করলে নয় — আগের ইনলাইন কোডে সেই শর্তটাই ছিল, তাই সেটা রাখা হয়েছে।

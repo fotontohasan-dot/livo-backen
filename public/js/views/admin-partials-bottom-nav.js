@@ -93,7 +93,7 @@
   }
 
   loadCounts();
-  setInterval(loadCounts, 30000); // সকেট কোনো কারণে না পৌঁছালেও ৩০ সেকেন্ড পরপর ফলব্যাক আপডেট
+  setInterval(function () { if (!document.hidden) loadCounts(); }, 30000); // সকেট কোনো কারণে না পৌঁছালেও ৩০ সেকেন্ড পরপর ফলব্যাক আপডেট
 
   function connectSocket() {
     if (typeof io === 'undefined') return;

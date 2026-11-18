@@ -81,6 +81,6 @@
         .catch(function() {});
     }
 
-    setInterval(refreshBets, 4000);
+    setInterval(function () { if (!document.hidden) refreshBets(); }, 8000);
   })();
 })();

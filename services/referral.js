@@ -14,6 +14,9 @@
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const rewards = require('./referralRewards');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const { tierFor, getTiers, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
@@ -127,6 +130,7 @@ async function getReferralStats(userId) {
   // সফল = বোনাস পাওয়া রেফারেল (paid + legacy_paid)
   const successRes = await pool.query(
     `SELECT COUNT(*) FROM referral_rewards WHERE referrer_id = $1 AND status IN ('paid','legacy_paid')`,
+    `SELECT COUNT(*) FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
     [userId]
   );
   // মোট আয় (সব কমিশন + বোনাস)
@@ -147,6 +151,7 @@ async function getReferralStats(userId) {
   const teamRes = await pool.query(
     `SELECT u.username, u.created_at, r.first_deposit_done,
             COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
+            (rr.status = 'pending_review') AS bonus_held,
             rr.status AS reward_status
        FROM referrals r
        JOIN users u ON r.referred_id = u.id
@@ -199,4 +204,7 @@ module.exports = {
   getReferralProgramInfo,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES
+  DEFAULT_COMMISSION_RATES,
+  MIN_DEPOSIT_FOR_BONUS,
+  SITE_MIN_DEPOSIT
 };
