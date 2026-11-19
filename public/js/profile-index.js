@@ -150,6 +150,15 @@
       });
   }
 
+  // back বাটন: আগে href="javascript:history.back()" ছিল (stored-XSS sweep লাল)।
+  // এখন href="/" ফলব্যাক; ইতিহাস থাকলে এক ধাপ পিছনে, না থাকলে হোমে।
+  function historyBack(ev) {
+    if (window.history.length > 1) {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      window.history.back();
+    }
+  }
+
   function init() {
     config = readConfig();
 
@@ -160,7 +169,8 @@
       'copy-uid': copyUid,
       'copy-profile-url': copyProfileUrl,
       'share-profile-url': shareProfileUrl,
-      'refresh-balance': refreshBalance
+      'refresh-balance': refreshBalance,
+      'history-back': historyBack
     };
 
     document.querySelectorAll('[data-profile-action]').forEach(function (el) {
