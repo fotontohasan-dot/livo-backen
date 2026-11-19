@@ -51,7 +51,7 @@ async function cleanup(userId) {
 // claim করার মতো turnover তৈরি — নাহলে সব claim বৈধভাবেই ব্যর্থ হত
 // এবং টেস্টটা "duplicate আটকেছে" বলে মিথ্যা আশ্বাস দিত।
 async function seedTurnover(userId, amount) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = require('../../utils/businessTime').today(); // সার্ভিসের মতো BD ব্যবসায়িক দিন
   await pool.query(
     `INSERT INTO user_daily_rewards (user_id, reward_date, sports_turnover)
      VALUES ($1, $2, $3)
