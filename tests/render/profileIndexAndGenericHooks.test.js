@@ -68,13 +68,18 @@ describe('profile/index.ejs — ইনলাইন কোড সরানো হ
     expect(profileJs).toContain("getElementById('profileConfig')");
   });
 
-  test('সাতটা অ্যাকশনই hook পেয়েছে এবং JS-এ ম্যাপ করা', () => {
-    expect(count(profileView, /data-profile-action=/g)).toBe(8); // avatar-open দুবার
+  test('আটটা অ্যাকশনই hook পেয়েছে এবং JS-এ ম্যাপ করা', () => {
+    expect(count(profileView, /data-profile-action=/g)).toBe(9); // avatar-open দুবার + history-back (javascript: href-এর বদলে)
     ['avatar-open', 'avatar-close', 'copy-username', 'copy-uid',
-     'copy-profile-url', 'share-profile-url', 'refresh-balance'].forEach((a) => {
+     'copy-profile-url', 'share-profile-url', 'refresh-balance', 'history-back'].forEach((a) => {
       expect(profileView).toContain('data-profile-action="' + a + '"');
       expect(profileJs).toContain("'" + a + "'");
     });
+  });
+
+  test('back বাটনে javascript: href নেই; href="/" ফলব্যাক + history-back hook', () => {
+    expect(profileView).not.toMatch(/javascript:/i);
+    expect(profileView).toMatch(/class="pf2-back" href="\/" data-profile-action="history-back"/);
   });
 
   test('অ্যাভাটার গ্রিড আর img.onclick বসায় না', () => {
