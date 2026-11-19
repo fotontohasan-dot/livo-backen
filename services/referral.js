@@ -21,7 +21,7 @@ const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const { createBonus } = require('./turnover');
 const { evaluateDuplicateAccount } = require('./duplicateDetection');
-const { tierFor, getTiers, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
+const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 const MIN_DEPOSIT_FOR_BONUS = DEFAULT_MIN_DEPOSIT; // ডিফল্ট; আসল মান settings.referral_min_deposit (referralRewards.getMinDeposit)
 // এর উপরে risk score উঠলে রেফারেল বোনাস স্বয়ংক্রিয়ভাবে ছাড় না দিয়ে
@@ -208,6 +208,10 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
 // নিজে আলাদা transaction ব্যবহার করে (pool থেকে), যাতে মূল বেট আটকে না যায়।
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
+  // নতুন নিয়ম: বাজি ধরলে কোনো কমিশন নেই — কমিশন শুধু ডিপোজিট সম্পূর্ণ হারলে ০.৮%
+  // (services/referralRewards.js settleLossCycles)। পুরোনো প্রতি-বাজি ৩-লেভেল কমিশন ডিফল্টে বন্ধ;
+  // site_settings referral_bet_commission_enabled = 'true' দিলে আবার চালু হয়।
+  if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
   const client = await pool.connect();
@@ -307,7 +311,9 @@ async function getReferralStats(userId) {
     totalReferrals: parseInt(totalRes.rows[0].count),
     successfulReferrals: successCount,
     totalEarnings: Number(earnRes.rows[0].total),
-    nextBonus: tierFor(successCount + 1, await getTiers()).amount,
+    nextBonus: tierFor(successCount + 1, await getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
+    bonusBands: await getBands(),
+    lossCommissionPercent: await getLossCommissionPercent(),
     history: historyRes.rows,
     team: teamRes.rows
   };
