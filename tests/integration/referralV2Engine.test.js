@@ -58,10 +58,12 @@ describe('পেআউট নিয়ম', () => {
     expect(Number(rw.amount)).toBe(75);
     expect(Number(rw.qualifying_deposit_id)).toBe(dep);
 
-    const bonus = (await pool.query(`SELECT * FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [referrer])).rows;
+    // Turnover V2: বোনাস deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, ডিপোজিট ০) — required = ৭৫ × turnover_multiplier (৩),
+    // স্পোর্টস ও ক্যাসিনো দুটোই একই টার্গেটে গোনা হয়।
+    const bonus = (await pool.query(`SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).rows;
     expect(bonus).toHaveLength(1);
-    expect(Number(bonus[0].sports_required)).toBe(225);
-    expect(Number(bonus[0].casino_required)).toBe(0);
+    expect(Number(bonus[0].bonus_amount)).toBe(75);
+    expect(Number(bonus[0].required)).toBe(225);
     expect(bonus[0].status).toBe('active');
 
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);
@@ -153,7 +155,7 @@ describe('পেআউট নিয়ম', () => {
     expect(await coins(referrer)).toBe(75);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referred_user_id=$1`, [referred])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);
-    expect(await count(`SELECT COUNT(*) FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [referrer])).toBe(1);
+    expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).toBe(1);
   });
 
   test('ওয়ালেট callback ডুপ্লিকেট + পরে অ্যাডমিন অনুমোদন — ডিপোজিট ও রেফারেল দুটোই একবার', async () => {
@@ -179,12 +181,12 @@ describe('পেআউট নিয়ম', () => {
     expect(await coins(referred)).toBe(2000);
     const types = (await pool.query(`SELECT type FROM coin_transactions WHERE user_id=$1 ORDER BY id`, [referred])).rows.map(r => r.type);
     expect(types).toEqual(['deposit', 'deposit_bonus']);
-    expect(await count(`SELECT COUNT(*) FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [referred])).toBe(0);
-    expect(await count(`SELECT COUNT(*) FROM bonuses WHERE user_id=$1 AND bonus_type='deposit'`, [referred])).toBe(1);
+    expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referred])).toBe(0);
+    expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='deposit'`, [referred])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referrer_id=$1`, [referred])).toBe(0);
     // রেফারার তার আলাদা বোনাস পায়
     expect(await coins(referrer)).toBe(75);
-    const refBonus = (await pool.query(`SELECT bonus_type FROM bonuses WHERE user_id=$1`, [referrer])).rows.map(r => r.bonus_type);
+    const refBonus = (await pool.query(`SELECT source FROM deposit_turnovers WHERE user_id=$1`, [referrer])).rows.map(r => r.source);
     expect(refBonus).toEqual(['referral']);
   });
 });
