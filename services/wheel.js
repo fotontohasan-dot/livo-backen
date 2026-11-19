@@ -5,6 +5,7 @@
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
 const secureRandom = require('../utils/secureRandom');
+const businessTime = require('../utils/businessTime');
 
 // হুইলের ঘর (পুরস্কার) — weight যত বেশি, আসার সম্ভাবনা তত বেশি
 const SEGMENTS = [
@@ -23,7 +24,7 @@ const SEGMENTS = [
 ];
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return businessTime.today();
 }
 
 // সব সম্ভাব্য পুরস্কার (ফ্রন্টএন্ডে হুইল আঁকতে)
@@ -33,13 +34,15 @@ function getSegments() {
 
 // আজ ডিপোজিট করেছে কিনা — শুধু ডিপোজিট করলেই হুইল আনলক হবে
 async function hasQualifyingActivityToday(userId) {
+  // ব্যবসায়িক (BD) দিনের রেঞ্জ — updated_at::date DB-টাইমজোনে (UTC) কাটত, spin_date-এর সঙ্গে মিলত না
   const d = today();
 
   const dep = await pool.query(
     `SELECT 1 FROM payment_requests
-     WHERE user_id=$1 AND type='deposit' AND status='approved' AND updated_at::date = $2
+     WHERE user_id=$1 AND type='deposit' AND status='approved'
+       AND updated_at >= $2 AND updated_at < $3
      LIMIT 1`,
-    [userId, d]
+    [userId, businessTime.startOfDay(d), businessTime.endOfDay(d)]
   );
   return !!dep.rows[0];
 }
