@@ -2775,6 +2775,51 @@ async function applyMigrations(pool) {
     await pool.query(`ALTER TABLE integration_suspend ADD COLUMN IF NOT EXISTS last_probe_at TIMESTAMPTZ`);
     console.log('✅ integration_suspend ready');
 
+    // ==================== Turnover System V2 ====================
+    // পুরোনো `bonuses` টেবিল অপরিবর্তিত (আর্কাইভ) — কিছু DELETE/UPDATE করা হয় না।
+    // নতুন সিস্টেম নিচের দুটো টেবিলে চলে; পুরোনো লজিক আর কোথাও চালু নেই।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deposit_turnovers (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        deposit_id INTEGER,
+        source VARCHAR(20) NOT NULL DEFAULT 'deposit',
+        deposit_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        bonus_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        multiplier NUMERIC(8,2) NOT NULL,
+        required NUMERIC(16,2) NOT NULL,
+        sports_done NUMERIC(16,2) NOT NULL DEFAULT 0,
+        casino_done NUMERIC(16,2) NOT NULL DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        expires_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_deposit_turnovers_deposit ON deposit_turnovers(deposit_id) WHERE deposit_id IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_turnovers_user_status ON deposit_turnovers(user_id, status)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS turnover_events (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        ref TEXT NOT NULL,
+        category VARCHAR(10) NOT NULL,
+        amount NUMERIC(16,2) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, ref)
+      );
+    `);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+        ('turnover_no_bonus_multiplier', '1'),
+        ('turnover_min_odds', '1.5'),
+        ('turnover_expiry_hours', '0'),
+        ('turnover_cashout_counts', '0')
+      ON CONFLICT (key) DO NOTHING
+    `);
+    console.log('✅ turnover v2 ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
-const { createBonus, canWithdraw } = require('../services/turnover');
+const { createBonus, createDepositTurnover, canWithdraw } = require('../services/turnover');
 const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
@@ -560,7 +560,7 @@ router.get('/withdraw/turnover-status', isAuth, requireFeature('withdrawal'), as
   res.set('Cache-Control', 'no-store');
   try {
     const check = await canWithdraw(req.session.user.id);
-    res.json({ success: true, allowed: !!check.allowed, pending: check.pending || [] });
+    res.json({ success: true, allowed: !!check.allowed, pending: check.pending || [], summary: check.summary || null });
   } catch (err) {
     console.error('turnover-status error:', err.message);
     // ব্যর্থ হলে আনলক বলা যাবে না
@@ -842,9 +842,10 @@ async function creditApprovedDeposit(client, request) {
           `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit_bonus',$3)`,
           [request.user_id, bonusGiven, `ডিপোজিট বোনাস (#${request.id})`]
         );
-        await createBonus(client, request.user_id, 'deposit', bonusGiven);
       }
     }
+    // Turnover V2: প্রতিটি approved Deposit-এর আলাদা এন্ট্রি — বোনাস নিলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
+    await createDepositTurnover(client, { userId: request.user_id, depositId: request.id, depositAmount: request.amount, bonusAmount: bonusGiven });
     // রেফারেল বোনাস এখানে নয় — ডিপোজিট COMMIT-এর পরে আলাদা ট্রানজ্যাকশনে (services/referralRewards.js)।
   }
 

@@ -1068,7 +1068,7 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
-  'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
   'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',

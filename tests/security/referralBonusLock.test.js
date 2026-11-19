@@ -14,7 +14,7 @@
 
 const { pool } = require('../../db');
 const { runEngine } = require('../helpers/referralDeposit');
-const { canWithdraw, RULES } = require('../../services/turnover');
+const { canWithdraw } = require('../../services/turnover');
 const { uniqueUsername, uniquePhone } = require('../helpers/app');
 
 async function createUser(prefix) {
@@ -40,19 +40,12 @@ describe('রেফারেল বোনাসে টার্নওভার �
     );
   });
 
-  test('RULES-এ referral এন্ট্রি আছে এবং স্পোর্টস মাল্টিপ্লায়ার শূন্যের বেশি', () => {
-    // এই এন্ট্রি না থাকলে createBonus() নীরবে কিছুই না করে ফিরে যেত —
-    // অর্থাৎ লকটা আবার হারিয়ে যেত, কোনো এরর ছাড়াই।
-    expect(RULES.referral).toBeDefined();
-    expect(RULES.referral.sports).toBeGreaterThan(0);
-  });
-
   test('রেফারেল পেআউটের পর bonuses টেবিলে active সারি তৈরি হয়', async () => {
     await runEngine(referredId, 500); // V2 ইঞ্জিন (আলাদা ট্রানজ্যাকশন)
 
     const bonuses = await pool.query(
-      `SELECT bonus_type, bonus_amount, sports_required, status
-       FROM bonuses WHERE user_id = $1`,
+      `SELECT source AS bonus_type, bonus_amount, required AS sports_required, status
+       FROM deposit_turnovers WHERE user_id = $1`,
       [referrerId]
     );
 
@@ -72,13 +65,13 @@ describe('রেফারেল বোনাসে টার্নওভার �
 
     const after = await canWithdraw(referrerId);
     expect(after.allowed).toBe(false);
-    expect(after.pending.some(p => p.type === 'referral' && p.sportsLeft > 0)).toBe(true);
+    expect(after.pending.some(p => p.type === 'referral' && p.remaining > 0)).toBe(true);
   });
 
   test('ন্যূনতম ডিপোজিটের নিচে হলে বোনাসও নেই, লকও নেই', async () => {
     await runEngine(referredId, 100); // ৫০০-র নিচে
 
-    const bonuses = await pool.query('SELECT id FROM bonuses WHERE user_id = $1', [referrerId]);
+    const bonuses = await pool.query('SELECT id FROM deposit_turnovers WHERE user_id = $1', [referrerId]);
     expect(bonuses.rows.length).toBe(0);
 
     const check = await canWithdraw(referrerId);

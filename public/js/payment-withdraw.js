@@ -70,7 +70,7 @@
     return n;
   }
 
-  function addLine(row, label, left, required, done, L) {
+  function addLine(row, label, left, required, done, L, percent) {
     var line = el('div', 'to-line');
     line.appendChild(el('span', null, label));
     line.appendChild(el('b', null, '\u09F3 ' + money(left) + ' ' + L.left));
@@ -80,17 +80,18 @@
     bar.value = Number(done) || 0;
     row.appendChild(bar);
     row.appendChild(el('div', 'to-meta',
-      '\u09F3 ' + money(done) + ' / \u09F3 ' + money(required) + ' ' + L.done));
+      '\u09F3 ' + money(done) + ' / \u09F3 ' + money(required) + ' ' + L.done + ' (' + (Number(percent) || 0) + '%)'));
   }
 
   function renderPending(list, pending, L) {
     while (list.firstChild) list.removeChild(list.firstChild);
     pending.forEach(function (p) {
-      if (!(p.sportsLeft > 0 || p.casinoLeft > 0)) return;
+      if (!(p.remaining > 0)) return;
       var row = el('div', 'to-row');
       row.appendChild(el('div', 'to-row-title', L.types[p.type] || p.type));
-      if (p.sportsLeft > 0) addLine(row, L.sports, p.sportsLeft, p.sportsRequired, p.sportsDone, L);
-      if (p.casinoLeft > 0) addLine(row, L.casino, p.casinoLeft, p.casinoRequired, p.casinoDone, L);
+      addLine(row, L.total, p.remaining, p.required, p.completed, L, p.percent);
+      row.appendChild(el('div', 'to-meta',
+        L.sports + ': \u09F3 ' + money(p.sportsDone) + ' \u00B7 ' + L.casino + ': \u09F3 ' + money(p.casinoDone)));
       list.appendChild(row);
     });
   }
@@ -126,6 +127,7 @@
       casino: modal.getAttribute('data-l-casino'),
       left: modal.getAttribute('data-l-left'),
       done: modal.getAttribute('data-l-done'),
+      total: modal.getAttribute('data-l-total') || 'Total',
       unlocked: modal.getAttribute('data-l-unlocked'),
       types: {
         deposit: modal.getAttribute('data-l-type-deposit'),

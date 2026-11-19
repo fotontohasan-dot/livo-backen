@@ -3557,5 +3557,10 @@
   "ref_first_deposit_info": "আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করলে আপনি বোনাস পাবেন।",
   "ref_status_pending": "⏳ অপেক্ষমাণ",
   "ref_status_bonus_received": "✅ বোনাস পেয়েছেন",
-  "admin_status_held": "আটকানো (রিভিউ)"
+  "admin_status_held": "আটকানো (রিভিউ)",
+  "to_total_label": "মোট টার্নওভার",
+  "adms_turnover_nobonus_mult": "টার্নওভার মাল্টিপ্লায়ার (বোনাস ছাড়া, ডিপোজিট × )",
+  "adms_turnover_min_odds": "টার্নওভার ন্যূনতম অডস (০ = বন্ধ)",
+  "adms_turnover_expiry_hours": "টার্নওভার মেয়াদ (ঘণ্টা, ০ = মেয়াদ নেই)",
+  "adms_turnover_cashout_counts": "ক্যাশ-আউট টার্নওভারে গণ্য (১ = হ্যাঁ, ০ = না)"
 }

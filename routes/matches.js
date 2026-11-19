@@ -14,7 +14,6 @@ const { requireFeature } = require('../middleware/featureGate');
 // বেটিং আলাদাভাবে `sports_betting` দিয়ে গেটেড (নিচে POST /:id/bet), যাতে
 // "ম্যাচ দেখা যাবে কিন্তু বাজি ধরা যাবে না" অবস্থাটাও সম্ভব হয়।
 router.use(requireFeature('sports'));
-const { addTurnover } = require('../services/turnover');
 const { updateDailyTurnover } = require('../services/dailyReward');
 const { distributeCommission } = require('../services/referral');
 const { addBet } = require('../services/cashback');
@@ -528,7 +527,7 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
     // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
     // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
     // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
-    await addTurnover(client, userId, 'sports', risk);
+    // Turnover V2: Sports টার্নওভার বেট settle হওয়ার পর (services/settlement.js) যোগ হয়।
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
