@@ -66,7 +66,7 @@ async function dailyMission() {
 // mission পূরণ করার মতো progress বসানো — নাহলে claim বৈধভাবেই ব্যর্থ হত
 // এবং টেস্টটা "duplicate আটকেছে" বলে মিথ্যা আশ্বাস দিত।
 async function seedProgress(userId, def) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = require('../../utils/businessTime').today(); // সার্ভিসের মতো BD ব্যবসায়িক দিন
   const betCount = def.target_type === 'bet_count' ? Number(def.target_value) + 10 : 0;
   const turnover = def.target_type === 'bet_count' ? 0 : Number(def.target_value) + 1000;
   await pool.query(
