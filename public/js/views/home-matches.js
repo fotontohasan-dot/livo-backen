@@ -15,8 +15,6 @@
     return n > 0 ? n : 24;
   }
   var MAX_ROWS = capRows();
-  // সাইডবারে সর্বোচ্চ সারি: ভিউ থেকে data-max (ডিফল্ট ৮, কখনো ৮-এর বেশি নয়)
-  var MAX_ROWS = Math.min(Math.max(parseInt(root.getAttribute('data-max'), 10) || 8, 1), 8);
   var ALL = [];
   var filter = null;      // null = pick a default once data arrives
   var league = '';

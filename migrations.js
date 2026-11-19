@@ -1183,6 +1183,7 @@ async function applyMigrations(pool) {
       CREATE INDEX IF NOT EXISTS idx_games_home_letter
         ON games((UPPER(LEFT(LTRIM(name), 1))), name, id)
         WHERE is_active = true AND admin_disabled = false;
+    `);
     // হোমের প্রোভাইডার ফিল্টার ও A-Z (ইংরেজি নামের প্রথম অক্ষর) ফিল্টারের জন্য ইনডেক্স
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_games_provider_lobby

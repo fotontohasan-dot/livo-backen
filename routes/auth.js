@@ -166,13 +166,6 @@ router.get('/', async (req, res) => {
     // গেম খেলা যাবে কি না তা games টেবিলের সারি + প্রোভাইডার সাসপেন্ড অবস্থা দিয়ে নির্ধারিত;
     // লঞ্চ-পথ /games/launch/:provider/:gameId অপরিবর্তিত।
     res.render('index', { user: req.session.user || null, casino });
-    // ক্যাসিনো-প্রথম হোম: ফিল্টার (ক্যাটাগরি/প্রোভাইডার/A-Z/সার্চ) সার্ভার-সাইডে; ডেটা-পড়া
-    // services/homeCasino.js-এ। ব্যর্থ হলে সেখানেই খালি-কিন্তু-বৈধ অবস্থা ফেরে, তাই হোম 500 দেয় না।
-    const [casino, banners] = await Promise.all([
-      homeCasino.getHomeCasino(req.query),
-      homeCasino.getBanners(),
-    ]);
-    res.render('index', { user: req.session.user || null, casino, banners, homeCasino, currentPage: 'home', bottomNavVariant: 'casino' });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
