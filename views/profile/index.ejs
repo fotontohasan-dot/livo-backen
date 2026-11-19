@@ -1,45 +1,46 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
-  /* Profile — "আমার অ্যাকাউন্ট" লাইট লেআউট (রেফারেন্স স্ক্রিনশট অনুযায়ী)।
+  /* Profile — রেফারেন্স লেআউট, সাইটের আগের ডার্ক-গ্রিন/গোল্ড রঙেই।
      style.css-এর `body:not(.light-mode) * { color:#fff !important }` হারাতে
-     সব রঙ `body .pf2 …` + !important দিয়ে বসানো। */
-  .pf2 { background:#f6f6f7; min-height:100vh; padding-bottom:110px; }
-  .pf2-bar { background:linear-gradient(135deg,#3a3535 0%,#2b2828 100%); height:56px; display:flex; align-items:center; justify-content:center; position:relative; }
-  .pf2-back { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:36px; height:36px; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:20px; }
+     গোল্ড/ম্যুটেড রঙ `body .pf2 …` + !important দিয়ে বসানো। */
+  .pf2 { padding:0 15px 110px; }
+  .pf2-bar { height:54px; display:flex; align-items:center; justify-content:center; position:relative; margin:0 -15px 10px; }
+  .pf2-back { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:36px; height:36px; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:19px; }
   .pf2-bar-title { font-size:17px; font-weight:700; }
-  .pf2-card { margin:-1px 16px 0 16px; border-radius:0 0 22px 22px; padding:20px 18px 20px; position:relative; overflow:hidden; background:linear-gradient(145deg,#f4f6fa 0%,#dfe4ec 100%); box-shadow:0 8px 24px rgba(0,0,0,0.12); }
-  .pf2-card::after { content:""; position:absolute; right:-30px; top:-20px; width:170px; height:170px; border-radius:50%; background:radial-gradient(circle,rgba(160,170,190,0.45),transparent 70%); pointer-events:none; }
-  .pf2-top { display:flex; align-items:center; gap:16px; position:relative; z-index:1; }
+  .pf2-card { background:linear-gradient(160deg,#003615,#001f0a 65%); border-radius:26px; padding:20px 18px 18px; position:relative; overflow:hidden; border:1px solid rgba(245,158,11,0.25); box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+  .pf2-card::after { content:""; position:absolute; top:-60px; right:-60px; width:170px; height:170px; background:radial-gradient(circle,rgba(212,167,44,0.55) 0%,rgba(212,167,44,0.18) 55%,transparent 75%); border-radius:50%; pointer-events:none; }
+  .pf2-top { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
   .pf2-avatar-wrap { position:relative; flex:0 0 auto; }
-  .pf2-avatar { width:82px; height:82px; border-radius:50%; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; border:4px solid #fff; box-shadow:0 4px 14px rgba(0,0,0,0.25); cursor:pointer; }
-  .pf2-cam { position:absolute; right:-2px; bottom:-2px; width:26px; height:26px; border-radius:50%; background:#2b6a52; border:2px solid #fff; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; }
+  .pf2-avatar { width:78px; height:78px; border-radius:50%; background:var(--grad-gold); background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; border:3px solid rgba(255,255,255,0.85); box-shadow:0 4px 16px rgba(0,0,0,0.5); cursor:pointer; }
+  .pf2-cam { position:absolute; right:-3px; bottom:-3px; width:26px; height:26px; border-radius:50%; background:var(--grad-gold); border:2px solid #002d0b; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
   .pf2-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
   .pf2-vip { align-self:flex-start; text-decoration:none; display:inline-flex; }
-  .pf2-vip span { background:linear-gradient(180deg,#8d9199,#5b5f66); font-size:13px; font-weight:800; padding:3px 16px; border-radius:20px; letter-spacing:.5px; }
-  .pf2-name-row { display:flex; align-items:center; gap:8px; min-width:0; }
-  .pf2-name { font-size:20px; font-weight:800; overflow-wrap:anywhere; line-height:1.2; }
-  .pf2-icon-btn { background:transparent; border:none; padding:2px; cursor:pointer; font-size:15px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
-  .pf2-meta { display:flex; align-items:center; gap:6px; font-size:12.5px; flex-wrap:wrap; }
+  .pf2-vip span { background:var(--grad-gold); font-size:11px; font-weight:900; padding:3px 14px; border-radius:20px; text-transform:uppercase; box-shadow:0 2px 8px rgba(212,167,44,0.35); }
+  .pf2-name-row { display:flex; align-items:center; gap:6px; min-width:0; flex-wrap:wrap; }
+  .pf2-name { font-size:19px; font-weight:800; letter-spacing:.5px; overflow-wrap:anywhere; line-height:1.2; }
+  .pf2-icon-btn { background:rgba(255,255,255,0.08); border:none; width:22px; height:22px; border-radius:6px; cursor:pointer; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-size:10px; padding:0; }
+  .pf2-meta { display:flex; align-items:center; gap:6px; font-size:12px; flex-wrap:wrap; }
   .pf2-progress { display:flex; align-items:center; gap:8px; margin-top:2px; }
-  .pf2-track { flex:1; height:5px; background:rgba(0,0,0,0.12); border-radius:10px; overflow:hidden; }
-  .pf2-fill { height:100%; background:linear-gradient(90deg,#c9a24d,#e8c77a); border-radius:10px; }
-  .pf2-pts { font-family:'Teko',sans-serif; font-size:13px; }
-  .pf2-balance { display:flex; align-items:center; justify-content:space-between; margin-top:18px; position:relative; z-index:1; }
-  .pf2-balance-label { font-size:11px; letter-spacing:.5px; opacity:.8; }
-  .pf2-balance-row { display:flex; align-items:center; gap:10px; }
-  .pf2-amount { font-size:34px; font-weight:800; font-family:'Teko',sans-serif; line-height:1.15; }
-  .pf2-refresh { background:transparent; border:none; cursor:pointer; font-size:17px; padding:4px; display:inline-flex; }
-  .pf2-last { font-size:10px; opacity:.7; }
-  .pf2-hist { width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.07); display:flex; align-items:center; justify-content:center; text-decoration:none; flex:0 0 auto; }
-  .pf2-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; position:relative; z-index:1; }
-  .pf2-act { height:44px; border-radius:22px; background:linear-gradient(180deg,#ffffff,#eceff4); box-shadow:0 3px 8px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; font-size:14px; font-weight:800; white-space:nowrap; }
-  .pf2-act i { font-size:13px; }
-  .pf2-share { display:flex; gap:8px; margin-top:12px; position:relative; z-index:1; }
-  .pf2-chip { background:rgba(255,255,255,0.7); border:1px solid rgba(0,0,0,0.1); border-radius:16px; padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
-  .pf2-section { margin:22px 16px 0; }
-  .pf2-section-head { display:flex; align-items:center; gap:10px; }
-  .pf2-section-chip { background:#e4e4e6; border-radius:14px; padding:4px 14px; font-size:13px; font-weight:700; white-space:nowrap; }
-  .pf2-section-line { flex:1; height:1px; background:#e6e6e8; }
+  .pf2-track { flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; }
+  .pf2-fill { height:100%; background:var(--grad-gold); border-radius:10px; }
+  .pf2-pts { font-family:'Teko',sans-serif; font-size:12px; }
+  .pf2-wallet { margin-top:18px; background:rgba(0,0,0,0.32); border-radius:18px; padding:14px 16px 16px; border:1px solid rgba(255,255,255,0.06); backdrop-filter:blur(5px); position:relative; z-index:1; }
+  .pf2-balance { display:flex; align-items:center; justify-content:space-between; }
+  .pf2-balance-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  .pf2-balance-row { display:flex; align-items:center; gap:8px; }
+  .pf2-amount { font-size:32px; font-weight:800; font-family:'Teko',sans-serif; line-height:1.2; }
+  .pf2-refresh { background:rgba(255,255,255,0.06); border:none; cursor:pointer; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:12px; padding:0; }
+  .pf2-last { font-size:10px; }
+  .pf2-hist { background:rgba(245,158,11,0.12); width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; text-decoration:none; flex:0 0 auto; }
+  .pf2-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+  .pf2-act { height:44px; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; font-size:13px; font-weight:800; white-space:nowrap; }
+  .pf2-act-1 { background:var(--grad-gold); box-shadow:0 4px 14px rgba(212,167,44,0.3); }
+  .pf2-act-2 { background:rgba(255,255,255,0.07); border:1px solid rgba(245,158,11,0.3); }
+  .pf2-act-3 { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); }
+  .pf2-section { margin-top:22px; background:#10291D; border:1px solid #1E4633; border-radius:20px; padding:18px 14px 20px; }
+  .pf2-section-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .pf2-section-chip { background:rgba(255,255,255,0.08); border-radius:14px; padding:4px 14px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .pf2-section-line { flex:1; height:1px; background:#1E4633; }
   .pf2-foot { text-align:center; margin-top:26px; font-size:12px; }
   .pf2-foot div + div { font-size:11px; margin-top:5px; }
   .rs2-41.rs2-41.rs2-41 { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:0.3s; background:#000; color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; z-index:999; pointer-events:none; }
@@ -49,17 +50,19 @@
   .rs2-45.rs2-45.rs2-45 { color:#fff; cursor:pointer; font-size:18px; }
   .rs2-46.rs2-46.rs2-46 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 
-  /* ---- রঙ (গ্লোবাল সাদা-টেক্সট রুল ছাপিয়ে) ---- */
-  body .pf2 .pf2-bar, body .pf2 .pf2-bar * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
-  body .pf2 .pf2-card, body .pf2 .pf2-card * { color:#1d2430 !important; -webkit-text-fill-color:#1d2430 !important; }
-  body .pf2 .pf2-meta, body .pf2 .pf2-meta *, body .pf2 .pf2-balance-label, body .pf2 .pf2-last { color:#5b6573 !important; -webkit-text-fill-color:#5b6573 !important; }
-  body .pf2 .pf2-vip span, body .pf2 .pf2-vip span * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
-  body .pf2 .pf2-avatar { color:#1d2430 !important; -webkit-text-fill-color:#1d2430 !important; }
-  body .pf2 .pf2-cam, body .pf2 .pf2-cam * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
-  body .pf2 .pf2-pts { color:#8a6d2b !important; -webkit-text-fill-color:#8a6d2b !important; }
-  body .pf2 .pf2-section-chip { color:#333 !important; -webkit-text-fill-color:#333 !important; }
-  body .pf2 .pf2-foot, body .pf2 .pf2-foot * { color:#8a8f98 !important; -webkit-text-fill-color:#8a8f98 !important; }
-  body .pf2 .pf2-avatar { background-color:#e8c77a; }
+  /* রঙ — আগের ডিজাইনের মতোই */
+  body .pf2 .pf2-avatar { color:#000 !important; -webkit-text-fill-color:#000 !important; }
+  body .pf2 .pf2-cam, body .pf2 .pf2-cam * { color:#000 !important; -webkit-text-fill-color:#000 !important; }
+  body .pf2 .pf2-vip span { color:#1a1400 !important; -webkit-text-fill-color:#1a1400 !important; }
+  body .pf2 .pf2-icon-btn, body .pf2 .pf2-icon-btn i, body .pf2 .pf2-refresh, body .pf2 .pf2-refresh i, body .pf2 .pf2-hist i, body .pf2 .pf2-pts { color:var(--gold) !important; -webkit-text-fill-color:var(--gold) !important; }
+  body .pf2 .pf2-meta, body .pf2 .pf2-meta span { color:rgba(255,255,255,0.55) !important; -webkit-text-fill-color:rgba(255,255,255,0.55) !important; }
+  body .pf2 .pf2-balance-label { color:rgba(255,255,255,0.5) !important; -webkit-text-fill-color:rgba(255,255,255,0.5) !important; }
+  body .pf2 .pf2-amount { color:var(--gold) !important; -webkit-text-fill-color:var(--gold) !important; }
+  body .pf2 .pf2-last { color:var(--text-muted) !important; -webkit-text-fill-color:var(--text-muted) !important; }
+  body .pf2 .pf2-act-1, body .pf2 .pf2-act-1 * { color:#1a1400 !important; -webkit-text-fill-color:#1a1400 !important; }
+  body .pf2 .pf2-act-2, body .pf2 .pf2-act-2 * { color:var(--gold) !important; -webkit-text-fill-color:var(--gold) !important; }
+  body .pf2 .pf2-section-chip { color:#8FA396 !important; -webkit-text-fill-color:#8FA396 !important; }
+  body .pf2 .pf2-foot, body .pf2 .pf2-foot * { color:var(--text-muted) !important; -webkit-text-fill-color:var(--text-muted) !important; }
 </style>
 
 <div class="pf2">
@@ -83,6 +86,8 @@
         <div class="pf2-name-row">
           <span class="pf2-name" id="usernameText"><%= user.username %></span>
           <button class="pf2-icon-btn" type="button" data-profile-action="copy-username" aria-label="<%= t.copy_username || 'Copy username' %>"><i class="fas fa-copy"></i></button>
+          <button class="pf2-icon-btn" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>" title="<%= t.shr_copy_link || 'লিংক কপি' %>"><i class="fas fa-link"></i></button>
+          <button class="pf2-icon-btn" type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>" title="<%= t.share || 'Share' %>"><i class="fas fa-share-alt"></i></button>
         </div>
         <div class="pf2-meta">
           <span>ID: <%= 100000 + user.id %></span>
@@ -97,6 +102,7 @@
       </div>
     </div>
 
+    <div class="pf2-wallet">
     <div class="pf2-balance">
       <div>
         <div class="pf2-balance-label"><%= t.total_balance %></div>
@@ -110,21 +116,17 @@
     </div>
 
     <div class="pf2-actions">
-      <a class="pf2-act" href="/payment/deposit"><i class="fas fa-plus-circle"></i><%= t.deposit %></a>
-      <a class="pf2-act" href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i><%= t.withdraw %></a>
-      <a class="pf2-act" href="/profile/cards"><i class="fas fa-credit-card"></i>আমার কার্ড</a>
+      <a class="pf2-act pf2-act-1" href="/payment/deposit"><i class="fas fa-plus-circle"></i><%= t.deposit %></a>
+      <a class="pf2-act pf2-act-2" href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i><%= t.withdraw %></a>
+      <a class="pf2-act pf2-act-3" href="/profile/cards"><i class="fas fa-credit-card"></i>আমার কার্ড</a>
+    </div>
     </div>
 
-    <div class="pf2-share">
-      <button class="pf2-chip" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>"><i class="fas fa-link"></i> <%= t.shr_copy_link || 'লিংক কপি' %></button>
-      <button class="pf2-chip" type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>"><i class="fas fa-share-alt"></i> <%= t.share || 'Share' %></button>
-    </div>
   </div>
 
   <!-- Member Center: flat grid, every feature is one tap away -->
   <div class="pf2-section">
     <div class="pf2-section-head"><span class="pf2-section-chip"><%= t.member_center %></span><span class="pf2-section-line"></span></div>
-    <div style="height:14px"></div>
 
     <div class="mc-flat-grid">
 
@@ -284,23 +286,23 @@
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 
 <style nonce="<%= cspNonce %>">
-.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 6px;align-items:start;justify-items:center}
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px 8px;align-items:start;justify-items:center}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
 .mc-tile{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;align-self:start}
-.mc-tile-label{font-size:12px;font-weight:600;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
+.mc-tile-label{color:#F2F5F3;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
 .mc-tile-sublabel{display:none}
-.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:#fcefd3;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative}
-.mc-tile-icon-danger{background:#fde4e4}
-.mc-tile-star{position:absolute;top:-3px;right:3px;font-size:12px}
-/* গ্লোবাল সাদা-টেক্সট রুল ছাপিয়ে — গোল্ড আইকন, গাঢ়-সোনালি লেবেল */
-body .pf2 .mc-tile .mc-tile-label{color:#9a7b35 !important;-webkit-text-fill-color:#9a7b35 !important}
-body .pf2 .mc-tile .mc-tile-icon i{color:#c9a24d !important;-webkit-text-fill-color:#c9a24d !important}
-body .pf2 .mc-tile .mc-tile-icon-danger i{color:#d62828 !important;-webkit-text-fill-color:#d62828 !important}
-body .pf2 .mc-tile .mc-tile-star i{color:#e0a800 !important;-webkit-text-fill-color:#e0a800 !important}
-/* ব্যাজ — public/js/badges-realtime.js টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
-.mc-tile-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e53935;font-size:11px;font-weight:800;line-height:20px;text-align:center;box-shadow:0 1px 4px rgba(229,57,53,0.5)}
-body .pf2 .mc-tile .mc-tile-badge{color:#fff !important;-webkit-text-fill-color:#fff !important}
+.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(145deg,#008F5A 0%,#006A4E 100%);border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:25px;color:#ffffff;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.45)}
+.mc-tile-icon i,.mc-tile-icon i::before{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;filter:drop-shadow(0 0 4px rgba(16,185,129,0.65))}
+.mc-tile-icon-danger{background:linear-gradient(145deg,#D62828 0%,#8f1a1a 100%);border-color:#F26B6B;box-shadow:0 4px 12px rgba(214,40,40,0.35)}
+.mc-tile-icon-danger i,.mc-tile-icon-danger i::before{filter:drop-shadow(0 0 4px rgba(242,107,107,0.65))}
+.mc-tile-star{position:absolute;top:-3px;right:3px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.6)}
+.mc-tile-star i,.mc-tile-star i::before{filter:none !important;color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
+body:not(.light-mode) .pf2 .mc-tile .mc-tile-label{color:#F2F5F3 !important;-webkit-text-fill-color:#F2F5F3 !important}
+body:not(.light-mode) .pf2 .mc-tile .mc-tile-icon i{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
+body:not(.light-mode) .pf2 .mc-tile .mc-tile-star i{color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
+/* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
+.mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
 
 <div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
