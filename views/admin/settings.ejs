@@ -58,11 +58,9 @@ function adminRow(a, currentAdminId) {
 
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_referral_commission')}</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            ${field('referral_commission_tier1_percent', t('adms_tier1'), 'number', s.referral_commission_tier1_percent || 2.5, '0.01')}
-            ${field('referral_commission_tier2_percent', 'Tier 2 (%)', 'number', s.referral_commission_tier2_percent || 1.5, '0.01')}
-            ${field('referral_commission_tier3_percent', 'Tier 3 (%)', 'number', s.referral_commission_tier3_percent || 0.8, '0.01')}
+            ${field('referral_loss_commission_percent', 'ডিপোজিট-হার কমিশন (%)', 'number', s.referral_loss_commission_percent || 0.8, '0.01')}
         </div>
-        <p class="text-xs text-slate-400 -mt-3">${t('adms_commission_hint')}</p>
+        <p class="text-xs text-slate-400 -mt-3">রেফার-করা ইউজারের ডিপোজিট করা টাকা সম্পূর্ণ হারলে ডিপোজিটের এই % রেফারার পায়। বাজি ধরলে বা জিতলে কমিশন নেই।</p>
 
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_security')}</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">

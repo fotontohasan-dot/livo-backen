@@ -94,7 +94,7 @@
   <!-- পরের বোনাস তথ্য -->
   <div class="dz76-12">
     <div class="dz76-13"><%= t.next_referral_reward %></div>
-    <div class="dz76-14"><%= stats.nextBonus %> টাকা</div>
+    <div class="dz76-14">বন্ধুর ডিপোজিট অনুযায়ী ৳<%= ((stats.bonusBands || [])[0] || {amount:0}).amount %> – ৳<%= ((stats.bonusBands || []).slice(-1)[0] || {amount:0}).amount %></div>
     <div class="dz76-9"><%= t.referral_condition %></div>
     <div class="dz76-9"><%= t('ref_first_deposit_info') %></div>
   </div>
@@ -105,9 +105,12 @@
     <table class="rf-table">
       <thead><tr><th>বন্ধুর প্রথম ডিপোজিট</th><th class="rf-amt">আপনার বোনাস</th></tr></thead>
       <tbody>
-        <tr><td>৳১০০</td><td class="rf-amt">৳২০</td></tr>
-        <tr><td>৳২০০ – ৳৪০০</td><td class="rf-amt">৳৫০</td></tr>
-        <tr><td>৳৫০০ বা তার বেশি</td><td class="rf-amt">৳৭৫</td></tr>
+        <% (stats.bonusBands || []).forEach(function (band, i, arr) { var next = arr[i + 1]; %>
+        <tr>
+          <td>৳<%= band.min.toLocaleString('bn-BD') %><%= next ? ' – ৳' + (next.min - 1).toLocaleString('bn-BD') : ' বা তার বেশি' %></td>
+          <td class="rf-amt">৳<%= band.amount.toLocaleString('bn-BD') %></td>
+        </tr>
+        <% }) %>
       </tbody>
     </table>
     <div class="rf-note">রেফার করা বন্ধু অ্যাকাউন্ট খুলে প্রথমবার ডিপোজিট করলে বোনাস পাবেন। সাইন-আপ করলেই বোনাস হয় না।</div>
@@ -115,7 +118,7 @@
 
   <div class="rf-card">
     <div class="rf-title">💸 ডিপোজিট হারের কমিশন</div>
-    <div class="rf-rate">০.৮%</div>
+    <div class="rf-rate"><%= Number(stats.lossCommissionPercent).toLocaleString('bn-BD') %>%</div>
     <div class="rf-note">বন্ধু যে টাকা ডিপোজিট করেছে তা সম্পূর্ণ হেরে গেলে, সেই ডিপোজিটের ০.৮% আপনি কমিশন পাবেন।</div>
     <ul class="rf-list">
       <li>প্রতিটি আলাদা বাজির হার-জিতের হিসাব হয় না।</li>
@@ -180,7 +183,7 @@
         <div class="dz76-30">
           <div>
             <div class="dz76-31">
-              <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
+              <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : (h.reason === 'loss_commission' ? '💸 ডিপোজিট-হার কমিশন' : '💸 ' + t('ref_commission').replace('{level}', h.level)) %>
             </div>
             <div class="dz76-24">
               <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>

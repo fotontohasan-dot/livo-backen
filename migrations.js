@@ -2142,6 +2142,36 @@ async function applyMigrations(pool) {
       ON CONFLICT (key) DO NOTHING;
     `);
 
+
+    // ==================== রেফারেল নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস + ০.৮% ডিপোজিট-হার কমিশন ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_deposit_cycles (
+        id BIGSERIAL PRIMARY KEY,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id),
+        referrer_id INTEGER NOT NULL REFERENCES users(id),
+        deposited NUMERIC(14,2) NOT NULL DEFAULT 0,
+        deposit_ids INTEGER[] NOT NULL DEFAULT '{}',
+        status VARCHAR(20) NOT NULL DEFAULT 'open',
+        commission NUMERIC(12,2) NOT NULL DEFAULT 0,
+        opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        closed_at TIMESTAMP,
+        CONSTRAINT referral_deposit_cycles_status_chk CHECK (status IN
+          ('open','lost_paid','closed_withdrawn','closed_held','closed_zero'))
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_referral_cycle_open ON referral_deposit_cycles(referred_user_id) WHERE status = 'open';`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_cycle_referrer ON referral_deposit_cycles(referrer_id, status);`);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_bonus_bands', '[{"min":100,"amount":20},{"min":200,"amount":50},{"min":500,"amount":75}]'),
+      ('referral_loss_commission_percent', '0.8'),
+      ('referral_bet_commission_enabled', 'false')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    // পুরোনো ডিফল্ট ন্যূনতম (৫০০) থাকলে নতুন নিয়মের ১০০-তে নামানো; অ্যাডমিনের নিজের সেট করা মান অপরিবর্তিত।
+    await pool.query(`UPDATE site_settings SET value = '100' WHERE key = 'referral_min_deposit' AND value = '500'`);
+    console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
+
     // legacy_paid ব্যাকফিল: পুরোনো সাইন-আপ-বোনাস পাওয়া (signup_bonus_paid=true) রেফারেল —
     // এর মধ্যে আগের pending_review বোনাসের রেফারেলও (ওগুলোতেও ওই ফ্ল্যাগ true হতো) —
     // শুধু রেকর্ড হয়। ব্যালেন্স/লেজার/bonuses কিছুই বদলায় না; নতুন পেআউট বা কাটছাঁট নেই।

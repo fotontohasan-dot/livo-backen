@@ -20,7 +20,8 @@ const DEFAULTS = {
   withdraw_commission_percent: '0',
   referral_commission_tier1_percent: '2.5',
   referral_commission_tier2_percent: '1.5',
-  referral_commission_tier3_percent: '0.8'
+  referral_commission_tier3_percent: '0.8',
+  referral_loss_commission_percent: '0.8'
 };
 
 async function fetchFromDb() {

@@ -315,3 +315,46 @@ describe('ত্রুটি ও legacy', () => {
     expect((await reward(referred)).status).toBe('legacy_paid');
   });
 });
+
+describe('নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস ধাপ ও ০.৮% হার-কমিশন', () => {
+  test.each([[100, 20, 1], [200, 50, 2], [400, 50, 2], [500, 75, 3]])(
+    'প্রথম ডিপোজিট %p → রেফারার বোনাস %p', async (dep, want, tier) => {
+      const { referrer, referred } = await pair();
+      await depositAndApprove(referred, dep);
+      expect(await coins(referrer)).toBe(want);
+      const rw = await reward(referred);
+      expect(Number(rw.amount)).toBe(want);
+      expect(rw.tier).toBe(tier);
+    });
+
+  test('ডিপোজিট সম্পূর্ণ হারলে রেফারার ডিপোজিটের ০.৮% পায়; দ্বিতীয়বার সেটেল হলে ডবল নয়', async () => {
+    const { referrer, referred } = await pair();
+    await depositAndApprove(referred, 500);
+    const before = await coins(referrer);
+    // ইউজার সব হেরে ব্যালেন্স শূন্য; শেষ কার্যকলাপ ১ ঘণ্টা আগের
+    await pool.query(`UPDATE users SET coins = 0 WHERE id = $1`, [referred]);
+    await pool.query(`UPDATE coin_transactions SET created_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1`, [referred]);
+    await engine.settleLossCycles();
+    expect(await coins(referrer)).toBe(before + 4); // ৫০০ × ০.৮% = ৪
+    await engine.settleLossCycles();
+    expect(await coins(referrer)).toBe(before + 4);
+    expect(await count(`SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1 AND reason='loss_commission'`, [referrer])).toBe(1);
+  });
+
+  test('ব্যালেন্স থাকলে বা সাইকেলে উইথড্র থাকলে কমিশন নেই', async () => {
+    const a = await pair();
+    await depositAndApprove(a.referred, 500);
+    const beforeA = await coins(a.referrer);
+    await engine.settleLossCycles(); // ইউজারের ব্যালেন্স ≥ ১
+    expect(await coins(a.referrer)).toBe(beforeA);
+
+    const b = await pair();
+    await depositAndApprove(b.referred, 500);
+    const beforeB = await coins(b.referrer);
+    await pool.query(`INSERT INTO payment_requests (user_id, type, amount, status, method) VALUES ($1,'withdraw',100,'approved','bkash')`, [b.referred]);
+    await pool.query(`UPDATE users SET coins = 0 WHERE id = $1`, [b.referred]);
+    await pool.query(`UPDATE coin_transactions SET created_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1`, [b.referred]);
+    await engine.settleLossCycles();
+    expect(await coins(b.referrer)).toBe(beforeB);
+  });
+});
