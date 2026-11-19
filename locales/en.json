@@ -2542,6 +2542,8 @@
   "adms_referral_commission": "Referral commission (when a deposit is fully lost)",
   "adms_tier1": "Tier 1 — direct referral (%)",
   "adms_commission_hint": "Each value must be between 0 and 100. Changes apply to new bets immediately (30-second cache).",
+  "adms_loss_commission": "Deposit-loss commission (%)",
+  "adms_loss_commission_hint": "When a referred user loses their entire deposit, the referrer earns this % of the deposit. No commission on placing bets or on wins.",
   "adms_security": "Security",
   "adms_max_login": "Max login attempts",
   "adms_maintenance": "Enable maintenance mode",
