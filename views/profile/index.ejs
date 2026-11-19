@@ -1,147 +1,130 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). Class selectors are repeated so the generated rules keep
-     the specificity the inline declarations had, without !important —
-     JS-set element.style still wins. */
-  .rs2-1.rs2-1.rs2-1 { padding: 15px; padding-bottom: 100px; }
-  .rs2-2.rs2-2.rs2-2 { background: linear-gradient(160deg, #003615, #001f0a 65%); border-radius: 26px; padding: 34px 20px 20px; margin-bottom: 20px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-  .rs2-3.rs2-3.rs2-3 { position: absolute; top: -60px; right: -60px; width: 170px; height: 170px; background: radial-gradient(circle, rgba(212,167,44,0.55) 0%, rgba(212,167,44,0.18) 55%, transparent 75%); border-radius: 50%; }
-  .rs2-4.rs2-4.rs2-4 { display: flex; align-items: flex-start; gap: 16px; position: relative; z-index: 1; }
-  .rs2-5.rs2-5.rs2-5 { position: relative; margin-top: -34px; flex-shrink: 0; }
-  .rs2-6.rs2-6.rs2-6 { position: absolute; bottom: -4px; right: -4px; background: var(--grad-gold); border: 2px solid #002d0b; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-  .rs2-7.rs2-7.rs2-7 { font-size: 11px; color: #000; }
-  .rs2-8.rs2-8.rs2-8 { flex: 1; min-width: 0; padding-top: 6px; }
-  .rs2-9.rs2-9.rs2-9 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .rs2-10.rs2-10.rs2-10 { color: #fff; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; overflow-wrap:anywhere; }
-  .rs2-11.rs2-11.rs2-11 { background: rgba(255,255,255,0.08); border: none; width: 22px; height: 22px; border-radius: 6px; color: var(--gold); cursor: pointer; flex-shrink:0; }
-  .rs2-12.rs2-12.rs2-12 { font-size: 10px; }
-  .rs2-13.rs2-13.rs2-13 { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; margin-top: 8px; }
-  .rs2-14.rs2-14.rs2-14 { background: var(--grad-gold); color: #1a1400; font-size: 11px; padding: 4px 14px; border-radius: 20px; font-weight: 900; text-transform: uppercase; box-shadow: 0 2px 8px rgba(212,167,44,0.35); }
-  .rs2-15.rs2-15.rs2-15 { display:flex; align-items:center; gap:6px; color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 8px; }
-  .rs2-16.rs2-16.rs2-16 { background: rgba(255,255,255,0.08); border: none; width: 20px; height: 20px; border-radius: 6px; color: var(--gold); cursor: pointer; }
-  .rs2-17.rs2-17.rs2-17 { font-size: 9px; }
-  .rs2-18.rs2-18.rs2-18 { display:flex; align-items:center; gap:8px; margin-top: 10px; }
-  .rs2-19.rs2-19.rs2-19 { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); padding: 5px 12px; border-radius: 20px; color: var(--gold); cursor: pointer; font-size: 11px; font-weight: 700; display:flex; align-items:center; gap:5px; }
-  .rs2-20.rs2-20.rs2-20 { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
-  .rs2-21.rs2-21.rs2-21 { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
-  .rs2-22.rs2-22.rs2-22 { font-family: 'Teko', sans-serif; font-size: 12px; color: var(--gold); }
-  .rs2-23.rs2-23.rs2-23 { margin-top: 22px; background: rgba(0,0,0,0.32); border-radius: 18px; padding: 16px 18px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(5px); }
-  .rs2-24.rs2-24.rs2-24 { display: flex; justify-content: space-between; align-items: center; }
-  .rs2-25.rs2-25.rs2-25 { color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  .rs2-26.rs2-26.rs2-26 { display:flex; align-items:center; gap:8px; }
-  .rs2-27.rs2-27.rs2-27 { color: var(--gold); font-size: 32px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2; }
-  .rs2-28.rs2-28.rs2-28 { background: rgba(255,255,255,0.06); border: none; color: var(--gold); cursor: pointer; padding: 6px; border-radius: 50%; width: 26px; height: 26px; display:flex; align-items:center; justify-content:center; }
-  .rs2-29.rs2-29.rs2-29 { font-size: 12px; }
-  .rs2-30.rs2-30.rs2-30 { color: var(--text-muted); font-size: 10px; }
-  .rs2-31.rs2-31.rs2-31 { background: rgba(245, 158, 11, 0.12); color: var(--gold); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0; }
-  .rs2-32.rs2-32.rs2-32 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
-  .rs2-33.rs2-33.rs2-33 { background: var(--grad-gold); color: #1a1400; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(212,167,44,0.3); }
-  .rs2-34.rs2-34.rs2-34 { background: rgba(255,255,255,0.07); color: var(--gold); padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
-  .rs2-35.rs2-35.rs2-35 { background: rgba(255,255,255,0.07); color: #fff; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
-  .rs2-36.rs2-36.rs2-36 { background: #10291D; border-radius: 20px; padding: 20px; border: 1px solid #1E4633; }
-  .rs2-37.rs2-37.rs2-37 { color: #8a7a55; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-  .rs2-38.rs2-38.rs2-38 { text-align: center; margin-top: 30px; padding-bottom: 20px; }
-  .rs2-39.rs2-39.rs2-39 { color: var(--text-muted); font-size: 12px; }
-  .rs2-40.rs2-40.rs2-40 { color: var(--text-muted); font-size: 11px; margin-top: 5px; }
+  /* Profile — "আমার অ্যাকাউন্ট" লাইট লেআউট (রেফারেন্স স্ক্রিনশট অনুযায়ী)।
+     style.css-এর `body:not(.light-mode) * { color:#fff !important }` হারাতে
+     সব রঙ `body .pf2 …` + !important দিয়ে বসানো। */
+  .pf2 { background:#f6f6f7; min-height:100vh; padding-bottom:110px; }
+  .pf2-bar { background:linear-gradient(135deg,#3a3535 0%,#2b2828 100%); height:56px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .pf2-back { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:36px; height:36px; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:20px; }
+  .pf2-bar-title { font-size:17px; font-weight:700; }
+  .pf2-card { margin:-1px 16px 0 16px; border-radius:0 0 22px 22px; padding:20px 18px 20px; position:relative; overflow:hidden; background:linear-gradient(145deg,#f4f6fa 0%,#dfe4ec 100%); box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+  .pf2-card::after { content:""; position:absolute; right:-30px; top:-20px; width:170px; height:170px; border-radius:50%; background:radial-gradient(circle,rgba(160,170,190,0.45),transparent 70%); pointer-events:none; }
+  .pf2-top { display:flex; align-items:center; gap:16px; position:relative; z-index:1; }
+  .pf2-avatar-wrap { position:relative; flex:0 0 auto; }
+  .pf2-avatar { width:82px; height:82px; border-radius:50%; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; border:4px solid #fff; box-shadow:0 4px 14px rgba(0,0,0,0.25); cursor:pointer; }
+  .pf2-cam { position:absolute; right:-2px; bottom:-2px; width:26px; height:26px; border-radius:50%; background:#2b6a52; border:2px solid #fff; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; }
+  .pf2-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .pf2-vip { align-self:flex-start; text-decoration:none; display:inline-flex; }
+  .pf2-vip span { background:linear-gradient(180deg,#8d9199,#5b5f66); font-size:13px; font-weight:800; padding:3px 16px; border-radius:20px; letter-spacing:.5px; }
+  .pf2-name-row { display:flex; align-items:center; gap:8px; min-width:0; }
+  .pf2-name { font-size:20px; font-weight:800; overflow-wrap:anywhere; line-height:1.2; }
+  .pf2-icon-btn { background:transparent; border:none; padding:2px; cursor:pointer; font-size:15px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
+  .pf2-meta { display:flex; align-items:center; gap:6px; font-size:12.5px; flex-wrap:wrap; }
+  .pf2-progress { display:flex; align-items:center; gap:8px; margin-top:2px; }
+  .pf2-track { flex:1; height:5px; background:rgba(0,0,0,0.12); border-radius:10px; overflow:hidden; }
+  .pf2-fill { height:100%; background:linear-gradient(90deg,#c9a24d,#e8c77a); border-radius:10px; }
+  .pf2-pts { font-family:'Teko',sans-serif; font-size:13px; }
+  .pf2-balance { display:flex; align-items:center; justify-content:space-between; margin-top:18px; position:relative; z-index:1; }
+  .pf2-balance-label { font-size:11px; letter-spacing:.5px; opacity:.8; }
+  .pf2-balance-row { display:flex; align-items:center; gap:10px; }
+  .pf2-amount { font-size:34px; font-weight:800; font-family:'Teko',sans-serif; line-height:1.15; }
+  .pf2-refresh { background:transparent; border:none; cursor:pointer; font-size:17px; padding:4px; display:inline-flex; }
+  .pf2-last { font-size:10px; opacity:.7; }
+  .pf2-hist { width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.07); display:flex; align-items:center; justify-content:center; text-decoration:none; flex:0 0 auto; }
+  .pf2-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; position:relative; z-index:1; }
+  .pf2-act { height:44px; border-radius:22px; background:linear-gradient(180deg,#ffffff,#eceff4); box-shadow:0 3px 8px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; font-size:14px; font-weight:800; white-space:nowrap; }
+  .pf2-act i { font-size:13px; }
+  .pf2-share { display:flex; gap:8px; margin-top:12px; position:relative; z-index:1; }
+  .pf2-chip { background:rgba(255,255,255,0.7); border:1px solid rgba(0,0,0,0.1); border-radius:16px; padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .pf2-section { margin:22px 16px 0; }
+  .pf2-section-head { display:flex; align-items:center; gap:10px; }
+  .pf2-section-chip { background:#e4e4e6; border-radius:14px; padding:4px 14px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .pf2-section-line { flex:1; height:1px; background:#e6e6e8; }
+  .pf2-foot { text-align:center; margin-top:26px; font-size:12px; }
+  .pf2-foot div + div { font-size:11px; margin-top:5px; }
   .rs2-41.rs2-41.rs2-41 { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:0.3s; background:#000; color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; z-index:999; pointer-events:none; }
   .rs2-42.rs2-42.rs2-42 { background:var(--bg-card, #10251a); border-radius:20px; padding:20px; max-width:360px; width:100%; border:1px solid rgba(245,158,11,0.3); }
   .rs2-43.rs2-43.rs2-43 { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
   .rs2-44.rs2-44.rs2-44 { color:#fff; font-weight:800; }
   .rs2-45.rs2-45.rs2-45 { color:#fff; cursor:pointer; font-size:18px; }
   .rs2-46.rs2-46.rs2-46 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+
+  /* ---- রঙ (গ্লোবাল সাদা-টেক্সট রুল ছাপিয়ে) ---- */
+  body .pf2 .pf2-bar, body .pf2 .pf2-bar * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
+  body .pf2 .pf2-card, body .pf2 .pf2-card * { color:#1d2430 !important; -webkit-text-fill-color:#1d2430 !important; }
+  body .pf2 .pf2-meta, body .pf2 .pf2-meta *, body .pf2 .pf2-balance-label, body .pf2 .pf2-last { color:#5b6573 !important; -webkit-text-fill-color:#5b6573 !important; }
+  body .pf2 .pf2-vip span, body .pf2 .pf2-vip span * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
+  body .pf2 .pf2-avatar { color:#1d2430 !important; -webkit-text-fill-color:#1d2430 !important; }
+  body .pf2 .pf2-cam, body .pf2 .pf2-cam * { color:#fff !important; -webkit-text-fill-color:#fff !important; }
+  body .pf2 .pf2-pts { color:#8a6d2b !important; -webkit-text-fill-color:#8a6d2b !important; }
+  body .pf2 .pf2-section-chip { color:#333 !important; -webkit-text-fill-color:#333 !important; }
+  body .pf2 .pf2-foot, body .pf2 .pf2-foot * { color:#8a8f98 !important; -webkit-text-fill-color:#8a8f98 !important; }
+  body .pf2 .pf2-avatar { background-color:#e8c77a; }
 </style>
 
-<div class="container rs2-1">
+<div class="pf2">
+  <div class="pf2-bar">
+    <a class="pf2-back" href="javascript:history.back()" aria-label="<%= t.back || 'Back' %>"><i class="fas fa-chevron-left"></i></a>
+    <span class="pf2-bar-title">আমার অ্যাকাউন্ট</span>
+  </div>
   <%- include('../partials/flash') %>
-  <!-- Premium Profile Header -->
-  <div class="rs2-2">
-    <div class="rs2-3"></div>
 
-    <div class="rs2-4">
-      <div class="rs2-5">
-        <div id="avatarCircle" data-profile-action="avatar-open" style="width: 76px; height: 76px; border-radius: 50%; background: <%= user.avatar ? 'transparent' : 'var(--grad-gold)' %>; background-image: <%= user.avatar ? "url('" + user.avatar + "')" : 'none' %>; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; color: #000; box-shadow: 0 4px 16px rgba(0,0,0,0.5); border: 3px solid rgba(255,255,255,0.85); cursor: pointer;">
+  <div class="pf2-card">
+    <div class="pf2-top">
+      <div class="pf2-avatar-wrap">
+        <div id="avatarCircle" class="pf2-avatar" data-profile-action="avatar-open" style="background-image: <%= user.avatar ? "url('" + user.avatar + "')" : 'none' %>;">
           <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
-        <div class="rs2-6" data-profile-action="avatar-open">
-          <i class="fas fa-camera rs2-7"></i>
-        </div>
+        <div class="pf2-cam" data-profile-action="avatar-open"><i class="fas fa-camera"></i></div>
       </div>
 
-      <div class="rs2-8">
-        <div class="rs2-9">
-          <span class="rs2-10" id="usernameText"><%= user.username %></span>
-          <button class="rs2-11" type="button" data-profile-action="copy-username" aria-label="<%= t.copy_username || 'Copy username' %>">
-            <i class="fas fa-copy rs2-12"></i>
-          </button>
+      <div class="pf2-info">
+        <a href="/profile/vip" class="pf-vip-badge-sm pf2-vip"><span>VIP<%= user.vip_level || 0 %></span></a>
+        <div class="pf2-name-row">
+          <span class="pf2-name" id="usernameText"><%= user.username %></span>
+          <button class="pf2-icon-btn" type="button" data-profile-action="copy-username" aria-label="<%= t.copy_username || 'Copy username' %>"><i class="fas fa-copy"></i></button>
         </div>
-        <a href="/profile/vip" class="pf-vip-badge-sm rs2-13">
-          <span class="rs2-14">VIP<%= user.vip_level || 0 %></span>
-        </a>
-        <div class="rs2-15">
+        <div class="pf2-meta">
           <span>ID: <%= 100000 + user.id %></span>
-          <button class="rs2-16" type="button" data-profile-action="copy-uid" aria-label="<%= t.copy_uid || 'Copy ID' %>">
-            <i class="fas fa-copy rs2-17"></i>
-          </button>
+          <button class="pf2-icon-btn" type="button" data-profile-action="copy-uid" aria-label="<%= t.copy_uid || 'Copy ID' %>"><i class="fas fa-copy"></i></button>
+          <% if (user.created_at) { %><span>· যোগদান: <%= new Date(user.created_at).toISOString().slice(0, 10) %></span><% } %>
         </div>
-        <div style="display:none;">
-          <span id="profileUrlText"><%= baseUrl %>/profile</span>
-        </div>
-        <div class="rs2-18">
-          <button class="rs2-19" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>">
-            <i class="fas fa-link rs2-17"></i> <%= t.copy_link || 'Copy Link' %>
-          </button>
-          <button class="rs2-19" type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>">
-            <i class="fas fa-share-alt rs2-17"></i> <%= t.share || 'Share' %>
-          </button>
-        </div>
-        <div class="rs2-20">
-           <div class="rs2-21">
-              <div style="width: <%= (user.total_points % 1000) / 10 %>%; height: 100%; background: var(--grad-gold); border-radius: 10px;"></div>
-           </div>
-           <span class="rs2-22"><%= user.total_points % 1000 %>/1000</span>
+        <div style="display:none;"><span id="profileUrlText"><%= baseUrl %>/profile</span></div>
+        <div class="pf2-progress">
+          <div class="pf2-track"><div class="pf2-fill" style="width: <%= (user.total_points % 1000) / 10 %>%;"></div></div>
+          <span class="pf2-pts"><%= user.total_points % 1000 %>/1000</span>
         </div>
       </div>
     </div>
 
-    <!-- Wallet Card -->
-    <div class="rs2-23">
-      <div class="rs2-24">
-        <div>
-          <div class="rs2-25"><%= t.total_balance %></div>
-          <div class="rs2-26">
-            <div class="rs2-27" id="balanceText">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
-            <button class="rs2-28" type="button" data-profile-action="refresh-balance" aria-label="<%= t.refresh_balance || 'Refresh balance' %>">
-              <i id="refreshIcon" class="fas fa-sync-alt rs2-29"></i>
-            </button>
-          </div>
-          <div class="rs2-30" id="lastUpdatedText"></div>
+    <div class="pf2-balance">
+      <div>
+        <div class="pf2-balance-label"><%= t.total_balance %></div>
+        <div class="pf2-balance-row">
+          <div class="pf2-amount" id="balanceText">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+          <button class="pf2-refresh" type="button" data-profile-action="refresh-balance" aria-label="<%= t.refresh_balance || 'Refresh balance' %>"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
         </div>
-        <a class="rs2-31" href="/profile/transactions">
-          <i class="fas fa-history"></i>
-        </a>
+        <div class="pf2-last" id="lastUpdatedText"></div>
       </div>
+      <a class="pf2-hist" href="/profile/transactions" aria-label="<%= t.transactions || 'History' %>"><i class="fas fa-history"></i></a>
+    </div>
 
-      <div class="rs2-32">
-        <a class="rs2-33" href="/payment/deposit">
-          <i class="fas fa-plus-circle"></i>
-          <%= t.deposit %>
-        </a>
-        <a class="rs2-34" href="/payment/withdraw">
-          <i class="fas fa-hand-holding-usd"></i>
-          <%= t.withdraw %>
-        </a>
-        <a class="rs2-35" href="/profile/cards">
-          <i class="fas fa-credit-card"></i>
-          Bank Account
-        </a>
-      </div>
+    <div class="pf2-actions">
+      <a class="pf2-act" href="/payment/deposit"><i class="fas fa-plus-circle"></i><%= t.deposit %></a>
+      <a class="pf2-act" href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i><%= t.withdraw %></a>
+      <a class="pf2-act" href="/profile/cards"><i class="fas fa-credit-card"></i>আমার কার্ড</a>
+    </div>
+
+    <div class="pf2-share">
+      <button class="pf2-chip" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>"><i class="fas fa-link"></i> <%= t.shr_copy_link || 'লিংক কপি' %></button>
+      <button class="pf2-chip" type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>"><i class="fas fa-share-alt"></i> <%= t.share || 'Share' %></button>
     </div>
   </div>
 
   <!-- Member Center: flat grid, every feature is one tap away -->
-  <div class="rs2-36">
-    <div class="rs2-37"><%= t.member_center %></div>
+  <div class="pf2-section">
+    <div class="pf2-section-head"><span class="pf2-section-chip"><%= t.member_center %></span><span class="pf2-section-line"></span></div>
+    <div style="height:14px"></div>
 
     <div class="mc-flat-grid">
 
@@ -151,32 +134,32 @@
           <span class="mc-tile-star"><i class="fas fa-star"></i></span>
           <span class="mc-tile-badge" data-badge="reward" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">Reward Center</span>
+        <span class="mc-tile-label">আমার পুরস্কার</span>
       </a>
 
       <a href="/profile/history" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-clipboard-list"></i></div>
-        <span class="mc-tile-label">Betting Record</span>
+        <span class="mc-tile-label">বাজির ইতিহাস</span>
       </a>
 
       <a href="/profile/stats" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-shuffle"></i></div>
-        <span class="mc-tile-label">Profit And Loss</span>
+        <span class="mc-tile-label">লাভ এবং লস</span>
       </a>
 
       <a href="/payment/history?type=deposit" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-file-arrow-up"></i></div>
-        <span class="mc-tile-label">Deposit Record</span>
+        <span class="mc-tile-label">জমা রেকর্ড</span>
       </a>
 
       <a href="/payment/history?type=withdraw" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-file-arrow-down"></i></div>
-        <span class="mc-tile-label">Withdrawal Record</span>
+        <span class="mc-tile-label">উত্তোলন রেকর্ড</span>
       </a>
 
       <a href="/profile/transactions" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-clock-rotate-left"></i></div>
-        <span class="mc-tile-label">Account Record</span>
+        <span class="mc-tile-label">লেনদেনের ইতিহাস</span>
       </a>
 
       <!-- আমার অ্যাকাউন্ট: /profile/security{/:tab}-এর 'personal' ট্যাব
@@ -191,13 +174,13 @@
 
       <a href="/profile/security" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user-shield"></i></div>
-        <span class="mc-tile-label">সিকিউরিটি সেন্টার</span>
+        <span class="mc-tile-label">সুরক্ষা কেন্দ্র</span>
         <span class="mc-tile-sublabel">পাসওয়ার্ড · লগইন হিস্টোরি</span>
       </a>
 
       <a href="/profile/referral" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user-plus"></i></div>
-        <span class="mc-tile-label">Invite Friends</span>
+        <span class="mc-tile-label">বন্ধুদের আমন্ত্রণ জানান</span>
       </a>
 
       <a href="/profile/missions" class="mc-tile">
@@ -205,12 +188,12 @@
           <i class="fas fa-gift"></i>
           <span class="mc-tile-badge" data-badge="mission" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">Mission</span>
+        <span class="mc-tile-label">মিশন</span>
       </a>
 
       <a href="/profile/cashback" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-coins"></i></div>
-        <span class="mc-tile-label">Rebate</span>
+        <span class="mc-tile-label">রিবেট</span>
       </a>
 
       <a href="/notifications" class="mc-tile">
@@ -218,7 +201,7 @@
           <i class="fas fa-at"></i>
           <span class="mc-tile-badge" data-badge="message" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">Internal Message</span>
+        <span class="mc-tile-label">মেইল</span>
       </a>
 
       <a href="/profile/feedback" class="mc-tile">
@@ -226,22 +209,22 @@
           <i class="fas fa-comment-alt"></i>
           <span class="mc-tile-star"><i class="fas fa-star"></i></span>
         </div>
-        <span class="mc-tile-label">Suggestion</span>
+        <span class="mc-tile-label">মতামত</span>
       </a>
 
       <a href="/profile/app-download" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-mobile-screen-button"></i></div>
-        <span class="mc-tile-label">Download APP</span>
+        <span class="mc-tile-label">অ্যাপ ডাউনলোড</span>
       </a>
 
       <a href="/profile/chat" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-headset"></i></div>
-        <span class="mc-tile-label">Customer Service</span>
+        <span class="mc-tile-label">গ্রাহক সেবা</span>
       </a>
 
       <a href="/help-center" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-question-circle"></i></div>
-        <span class="mc-tile-label">Help Center</span>
+        <span class="mc-tile-label">সহায়তা কেন্দ্র</span>
       </a>
 
       <!-- Lucky Wheel, Badges, Loyalty, Daily Streak, Free Bet, Periodic Reward,
@@ -252,17 +235,17 @@
 
       <a href="/profile/share" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-share-alt"></i></div>
-        <span class="mc-tile-label">Share</span>
+        <span class="mc-tile-label">শেয়ার</span>
       </a>
 
       <a href="/profile/responsible" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-hand-holding-heart"></i></div>
-        <span class="mc-tile-label">Responsible Gaming</span>
+        <span class="mc-tile-label">দায়িত্বশীল গেমিং</span>
       </a>
 
       <a href="/extra/kyc" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-id-card"></i></div>
-        <span class="mc-tile-label">KYC Verification</span>
+        <span class="mc-tile-label">কেওয়াইসি যাচাই</span>
       </a>
 
       <a href="/profile/vip" class="mc-tile">
@@ -278,9 +261,9 @@
     </div>
   </div>
 
-  <div class="rs2-38">
-    <div class="rs2-39"><%= t.version %> 2.1.0</div>
-    <div class="rs2-40">© <%= new Date().getFullYear() %> <%= siteName %> Gaming</div>
+  <div class="pf2-foot">
+    <div><%= t.version %> 2.1.0</div>
+    <div>© <%= new Date().getFullYear() %> <%= siteName %> Gaming</div>
   </div>
 
 </div>
@@ -301,30 +284,23 @@
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 
 <style nonce="<%= cspNonce %>">
-.rs2-36{background:#10291D;border:1px solid #1E4633}
-.rs2-37{color:#8FA396}
-.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px 8px;align-items:start;justify-items:center}
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 6px;align-items:start;justify-items:center}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
 .mc-tile{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;align-self:start}
-.mc-tile-label{color:#F2F5F3;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
+.mc-tile-label{font-size:12px;font-weight:600;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
 .mc-tile-sublabel{display:none}
-.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(145deg,#008F5A 0%,#006A4E 100%);border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:25px;color:#ffffff;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.45)}
-.mc-tile-icon i,.mc-tile-icon i::before{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;filter:drop-shadow(0 0 4px rgba(16,185,129,0.65))}
-.mc-tile-icon-danger{background:linear-gradient(145deg,#D62828 0%,#8f1a1a 100%);border-color:#F26B6B;box-shadow:0 4px 12px rgba(214,40,40,0.35)}
-.mc-tile-icon-danger i,.mc-tile-icon-danger i::before{filter:drop-shadow(0 0 4px rgba(242,107,107,0.65))}
-.mc-tile-star{position:absolute;top:-3px;right:3px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.6)}
-.mc-tile-star i,.mc-tile-star i::before{filter:none !important;color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
-.mc-tile-label-danger{color:#F26B6B}
-/* style.css-এর `body:not(.light-mode) * { color:#fff !important }` সব লেখা সাদা করে দেয় —
-   সাদা কার্ডের ওপর লেবেল অদৃশ্য হয়ে যেত। একই সিলেক্টর-ফর্ম ব্যবহার করে (উচ্চ specificity) লেবেল/হেডিং গাঢ় করা হলো */
-body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label{color:#F2F5F3 !important;-webkit-text-fill-color:#F2F5F3 !important}
-body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label-danger{color:#F26B6B !important;-webkit-text-fill-color:#F26B6B !important}
-body:not(.light-mode) .rs2-36 .rs2-37{color:#8FA396 !important;-webkit-text-fill-color:#8FA396 !important}
-body:not(.light-mode) .rs2-36 .mc-tile-icon i{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
-body:not(.light-mode) .rs2-36 .mc-tile-star i{color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
-/* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
-.mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
+.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:#fcefd3;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative}
+.mc-tile-icon-danger{background:#fde4e4}
+.mc-tile-star{position:absolute;top:-3px;right:3px;font-size:12px}
+/* গ্লোবাল সাদা-টেক্সট রুল ছাপিয়ে — গোল্ড আইকন, গাঢ়-সোনালি লেবেল */
+body .pf2 .mc-tile .mc-tile-label{color:#9a7b35 !important;-webkit-text-fill-color:#9a7b35 !important}
+body .pf2 .mc-tile .mc-tile-icon i{color:#c9a24d !important;-webkit-text-fill-color:#c9a24d !important}
+body .pf2 .mc-tile .mc-tile-icon-danger i{color:#d62828 !important;-webkit-text-fill-color:#d62828 !important}
+body .pf2 .mc-tile .mc-tile-star i{color:#e0a800 !important;-webkit-text-fill-color:#e0a800 !important}
+/* ব্যাজ — public/js/badges-realtime.js টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
+.mc-tile-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e53935;font-size:11px;font-weight:800;line-height:20px;text-align:center;box-shadow:0 1px 4px rgba(229,57,53,0.5)}
+body .pf2 .mc-tile .mc-tile-badge{color:#fff !important;-webkit-text-fill-color:#fff !important}
 </style>
 
 <div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
