@@ -3,6 +3,7 @@ const engine = require('../../services/referralRewards');
 const walletCallback = require('../../services/walletCallback');
 const payment = require('../../routes/payment');
 const referral = require('../../services/referral');
+const { loadConfig } = require('../../services/turnover');
 const { makeUser, link, makeDeposit, coins, reward, cleanup } = require('../helpers/referralDeposit');
 
 // ==================== Referral V2 পেআউট ইঞ্জিন (আসল Postgres) ====================
@@ -47,7 +48,7 @@ describe('কনফিগ ও টিয়ার', () => {
 });
 
 describe('পেআউট নিয়ম', () => {
-  test('৫০০-তে রেফারার বোনাস (৭৫) পায়: কয়েন, লেজার, রেকর্ড, ৩x স্পোর্টস/০x ক্যাসিনো ওয়েজারিং', async () => {
+  test('৫০০-তে রেফারার বোনাস (৭৫) পায়: কয়েন, লেজার, রেকর্ড, turnover_multiplier-ভিত্তিক ওয়েজারিং', async () => {
     const { referrer, referred } = await pair();
     const dep = await depositAndApprove(referred, 500);
 
@@ -58,12 +59,14 @@ describe('পেআউট নিয়ম', () => {
     expect(Number(rw.amount)).toBe(75);
     expect(Number(rw.qualifying_deposit_id)).toBe(dep);
 
-    // Turnover V2: বোনাস deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, ডিপোজিট ০) — required = ৭৫ × turnover_multiplier (৩),
+    // Turnover V2: বোনাস deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, ডিপোজিট ০) — required = ৭৫ × turnover_multiplier (ডিফল্ট ৫; মান settings থেকে পড়া হয়),
     // স্পোর্টস ও ক্যাসিনো দুটোই একই টার্গেটে গোনা হয়।
     const bonus = (await pool.query(`SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).rows;
     expect(bonus).toHaveLength(1);
     expect(Number(bonus[0].bonus_amount)).toBe(75);
-    expect(Number(bonus[0].required)).toBe(225);
+    const multiplier = (await loadConfig(pool)).multiplier; // সেটিং (site_settings.turnover_multiplier) থেকে — হার্ডকোড নয়
+    expect(multiplier).toBe(5); // সিড করা ডিফল্ট
+    expect(Number(bonus[0].required)).toBe(75 * multiplier); // ৩৭৫
     expect(bonus[0].status).toBe('active');
 
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);
