@@ -68,7 +68,7 @@
 <div class="pf2">
   <div class="pf2-bar">
     <a class="pf2-back" href="javascript:history.back()" aria-label="<%= t.back || 'Back' %>"><i class="fas fa-chevron-left"></i></a>
-    <span class="pf2-bar-title">আমার অ্যাকাউন্ট</span>
+    <span class="pf2-bar-title"><%= t.pfm_my_account || 'My Account' %></span>
   </div>
   <%- include('../partials/flash') %>
 
@@ -86,13 +86,13 @@
         <div class="pf2-name-row">
           <span class="pf2-name" id="usernameText"><%= user.username %></span>
           <button class="pf2-icon-btn" type="button" data-profile-action="copy-username" aria-label="<%= t.copy_username || 'Copy username' %>"><i class="fas fa-copy"></i></button>
-          <button class="pf2-icon-btn" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>" title="<%= t.shr_copy_link || 'লিংক কপি' %>"><i class="fas fa-link"></i></button>
+          <button class="pf2-icon-btn" type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>" title="<%= t.shr_copy_link || 'Copy link' %>"><i class="fas fa-link"></i></button>
           <button class="pf2-icon-btn" type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>" title="<%= t.share || 'Share' %>"><i class="fas fa-share-alt"></i></button>
         </div>
         <div class="pf2-meta">
           <span>ID: <%= 100000 + user.id %></span>
           <button class="pf2-icon-btn" type="button" data-profile-action="copy-uid" aria-label="<%= t.copy_uid || 'Copy ID' %>"><i class="fas fa-copy"></i></button>
-          <% if (user.created_at) { %><span>· যোগদান: <%= new Date(user.created_at).toISOString().slice(0, 10) %></span><% } %>
+          <% if (user.created_at) { %><span>· <%= t.pfm_joined || 'Joined' %>: <%= new Date(user.created_at).toISOString().slice(0, 10) %></span><% } %>
         </div>
         <div style="display:none;"><span id="profileUrlText"><%= baseUrl %>/profile</span></div>
         <div class="pf2-progress">
@@ -118,7 +118,7 @@
     <div class="pf2-actions">
       <a class="pf2-act pf2-act-1" href="/payment/deposit"><i class="fas fa-plus-circle"></i><%= t.deposit %></a>
       <a class="pf2-act pf2-act-2" href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i><%= t.withdraw %></a>
-      <a class="pf2-act pf2-act-3" href="/profile/cards"><i class="fas fa-credit-card"></i>আমার কার্ড</a>
+      <a class="pf2-act pf2-act-3" href="/profile/cards"><i class="fas fa-credit-card"></i><%= t.pfm_my_cards || 'My Cards' %></a>
     </div>
     </div>
 
@@ -136,32 +136,32 @@
           <span class="mc-tile-star"><i class="fas fa-star"></i></span>
           <span class="mc-tile-badge" data-badge="reward" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">আমার পুরস্কার</span>
+        <span class="mc-tile-label"><%= t.pfm_my_rewards || 'My Rewards' %></span>
       </a>
 
       <a href="/profile/history" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-clipboard-list"></i></div>
-        <span class="mc-tile-label">বাজির ইতিহাস</span>
+        <span class="mc-tile-label"><%= t.pfm_bet_history || 'Bet History' %></span>
       </a>
 
       <a href="/profile/stats" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-shuffle"></i></div>
-        <span class="mc-tile-label">লাভ এবং লস</span>
+        <span class="mc-tile-label"><%= t.pfm_profit_loss || 'Profit & Loss' %></span>
       </a>
 
       <a href="/payment/history?type=deposit" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-file-arrow-up"></i></div>
-        <span class="mc-tile-label">জমা রেকর্ড</span>
+        <span class="mc-tile-label"><%= t.pfm_deposit_records || 'Deposit Records' %></span>
       </a>
 
       <a href="/payment/history?type=withdraw" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-file-arrow-down"></i></div>
-        <span class="mc-tile-label">উত্তোলন রেকর্ড</span>
+        <span class="mc-tile-label"><%= t.pfm_withdraw_records || 'Withdrawal Records' %></span>
       </a>
 
       <a href="/profile/transactions" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-clock-rotate-left"></i></div>
-        <span class="mc-tile-label">লেনদেনের ইতিহাস</span>
+        <span class="mc-tile-label"><%= t.pfm_transaction_history || 'Transaction History' %></span>
       </a>
 
       <!-- আমার অ্যাকাউন্ট: /profile/security{/:tab}-এর 'personal' ট্যাব
@@ -171,18 +171,18 @@
            নিজের /profile পেজেই (প্রোফাইল হোম) পয়েন্ট করত, যা ভুল ছিল। -->
       <a href="/profile/security/personal" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user"></i></div>
-        <span class="mc-tile-label">আমার অ্যাকাউন্ট</span>
+        <span class="mc-tile-label"><%= t.pfm_my_account || 'My Account' %></span>
       </a>
 
       <a href="/profile/security" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user-shield"></i></div>
-        <span class="mc-tile-label">সিকিউরিটি সেন্টার</span>
-        <span class="mc-tile-sublabel">পাসওয়ার্ড · লগইন হিস্টোরি</span>
+        <span class="mc-tile-label"><%= t.pfm_security_center || 'Security Center' %></span>
+        <span class="mc-tile-sublabel"><%= t.pfm_security_sub || 'Password · Login history' %></span>
       </a>
 
       <a href="/profile/referral" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user-plus"></i></div>
-        <span class="mc-tile-label">বন্ধুদের আমন্ত্রণ জানান</span>
+        <span class="mc-tile-label"><%= t.pfm_invite_friends || 'Invite Friends' %></span>
       </a>
 
       <a href="/profile/missions" class="mc-tile">
@@ -190,12 +190,12 @@
           <i class="fas fa-gift"></i>
           <span class="mc-tile-badge" data-badge="mission" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">মিশন</span>
+        <span class="mc-tile-label"><%= t.pfm_mission || 'Mission' %></span>
       </a>
 
       <a href="/profile/cashback" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-coins"></i></div>
-        <span class="mc-tile-label">রিবেট</span>
+        <span class="mc-tile-label"><%= t.pfm_rebate || 'Rebate' %></span>
       </a>
 
       <a href="/notifications" class="mc-tile">
@@ -203,7 +203,7 @@
           <i class="fas fa-at"></i>
           <span class="mc-tile-badge" data-badge="message" style="display:none;"></span>
         </div>
-        <span class="mc-tile-label">মেইল</span>
+        <span class="mc-tile-label"><%= t.pfm_mail || 'Mail' %></span>
       </a>
 
       <a href="/profile/feedback" class="mc-tile">
@@ -211,22 +211,22 @@
           <i class="fas fa-comment-alt"></i>
           <span class="mc-tile-star"><i class="fas fa-star"></i></span>
         </div>
-        <span class="mc-tile-label">মতামত</span>
+        <span class="mc-tile-label"><%= t.pfm_feedback || 'Feedback' %></span>
       </a>
 
       <a href="/profile/app-download" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-mobile-screen-button"></i></div>
-        <span class="mc-tile-label">অ্যাপ ডাউনলোড</span>
+        <span class="mc-tile-label"><%= t.pfm_app_download || 'App Download' %></span>
       </a>
 
       <a href="/profile/chat" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-headset"></i></div>
-        <span class="mc-tile-label">গ্রাহক সেবা</span>
+        <span class="mc-tile-label"><%= t.pfm_customer_service || 'Customer Service' %></span>
       </a>
 
       <a href="/help-center" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-question-circle"></i></div>
-        <span class="mc-tile-label">সহায়তা কেন্দ্র</span>
+        <span class="mc-tile-label"><%= t.pfm_help_center || 'Help Center' %></span>
       </a>
 
       <!-- Lucky Wheel, Badges, Loyalty, Daily Streak, Free Bet, Periodic Reward,
@@ -237,17 +237,17 @@
 
       <a href="/profile/share" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-share-alt"></i></div>
-        <span class="mc-tile-label">শেয়ার</span>
+        <span class="mc-tile-label"><%= t.pfm_share || 'Share' %></span>
       </a>
 
       <a href="/profile/responsible" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-hand-holding-heart"></i></div>
-        <span class="mc-tile-label">দায়িত্বশীল গেমিং</span>
+        <span class="mc-tile-label"><%= t.pfm_responsible_gaming || 'Responsible Gaming' %></span>
       </a>
 
       <a href="/extra/kyc" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-id-card"></i></div>
-        <span class="mc-tile-label">কেওয়াইসি যাচাই</span>
+        <span class="mc-tile-label"><%= t.pfm_kyc_verify || 'KYC Verification' %></span>
       </a>
 
       <a href="/profile/vip" class="mc-tile">
@@ -308,7 +308,7 @@ body:not(.light-mode) .pf2 .mc-tile .mc-tile-star i{color:#FFD54A !important;-we
 <div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
   <div class="rs2-42">
     <div class="rs2-43">
-      <span class="rs2-44">প্রোফাইল ছবি বাছাই করুন</span>
+      <span class="rs2-44"><%= t.pfm_choose_avatar || 'Choose Profile Photo' %></span>
       <span class="rs2-45" data-profile-action="avatar-close">&times;</span>
     </div>
     <div class="rs2-46" id="avatarGrid"></div>
