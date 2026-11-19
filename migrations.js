@@ -842,7 +842,7 @@ async function applyMigrations(pool) {
       INSERT INTO site_settings (key, value) VALUES
       ('min_bet', '10'),
       ('max_bet', '50000'),
-      ('turnover_multiplier', '3'),
+      ('turnover_multiplier', '5'),
       ('deposit_commission_percent', '0'),
       ('withdraw_commission_percent', '0'),
       ('max_withdraw_per_request', '50000'),
