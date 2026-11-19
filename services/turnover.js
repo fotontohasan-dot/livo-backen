@@ -27,14 +27,28 @@ function num(v, fallback) {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-async function loadConfig() {
-  const [m, nb, mo, ex, co] = await Promise.all([
-    getSetting('turnover_multiplier'),
-    getSetting('turnover_no_bonus_multiplier'),
-    getSetting('turnover_min_odds'),
-    getSetting('turnover_expiry_hours'),
-    getSetting('turnover_cashout_counts')
-  ]);
+const CONFIG_KEYS = ['turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts'];
+
+// db = কলারের খোলা transaction client (থাকলে)। কলার আগে থেকেই একটা pool কানেকশন ধরে রেখেছে; এই অবস্থায়
+// getSetting() ক্যাশ-মিসে pool থেকে আরেকটা কানেকশন চায়। একসাথে অনেক settlement চললে সব কানেকশন
+// ধরা থাকে, settings-এর কানেকশন আর পাওয়া যায় না → পরস্পরের অপেক্ষায় আটকে (timeout)। তাই client থাকলে
+// সেটা দিয়েই পড়ি; কোনো কী না পেলে (বা client না থাকলে) আগের মতো getSetting()।
+async function readConfigValues(db) {
+  const values = {};
+  if (db && typeof db.query === 'function') {
+    try {
+      const r = await db.query('SELECT key, value FROM site_settings WHERE key = ANY($1::text[])', [CONFIG_KEYS]);
+      for (const row of (r && r.rows) || []) values[row.key] = row.value;
+    } catch (_) { /* নিচে getSetting() ফলব্যাক */ }
+  }
+  const missing = CONFIG_KEYS.filter((k) => values[k] === undefined);
+  const fetched = await Promise.all(missing.map((k) => getSetting(k)));
+  missing.forEach((k, i) => { values[k] = fetched[i]; });
+  return CONFIG_KEYS.map((k) => values[k]);
+}
+
+async function loadConfig(db) {
+  const [m, nb, mo, ex, co] = await readConfigValues(db);
   const multiplier = num(m, DEFAULTS.multiplier);
   const noBonusMultiplier = num(nb, DEFAULTS.noBonusMultiplier);
   return {
@@ -54,7 +68,7 @@ async function createDepositTurnover(client, { userId, depositId = null, deposit
   const bonus = Math.max(0, Math.round(Number(bonusAmount) || 0));
   if (deposit + bonus <= 0) return null;
 
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(client);
   const multiplier = bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier;
   const required = (deposit + bonus) * multiplier;
   const expiresAt = cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
@@ -129,7 +143,7 @@ async function addTurnover(a, b, c, d, e) {
   const kind = opts.kind || 'bet';
   if (['void', 'cancelled', 'canceled', 'refund', 'refunded'].includes(kind)) return { counted: 0, reason: kind };
 
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(client);
   if (kind === 'cashout' && !cfg.cashoutCounts) return { counted: 0, reason: 'cashout' };
   if (category === 'sports' && cfg.minOdds > 0) {
     const odds = Number(opts.odds);

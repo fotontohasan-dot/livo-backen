@@ -122,6 +122,19 @@ function buildJobDefinitions() {
       }
     },
 
+    referral_loss_settle: {
+      label: 'Referral Loss Commission',
+      description: 'রেফার-করা ইউজারের ডিপোজিট করা টাকা সম্পূর্ণ হারলে রেফারারকে ডিপোজিটের ০.৮% কমিশন দেয়',
+      defaultIntervalMs: 2 * MIN,
+      defaultEnabled: true,
+      maxRetries: 1,
+      handler: async () => {
+        const { settleLossCycles } = require('./referralRewards');
+        const r = await settleLossCycles();
+        return `${r.scanned}টা খোলা সাইকেল দেখা হলো — ${JSON.stringify(r.tally)}`;
+      }
+    },
+
     queue_cleanup: {
       label: 'Queue Cleanup',
       description: 'job_queue-এর পুরনো completed (২৪ ঘণ্টা+) রো ও পুরনো dead-letter (৭ দিন+) জব মুছে ফেলে',
