@@ -1086,6 +1086,7 @@
   "admin_application_not_found": "আবেদন পাওয়া যায়নি",
   "admin_already_in_status": "ইতিমধ্যে \"{value}\" অবস্থায় আছে",
   "admin_process_failed_db": "সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি",
+  "admin_date_filter_invalid": "তারিখটি বোঝা যায়নি, তাই তারিখ ফিল্টার বাদ দেওয়া হয়েছে। অনুগ্রহ করে YYYY-MM-DD ফরম্যাটে দিন (যেমন 2026-03-05)।",
   "admin_title_and_message_required": "শিরোনাম ও বার্তা দুটোই আবশ্যক",
   "admin_broadcast_sent": "✅ {value} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!",
   "admin_broadcast_failed": "ব্রডকাস্ট পাঠাতে সমস্যা হয়েছে",

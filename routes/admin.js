@@ -2,6 +2,8 @@ const { fetchWithTimeout } = require('../utils/httpClient');
 const express = require('express');
 const secretBox = require('../utils/secretBox');
 const router = express.Router();
+// from/to তারিখ: 2026-3-5 → 2026-03-05 স্বয়ংক্রিয় সংশোধন; অচেনা হলে বন্ধুত্বপূর্ণ বার্তা (এরর পেজ নয়)
+router.use(require('../middleware/dateRangeNormalize').dateRangeNormalize);
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');

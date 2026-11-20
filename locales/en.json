@@ -1086,6 +1086,7 @@
   "admin_application_not_found": "Application not found",
   "admin_already_in_status": "It is already in the \"{value}\" state",
   "admin_process_failed_db": "Could not be processed because of a server or database error",
+  "admin_date_filter_invalid": "That date was not recognised, so the date filter was ignored. Please use YYYY-MM-DD (e.g. 2026-03-05).",
   "admin_title_and_message_required": "Both a title and a message are required",
   "admin_broadcast_sent": "✅ Notification sent to {value} users!",
   "admin_broadcast_failed": "Could not send the broadcast",
