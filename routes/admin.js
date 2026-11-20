@@ -1143,14 +1143,43 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
   }
 });
 
-router.post('/settings/update', rbac.requirePermission('settings_edit'), async (req, res) => {
+// বোনাস/টার্নওভার সেটিং key — এগুলো আর settings_edit নয়, bonus_manage চায়।
+const BONUS_SETTING_KEYS = new Set([
+  'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds',
+  'turnover_expiry_hours', 'turnover_cashout_counts'
+]);
+
+// settings_edit অথবা bonus_manage — যেকোনো একটা থাকলে ফর্মে ঢোকা যায়; কোনোটাই না থাকলে
+// আগের মতোই rbac.requirePermission('settings_edit')-এর স্বাভাবিক প্রত্যাখ্যান + UNAUTHORIZED_ACCESS লগ।
+// কোন key সেভ হবে সেটা হ্যান্ডলারে req.settingsAccess দিয়ে আলাদা হয়।
+async function requirePermissionSettingsOrBonus(req, res, next) {
   try {
+    const uid = req.session && req.session.user && req.session.user.id;
+    if (!uid) return rbac.requirePermission('settings_edit')(req, res, next);
+    const [canEdit, canBonus] = await Promise.all([
+      rbac.hasPermission(uid, 'settings_edit'),
+      rbac.hasPermission(uid, 'bonus_manage')
+    ]);
+    if (!canEdit && !canBonus) return rbac.requirePermission('settings_edit')(req, res, next);
+    req.settingsAccess = { canEdit, canBonus };
+    return next();
+  } catch (err) {
+    console.error('settings gate error:', err.message);
+    return res.status(500).send('Permission check failed');
+  }
+}
+
+router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, res) => {
+  try {
+    const { canEdit, canBonus } = req.settingsAccess;
     // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
     const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
 
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
+      // turnover_* শুধু bonus_manage-ওয়ালা বদলাতে পারে; বাকি সব key শুধু settings_edit-ওয়ালা
+      if (BONUS_SETTING_KEYS.has(key) ? !canBonus : !canEdit) continue;
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
@@ -1204,13 +1233,16 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
     // তাই এখানে সবসময় boolean-এ coerce করে explicit true/false লেখা হচ্ছে।
     let rawMaintenance = 'maintenance_mode' in req.body ? req.body.maintenance_mode : 'false';
     if (Array.isArray(rawMaintenance)) rawMaintenance = rawMaintenance[rawMaintenance.length - 1];
-    const maintenanceBool = rawMaintenance === true || rawMaintenance === 'true' || rawMaintenance === 'on' || rawMaintenance === '1';
+    const maintenanceBool = !canEdit ? wasOn : (rawMaintenance === true || rawMaintenance === 'true' || rawMaintenance === 'on' || rawMaintenance === '1');
 
-    await pool.query(
-      `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [String(maintenanceBool)]
-    );
+    // শুধু bonus_manage থাকলে maintenance_mode স্পর্শ হয় না (ফর্মে চেকবক্স না থাকায় সেটা false হয়ে যেত)
+    if (canEdit) {
+      await pool.query(
+        `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [String(maintenanceBool)]
+      );
+    }
 
     // এই দুটো ব্যর্থ হলেও সেটিংস তো সেভ হয়েই গেছে — তাই আলাদা try/catch দিয়ে
     // এদের এরর মূল সেভ অপারেশনকে ব্যর্থ দেখানো থেকে আটকানো হচ্ছে
@@ -3320,7 +3352,7 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
 });
 
 // ==================== বোনাস ম্যানেজমেন্ট ====================
-router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) => {
+router.get('/bonuses', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT b.*, u.username FROM bonuses b LEFT JOIN users u ON u.id = b.user_id
@@ -3341,7 +3373,7 @@ router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) =>
   }
 });
 
-router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, res) => {
+router.post('/bonuses/add', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const { username } = req.body;
     const bonus_type = sanitizeText(req.body.bonus_type || '', { maxLen: 50 });
@@ -3364,7 +3396,7 @@ router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, re
   }
 });
 
-router.post('/bonuses/:id/cancel', rbac.requirePermission('users_edit'), async (req, res) => {
+router.post('/bonuses/:id/cancel', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query("UPDATE bonuses SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [id]);
