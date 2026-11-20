@@ -19,6 +19,10 @@ const bt = require('../utils/businessTime');
 const sqlBizDate = bt.sqlBusinessDate;
 // BD দিন-সীমা (UTC Date) → টাইমজোনবিহীন TIMESTAMP কলামের সাথে তুলনার জন্য সেশন-লোকাল ঘড়িতে
 const BIZ_TS = (p) => `(${p}::timestamptz AT TIME ZONE current_setting('TimeZone'))`;
+// ফিল্টারের 'YYYY-MM-DD' → BD দিন-সীমা (ISO UTC স্ট্রিং)। SQL-এ BIZ_TS($n)-এর সাথে:
+//   col >= BIZ_TS(bizFrom(from))  AND  col < BIZ_TS(bizToExcl(to))   (to = সেই BD দিনসহ; সীমা = পরের BD দিনের শুরু, `<`)
+const bizFrom = (day) => bt.startOfDay(day).toISOString();
+const bizToExcl = (day) => bt.endOfDay(day).toISOString();
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
 // আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
@@ -1398,7 +1402,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
     );
     const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
 
     // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
@@ -1421,18 +1426,18 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 
     const revenueTrend = await pool.query(`
       SELECT d::date AS day,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$2')} = d::date),0) AS deposit,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$2')} = d::date),0) AS withdraw
+      FROM generate_series($1::date - INTERVAL '13 days', $1::date, INTERVAL '1 day') d
       ORDER BY day
-    `);
+    `, [today, bt.sqlTimezone()]);
 
     const userGrowth = await pool.query(`
       SELECT d::date AS day,
-        COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+        COALESCE((SELECT COUNT(*) FROM users WHERE ${sqlBizDate('created_at', '$2')} = d::date),0) AS new_users
+      FROM generate_series($1::date - INTERVAL '13 days', $1::date, INTERVAL '1 day') d
       ORDER BY day
-    `);
+    `, [today, bt.sqlTimezone()]);
 
     const recentBets = await pool.query(`
       SELECT b.*, u.username, m.team_a, m.team_b, m.title
@@ -1670,8 +1675,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    const today = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const today = bt.today();
+    const thirtyDaysAgo = bt.addDays(today, -29);
     res.render('admin/dashboard', { loadError: true,
       dateRange: { from: thirtyDaysAgo, to: today },
       betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
@@ -1692,27 +1697,32 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 // ==================== ড্যাশবোর্ড লাইভ স্ট্যাটস (পোলিং API) ====================
 router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), async (req, res) => {
   try {
+    const today = bt.today(); // BD ব্যবসায়িক দিন (S5–S8 ড্যাশবোর্ড কার্ডের সাথে একই সংজ্ঞা)
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
     const activeUsersPoll = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayWithdraw = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), today]
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), bt.addDays(today, -1)]
     );
     const totalDepositAll = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
@@ -1721,7 +1731,8 @@ router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), asy
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
     );
     const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const pendingDeposits = await pool.query(
       `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
