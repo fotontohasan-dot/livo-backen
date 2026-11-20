@@ -70,6 +70,24 @@ function tzOffsetMinutes(at = new Date()) {
 }
 
 /**
+ * ব্যবহারকারীর লেখা তারিখকে কড়া 'YYYY-MM-DD'-এ আনে (স্বয়ংক্রিয় সংশোধন)।
+ * গ্রহণযোগ্য: বছর-আগে + '-' '/' '.' বা স্পেস বিভাজক, মাস/দিন ১–২ অঙ্ক (2026-3-5, 2026/03/05),
+ * বাংলা অঙ্কও (২০২৬-০৩-০৫)। বাস্তব ক্যালেন্ডার-তারিখ না হলে (2026-02-30) বা চেনা না গেলে null।
+ */
+function normalizeDay(input) {
+  if (input === undefined || input === null) return null;
+  let s = String(input).trim();
+  if (!s) return null;
+  s = s.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
+  const m = /^(\d{4})[-/.\s]+(\d{1,2})[-/.\s]+(\d{1,2})$/.exec(s);
+  if (!m) return null;
+  const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, d, 12));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/**
  * SQL-এ ব্যবহারের জন্য টাইমজোন নাম। `DATE(created_at AT TIME ZONE $tz)`
  * লেখার সময় হার্ডকোড না করে এখান থেকে নিলে সব জায়গায় একই সংজ্ঞা থাকে।
  */
@@ -133,4 +151,4 @@ function sqlBusinessDate(col, tzParam) {
   return `((${col} AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE ${tzParam}::text)::date`;
 }
 
-module.exports = { today, businessDay, businessWeekday, businessMonthKey, monthLabelBn, quickRange, sqlBusinessDate, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };
+module.exports = { normalizeDay, today, businessDay, businessWeekday, businessMonthKey, monthLabelBn, quickRange, sqlBusinessDate, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };
