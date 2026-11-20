@@ -15,7 +15,7 @@ async function convo(utcResolvedAt) {
   const u = await pool.query(
     `INSERT INTO users (username, phone, password, coins, support_status, support_status_updated_at)
      VALUES ($1,$2,'x',0,'resolved',$3::timestamp) RETURNING id`,
-    [`cs${tag}`, `017${String(Date.now()).slice(-7)}${userIds.length}`.slice(0, 11), utcResolvedAt]);
+    [`cs${tag}`, uniquePhone(), utcResolvedAt]);
   userIds.push(u.rows[0].id);
   await pool.query(`INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin) VALUES ($1,NULL,'hi',false)`, [u.rows[0].id]);
 }
