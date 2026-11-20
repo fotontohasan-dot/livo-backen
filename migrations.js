@@ -2165,7 +2165,10 @@ async function applyMigrations(pool) {
       INSERT INTO site_settings (key, value) VALUES
       ('referral_bonus_bands', '[{"min":100,"amount":20},{"min":200,"amount":50},{"min":500,"amount":75}]'),
       ('referral_loss_commission_percent', '0.8'),
-      ('referral_bet_commission_enabled', 'false')
+      ('referral_bet_commission_enabled', 'false'),
+      ('referral_commission_tier1_percent', '0'),
+      ('referral_commission_tier2_percent', '0'),
+      ('referral_commission_tier3_percent', '0')
       ON CONFLICT (key) DO NOTHING;
     `);
     // পুরোনো ডিফল্ট ন্যূনতম (৫০০) থাকলে নতুন নিয়মের ১০০-তে নামানো; অ্যাডমিনের নিজের সেট করা মান অপরিবর্তিত।

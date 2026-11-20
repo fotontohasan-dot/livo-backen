@@ -12,10 +12,8 @@
 //  শর্ত: ডিপোজিট ≥ REFERRAL_MIN_DEPOSIT (env; ডিফল্ট = সাইটের ন্যূনতম ডিপোজিট ১০০)। পরিমাণ ডিপোজিটের অঙ্কের ওপর নির্ভর করে না।
 //  গার্ড: রেফারার ও রেফার-করা একই ফোন/IP/ডিভাইসে হলে (বা নিজেকে রেফার) বোনাস আটকে অ্যাডমিন রিভিউয়ে যায়।
 //
-//  মাল্টি-লেভেল কমিশন (আজীবন, বাজির উপর):
-//    Tier 1 (সরাসরি)  → ২.৫%
-//    Tier 2           → ১.৫%
-//    Tier 3           → ০.৮%
+//  বাজির উপর ৩-ধাপ রেফারেল কমিশন: সম্পূর্ণ বন্ধ (ডিফল্ট ০/০/০%)। হার ০ হলে কোনো কমিশন-সারি বা ব্যালেন্স যোগ হয় না।
+//  (পুরোনো হার ছিল ২.৫/১.৫/০.৮%।) কমিশন এখন শুধু ডিপোজিট সম্পূর্ণ হারলে — services/referralRewards.js।
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
@@ -35,9 +33,10 @@ function getMinDepositForBonus(env = process.env) {
   const n = Number(env.REFERRAL_MIN_DEPOSIT);
   return Number.isFinite(n) && n > 0 ? n : SITE_MIN_DEPOSIT;
 }
-// ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
-// আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
-const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+// ডিফল্ট রেট (Tier 1,2,3) — বাজির ওপর ৩-ধাপ কমিশন বন্ধ, তাই সব ০।
+// সেটিং না থাকলে বা অবৈধ হলে এই মানই ব্যবহার হয় (fail-closed: ভুল মানে কখনো কমিশন যায় না)।
+// services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
+const DEFAULT_COMMISSION_RATES = [0, 0, 0]; // Tier 1,2,3
 
 // অ্যাডমিন-কনফিগারড কমিশন রেট (fraction, যেমন 0.025 = 2.5%) — site_settings থেকে,
 // ৩০ সেকেন্ড ক্যাশড getSetting() দিয়ে, তাই প্রতি বাজিতে আলাদা DB কল লাগে না।
@@ -214,6 +213,8 @@ async function distributeCommission(bettorId, stake) {
   if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
+  // তিন ধাপের সব হার ০ হলে কিছুই করার নেই — ট্রানজ্যাকশনও খোলা হয় না (কমিশন-সারি/ব্যালেন্স যোগ নেই)।
+  if (!rates.some((r) => r > 0)) return;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
