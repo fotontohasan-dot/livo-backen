@@ -132,7 +132,7 @@ router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   let bonusPct = 100;
   try {
     const before = await approvedDepositCount(pool, req.session.user.id);
-    bonusPct = bonusPercentFor(before, new Date().getDay() === 5);
+    bonusPct = bonusPercentFor(before, businessTime.businessWeekday() === 5);
   } catch (e) {
     console.error('deposit bonus pct error:', e.message);
   }
@@ -833,7 +833,7 @@ async function creditApprovedDeposit(client, request) {
 
     if (request.want_bonus) {
       const before = await approvedDepositCount(client, request.user_id, request.id);
-      const isFriday = new Date().getDay() === 5;
+      const isFriday = businessTime.businessWeekday() === 5; // Asia/Dhaka বার (UTC নয়)
       const pct = bonusPercentFor(before, isFriday);
       bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
       if (bonusGiven > 0) {
