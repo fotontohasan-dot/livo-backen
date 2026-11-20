@@ -10,6 +10,7 @@
 // ব্যর্থ হলে শুধু console.error করে চুপচাপ এগিয়ে যায়।
 
 const { pool } = require('../db');
+const { startOfDay, endOfDay } = require('../utils/businessTime');
 
 const VALID_CATEGORIES = ['auth', 'financial', 'settings', 'role', 'security', 'maintenance', 'backup', 'restore', 'cron', 'queue', 'cache', 'api', 'other'];
 const VALID_RISK_LEVELS = ['low', 'medium', 'high', 'critical'];
@@ -146,8 +147,22 @@ function buildFilterQuery(filters = {}) {
   if (filters.riskLevel) { params.push(filters.riskLevel); conditions.push(`risk_level = $${params.length}`); }
   if (filters.actorId) { params.push(filters.actorId); conditions.push(`actor_id = $${params.length}`); }
   if (filters.action) { params.push(`%${filters.action}%`); conditions.push(`action ILIKE $${params.length}`); }
-  if (filters.from) { params.push(filters.from); conditions.push(`created_at >= $${params.length}`); }
-  if (filters.to) { params.push(filters.to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+  // অ্যাডমিন UI-র from/to হলো ব্যবসায়িক (Asia/Dhaka) দিন। আগে `created_at >= '2026-03-10'` সেশন-টাইমজোনে
+  // (UTC) মধ্যরাত ধরত, আর `to::date + 1 day` UTC মধ্যরাত পর্যন্ত (সীমা-সহ) — দুটোই BD দিনের সীমানা থেকে
+  // ৬ ঘণ্টা সরে ছিল। এখন BD দিনের শুরু (>=) ও পরের দিনের শুরু (<)। শুধু YYYY-MM-DD হলে; অন্য ফরম্যাট আগের মতো।
+  const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  if (filters.from) {
+    if (DAY_RE.test(filters.from)) {
+      params.push(startOfDay(filters.from).toISOString());
+      conditions.push(`created_at >= $${params.length}::timestamptz`);
+    } else { params.push(filters.from); conditions.push(`created_at >= $${params.length}`); }
+  }
+  if (filters.to) {
+    if (DAY_RE.test(filters.to)) {
+      params.push(endOfDay(filters.to).toISOString());
+      conditions.push(`created_at < $${params.length}::timestamptz`);
+    } else { params.push(filters.to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+  }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   return { where, params };

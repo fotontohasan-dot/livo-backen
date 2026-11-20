@@ -26,3 +26,11 @@
 - scripts/loadtest/mockProvider.js, scripts/audit/audit-scan.js — টুল/মক, ব্যবসায়িক নয়।
 - cashback.js:101, periodicReward.js:47, missions.js:92, coins.js:57, wheel.js:37 — আগেই BD-পরামিতি/ব্যবসায়িক দিনে; `::date` কেবল প্যারামিটার কাস্ট।
 - utils/businessTime.js — সংজ্ঞাই এখানে।
+
+---
+## বাস্তব অবস্থা (fix/timezone-bd-5, কাজ ১)
+| স্থান | সিদ্ধান্ত |
+|---|---|
+| services/redpacket.js:32 | বদলানো হয়েছে — `sqlBusinessDate(updated_at)` |
+| services/auditLog.js from/to | বদলানো হয়েছে — BD দিনের শুরু `>=` / পরের দিনের শুরু `<` (from ও to দুটোই; দুটোই ৬ ঘণ্টা সরে ছিল) |
+| routes/chat.js /admin/stats resolved "আজ" | বদলানো হয়েছে — `sqlBusinessDate(...) = businessToday` |
