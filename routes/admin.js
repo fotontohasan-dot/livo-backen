@@ -4372,28 +4372,31 @@ router.post('/duplicate-accounts/scan', rbac.requirePermission('bot_monitoring_m
 
 router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
-    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const to = req.query.to || new Date().toISOString().slice(0, 10);
+    const from = req.query.from || bt.addDays(bt.today(), -30);
+    const to = req.query.to || bt.today();
+    // রেঞ্জ = [BD from-এর শুরু, BD to-এর পরের দিনের শুরু) — আগে `BETWEEN $1 AND $2::date + 1 day` (UTC; দুই প্রান্তই বন্ধ)
+    const rangeParams = [bizFrom(from), bizToExcl(to)];
+    const inRange = (col) => `${col} >= ${BIZ_TS('$1')} AND ${col} < ${BIZ_TS('$2')}`;
 
     const depositRes = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-       WHERE type = 'deposit' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       WHERE type = 'deposit' AND status = 'approved' AND ${inRange('created_at')}`,
+      rangeParams
     );
     const withdrawRes = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-       WHERE type = 'withdraw' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       WHERE type = 'withdraw' AND status = 'approved' AND ${inRange('created_at')}`,
+      rangeParams
     );
     const betsRes = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS total_stake, COUNT(*) AS cnt,
               COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) FILTER (WHERE status = 'won'),0) AS total_payout
-       FROM bets WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       FROM bets WHERE ${inRange('created_at')}`,
+      rangeParams
     );
     const usersRes = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${inRange('created_at')}`,
+      rangeParams
     );
 
     const deposits = depositRes.rows[0];
@@ -4404,12 +4407,12 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) ====
     const ggrTrendRes = await pool.query(`
       SELECT d::date AS day,
-             COALESCE(SUM(b.stake) FILTER (WHERE b.created_at::date = d::date),0) AS staked,
-             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE b.created_at::date = d::date AND b.status='won'),0) AS payout
+             COALESCE(SUM(b.stake) FILTER (WHERE ${sqlBizDate('b.created_at', '$3')} = d::date),0) AS staked,
+             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE ${sqlBizDate('b.created_at', '$3')} = d::date AND b.status='won'),0) AS payout
       FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN bets b ON b.created_at::date = d::date
+      LEFT JOIN bets b ON ${sqlBizDate('b.created_at', '$3')} = d::date
       GROUP BY d ORDER BY d
-    `, [from, to]);
+    `, [from, to, bt.sqlTimezone()]);
     const ggrTrend = ggrTrendRes.rows.map(r => ({
       day: r.day, ggr: Number(r.staked) - Number(r.payout)
     }));
@@ -4418,9 +4421,9 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     const userTrendRes = await pool.query(`
       SELECT d::date AS day, COUNT(u.id) AS cnt
       FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN users u ON u.created_at::date = d::date
+      LEFT JOIN users u ON ${sqlBizDate('u.created_at', '$3')} = d::date
       GROUP BY d ORDER BY d
-    `, [from, to]);
+    `, [from, to, bt.sqlTimezone()]);
     const userTrend = userTrendRes.rows.map(r => ({ day: r.day, count: parseInt(r.cnt) }));
 
     res.render('admin/reports', {
@@ -4557,8 +4560,8 @@ router.get('/login-history', rbac.requirePermission('activity_log_view'), async 
       conditions.push(`(u.username ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.location ILIKE $${params.length})`);
     }
     if (new_device === '1') conditions.push(`l.is_new_device = true`);
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -4714,8 +4717,8 @@ router.get('/api-logs', rbac.requirePermission('reports_view'), async (req, res)
     if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
     if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
     if (api_key_id) { params.push(api_key_id); conditions.push(`l.api_key_id = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(`SELECT COUNT(*) FROM api_usage_logs l ${where}`, params);
@@ -4784,8 +4787,8 @@ router.get('/api-logs/export.csv', rbac.requirePermission('reports_view'), async
     if (method) { params.push(method); conditions.push(`l.method = $${params.length}`); }
     if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
     if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const result = await pool.query(
