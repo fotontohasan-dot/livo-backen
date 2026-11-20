@@ -3588,5 +3588,6 @@
   "pfm_share": "Share",
   "pfm_responsible_gaming": "Responsible Gaming",
   "pfm_kyc_verify": "KYC Verification",
-  "pfm_choose_avatar": "Choose Profile Photo"
+  "pfm_choose_avatar": "Choose Profile Photo",
+  "admin_turnover_needs_bonus_manage": "Changing these turnover settings ({keys}) requires the bonus_manage permission — they were not saved."
 }
