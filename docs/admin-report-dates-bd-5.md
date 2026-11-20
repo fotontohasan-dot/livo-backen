@@ -9,10 +9,10 @@
 ## ঠিক করা হয়েছে (S1–S8) — টেস্ট: tests/regression/adminReportDayBd.test.js
 | # | স্থান (এখনকার লাইন) | রুট |
 |---|---|---|
-| S1 | :27-36 revenue দৈনিক সিরিজ | GET /admin/api/analytics |
-| S2 | :38-41 userGrowth | ঐ |
-| S3 | :43-47 betStats | ঐ |
-| S4 | dateRange ডিফল্ট + কনজিউমার betStats/betPayout/apiUsage (BETWEEN) | GET /admin/ (ড্যাশবোর্ড) |
+| S1 | :32-37 revenue দৈনিক সিরিজ | GET /admin/api/analytics |
+| S2 | :38-42 userGrowth | ঐ |
+| S3 | :43-48 betStats | ঐ |
+| S4 | :1350-1352 dateRange ডিফল্ট + কনজিউমার betStats/betPayout/apiUsage (BETWEEN) | GET /admin/ (ড্যাশবোর্ড) |
 | S5 | আজ-ডিপোজিট (`today_deposit`) | ঐ |
 | S6 | আজ-উইথড্র | ঐ |
 | S7 | আজ-বেট (গণনা/স্টেক) | ঐ |
