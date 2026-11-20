@@ -13,6 +13,12 @@ const scheduler = require('../services/scheduler');
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
 // কারণটা আগের মতোই console.error()-এ সার্ভার লগে থাকে। utils/safeError.js দেখুন।
 const { publicMessage } = require('../utils/safeError');
+// রিপোর্টের "দিন" = Asia/Dhaka ব্যবসায়িক দিন (utils/businessTime.js)। আগে CURRENT_DATE / created_at::date
+// (DB-টাইমজোন = UTC) ও toISOString().slice (UTC) — দিন বদলাত BD ০৬:০০-এ, ব্যবসায়িক মধ্যরাতে নয়।
+const bt = require('../utils/businessTime');
+const sqlBizDate = bt.sqlBusinessDate;
+// BD দিন-সীমা (UTC Date) → টাইমজোনবিহীন TIMESTAMP কলামের সাথে তুলনার জন্য সেশন-লোকাল ঘড়িতে
+const BIZ_TS = (p) => `(${p}::timestamptz AT TIME ZONE current_setting('TimeZone'))`;
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
 // আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
@@ -25,21 +31,21 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
     const [revenue, userGrowth, betStats, topUsers, kycSummary, queueH] = await Promise.all([
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND created_at::date=d::date),0) AS deposit,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date=d::date),0) AS withdraw
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND ${sqlBizDate('created_at', '$2')}=d::date),0) AS deposit,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$2')}=d::date),0) AS withdraw
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date=d::date),0) AS new_users
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT COUNT(*) FROM users WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS new_users
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date=d::date),0) AS cnt,
-          COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date=d::date),0) AS staked
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT COUNT(*) FROM bets WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS cnt,
+          COALESCE((SELECT SUM(stake) FROM bets WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS staked
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT u.username, SUM(pr.amount) AS total FROM payment_requests pr
         JOIN users u ON pr.user_id=u.id
@@ -1341,8 +1347,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     // কিন্তু এই ভ্যারিয়েবলটা কখনো তৈরি/পাস করা হতো না — ফলে প্রতিবার লগইনের পর প্রথম পেজ
     // (dashboard) 500 এরর দিয়ে ক্র্যাশ করত ("dateRange is not defined")। ডিফল্ট গত ৩০ দিন,
     // query param দিয়ে ওভাররাইড করা যায়।
-    const today = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const today = bt.today();
+    const thirtyDaysAgo = bt.addDays(today, -29);
     const dateRange = {
       from: /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : thirtyDaysAgo,
       to: /^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '') ? req.query.to : today
@@ -1359,24 +1365,29 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayWithdraw = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayBets = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
+      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), today]
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), bt.addDays(today, -1)]
     );
 
     // ==== সর্বমোট (লাইফটাইম) ডিপোজিট/উইথড্র — ড্যাশবোর্ড কার্ডের আসল সংখ্যা ====
@@ -1515,11 +1526,11 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='won') AS won,
              COUNT(*) FILTER (WHERE status='lost') AS lost, COUNT(*) FILTER (WHERE status='pending') AS pending,
              COALESCE(SUM(stake),0) AS staked
-      FROM bets WHERE created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      FROM bets WHERE created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const betPayoutRes = await pool.query(`
-      SELECT COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END),0) AS payout FROM bets WHERE status='won' AND created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      SELECT COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END),0) AS payout FROM bets WHERE status='won' AND created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const totalBetsN = betStatsRes ? parseInt(betStatsRes.rows[0].total) : 0;
     const wonN = betStatsRes ? parseInt(betStatsRes.rows[0].won) : 0;
     const totalStakeN = betStatsRes ? Number(betStatsRes.rows[0].staked) : 0;
@@ -1538,8 +1549,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     const apiLogStatsRes = await pool.query(`
       SELECT COUNT(*) AS total, COALESCE(AVG(response_time_ms),0) AS avg_ms,
              COUNT(*) FILTER (WHERE status_code >= 400) AS errors
-      FROM api_usage_logs WHERE created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      FROM api_usage_logs WHERE created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const totalReqN = apiLogStatsRes ? parseInt(apiLogStatsRes.rows[0].total) : 0;
     const apiUsageStats = {
       totalRequests: totalReqN,
