@@ -60,7 +60,7 @@ async function bet(label, when, stake, status, odd = 2) {
 async function newUser(label, when) {
   const r = await pool.query(
     `INSERT INTO users (username, phone, password, coins, created_at) VALUES ($1,$2,'x',0,$3::timestamp) RETURNING id`,
-    [`${TAG}${label}`.slice(0, 18).toLowerCase(), `017${String(Date.now()).slice(-7)}${label.length}`.slice(0, 11), when]);
+    [`${TAG}${label}`.slice(0, 18).toLowerCase(), uniquePhone(), when]);
   userIds.push(r.rows[0].id);
 }
 async function apiLog(when) {
