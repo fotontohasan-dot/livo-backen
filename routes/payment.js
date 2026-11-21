@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
 const { createBonus, createDepositTurnover, canWithdraw } = require('../services/turnover');
+const { grantFirstDepositFreeBet } = require('../services/freebet');
 const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
@@ -846,6 +847,8 @@ async function creditApprovedDeposit(client, request) {
     }
     // Turnover V2: প্রতিটি approved Deposit-এর আলাদা এন্ট্রি — বোনাস নিলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
     await createDepositTurnover(client, { userId: request.user_id, depositId: request.id, depositAmount: request.amount, bonusAmount: bonusGiven });
+    // প্রথম যোগ্য ডিপোজিটে ফ্রি বেট (want_bonus নিলে নয়) — একই transaction-এর client; ব্যালেন্স/টার্নওভার হিসাব অপরিবর্তিত।
+    await grantFirstDepositFreeBet(client, request);
     // রেফারেল বোনাস এখানে নয় — ডিপোজিট COMMIT-এর পরে আলাদা ট্রানজ্যাকশনে (services/referralRewards.js)।
   }
 

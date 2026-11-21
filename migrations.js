@@ -2848,6 +2848,11 @@ async function applyMigrations(pool) {
         ('turnover_cashout_counts', '0')
       ON CONFLICT (key) DO NOTHING
     `);
+    // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইমের টার্নওভার গুণক (শুধু reason='first_deposit' সারিতে); বিদ্যমান মান অক্ষত।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES ('free_bet_turnover_multiplier', '3')
+      ON CONFLICT (key) DO NOTHING
+    `);
     console.log('✅ turnover v2 ready');
 
   } catch (err) {
