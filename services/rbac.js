@@ -49,6 +49,7 @@ const PERMISSIONS = {
   cron_jobs_manage: { label: 'Cron Jobs enable/disable/run', group: 'System' },
   reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },
   vip_manage: { label: 'VIP সিস্টেম ম্যানেজমেন্ট (লেভেল, বোনাস, অ্যানালিটিক্স)', group: 'Content' },
+  bonus_manage: { label: 'বোনাস ম্যানেজমেন্ট (রেফারেল হোল্ড বোনাস approve/reject)', group: 'Bonus' },
   merchants_manage: { label: 'মার্চেন্ট ও সাব-মার্চেন্ট ম্যানেজমেন্ট (তৈরি, এডিট, স্ট্যাটাস, ডিলিট)', group: 'Merchants' }
 };
 

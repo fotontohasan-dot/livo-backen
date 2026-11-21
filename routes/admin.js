@@ -2250,7 +2250,7 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done,
               COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
               (rr.status = 'pending_review') AS bonus_held,
-              rr.status AS reward_status, rr.review_reason AS hold_reason,
+              rr.id AS reward_id, rr.status AS reward_status, rr.review_reason AS hold_reason,
               rr.tier AS reward_tier, rr.amount AS reward_amount, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
@@ -2283,6 +2283,40 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     });
   }
 });
+
+// ==================== রেফারেল হোল্ড রিভিউ (approve/reject) ====================
+// ফোন/পেমেন্ট-অ্যাকাউন্ট/ডিভাইস মিল বা স্কোর ≥৫০ হলে বোনাস pending_review। permission: bonus_manage।
+async function reviewReferralHandler(decision, req, res) {
+  const back = '/admin/referrals?status=held';
+  // reject-এ কারণ বাধ্যতামূলক — না থাকলে 400 (কিছুই বদলায় না)
+  if (decision === 'reject' && !String((req.body && req.body.reason) || '').trim()) {
+    return res.status(400).type('text').send(req.t('arf_review_reason_required'));
+  }
+  try {
+    const out = await require('../services/referralReview').reviewHeldReward({
+      rewardId: req.params.id, adminId: req.session.user.id, decision, reason: req.body && req.body.reason
+    });
+    if (!out.ok) {
+      req.flash('error', out.result === 'not_found' ? req.t('arf_review_not_found') : req.t('arf_review_already'));
+      return res.redirect(back);
+    }
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: out.result === 'approved' ? 'REFERRAL_BONUS_APPROVED' : 'REFERRAL_BONUS_REJECTED',
+      category: 'financial', riskLevel: 'medium',
+      details: { reward_id: Number(req.params.id), referrer_id: out.referrerId, referred_user_id: out.referredId,
+        old_status: out.oldStatus, new_status: out.newStatus, reason: out.reason, amount: out.amount }
+    });
+    req.flash('success', out.result === 'approved' ? req.t('arf_review_approved') : req.t('arf_review_rejected'));
+    return res.redirect(back);
+  } catch (err) {
+    console.error('referral review error:', err.message);
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
+    return res.redirect(back);
+  }
+}
+router.post('/referrals/:id/approve', rbac.requirePermission('bonus_manage'), (req, res) => reviewReferralHandler('approve', req, res));
+router.post('/referrals/:id/reject', rbac.requirePermission('bonus_manage'), (req, res) => reviewReferralHandler('reject', req, res));
 
 // ==================== USERS ====================
 router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {

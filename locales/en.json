@@ -3545,5 +3545,11 @@
   "adms_ref_turnover_sports": "Referral bonus turnover - sports (x)",
   "adms_ref_turnover_casino": "Referral bonus turnover - casino (x)",
   "adms_ref_slabs": "Bonus slabs (JSON)",
-  "adms_ref_slabs_hint": "Format: [{\"min\":500,\"amount\":75},{\"min\":1000,\"amount\":100}] - min must strictly increase; invalid input is not saved and the previous value stays. Each slab runs until the next slab min; the bonus never exceeds the cap."
+  "adms_ref_slabs_hint": "Format: [{\"min\":500,\"amount\":75},{\"min\":1000,\"amount\":100}] - min must strictly increase; invalid input is not saved and the previous value stays. Each slab runs until the next slab min; the bonus never exceeds the cap.",
+  "arf_review_not_found": "Record not found",
+  "arf_review_already": "This record was already processed",
+  "arf_review_approved": "Bonus approved",
+  "arf_review_rejected": "Bonus rejected",
+  "arf_review_reason_required": "A rejection reason is required",
+  "arf_review_reason_ph": "Reject reason (required)"
 }

@@ -2109,6 +2109,8 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_referrer_status ON referral_rewards(referrer_id, status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_status ON referral_rewards(status);`);
+    // অ্যাডমিন রিভিউয়ের মন্তব্য/কারণ (reject-এ বাধ্যতামূলক) — আলাদা nullable কলাম, review_reason (হোল্ডের কারণ) অক্ষত।
+    await pool.query(`ALTER TABLE referral_rewards ADD COLUMN IF NOT EXISTS review_note TEXT;`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referral_reward_adjustments (
         id BIGSERIAL PRIMARY KEY,

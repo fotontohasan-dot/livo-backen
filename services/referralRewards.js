@@ -404,8 +404,33 @@ async function retryPending(limit = 50) {
   return results;
 }
 
+// অ্যাডমিন-অনুমোদিত held বোনাসের ক্রেডিট (services/referralReview.js ডাকে; কলার transaction/সারি-লক ধরে রাখে)।
+// ইঞ্জিনের paid পথের মতোই: কয়েন, createBonus (টার্নওভার ৫x কনফিগযোগ্য), কমিশন-রেকর্ড, লেজার, ফ্ল্যাগ, নোটিফিকেশন।
+async function payoutApprovedHeld(client, reward, amount) {
+  const referrerId = reward.referrer_id;
+  const referredUserId = reward.referred_user_id;
+  await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, referrerId]);
+  await createBonus(client, referrerId, 'referral', amount);
+  await client.query(
+    `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
+     VALUES ($1, $2, 0, $3, 'first_deposit')`,
+    [referrerId, referredUserId, amount]
+  );
+  await client.query(
+    `INSERT INTO coin_transactions (user_id, amount, type, description)
+     VALUES ($1, $2, 'referral_bonus', 'রেফারেল প্রথম-ডিপোজিট বোনাস (অ্যাডমিন অনুমোদিত)')`,
+    [referrerId, amount]
+  );
+  await client.query(`UPDATE referrals SET first_deposit_done = true WHERE referred_id = $1`, [referredUserId]);
+  await client.query(
+    `INSERT INTO notifications (user_id, title, message, type)
+     VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
+    [referrerId, `আপনার রেফারেল বোনাস অনুমোদিত হয়েছে। আপনি ${amount} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
+  );
+}
+
 module.exports = {
-  processReferralReward, afterDepositCommit, retryPending, collectEvidence,
+  processReferralReward, payoutApprovedHeld, afterDepositCommit, retryPending, collectEvidence,
   tierFor, parseTiers, getTiers, getMinDeposit, phoneKey,
   getBonusMode, parseSlabs, getSlabs, getBonusCap, slabFor,
   DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT, DEFAULT_SLABS, DEFAULT_BONUS_CAP, DEFAULT_TURNOVER
