@@ -1908,6 +1908,41 @@ router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'
   }
 });
 
+// ==================== approved ডিপোজিট হাতে রিভার্স (permission: deposit_reverse) ====================
+// স্বয়ংক্রিয় নয়; কারণ বাধ্যতামূলক (না থাকলে 400, কিছুই বদলায় না)। বিস্তারিত: services/depositReversal.js
+// body: { reason, require_full? } — require_full=true হলে কম ব্যালেন্সে অস্বীকৃত; নইলে যা আছে কেটে বাকিটা বকেয়া।
+// রেফারেল বোনাস পেআউট স্বয়ংক্রিয় কাটা হয় না — referral_payouts তালিকা ফেরত যায়।
+router.post('/api/deposits/:id/reverse', rbac.requirePermission('deposit_reverse'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+  const reason = String((req.body && req.body.reason) || '').replace(/\s+/g, ' ').trim();
+  if (!reason) return res.status(400).json({ success: false, error: 'reason_required' });
+  const requireFull = !!(req.body && (req.body.require_full === true || req.body.require_full === 'true' || req.body.require_full === '1'));
+  try {
+    const out = await require('../services/depositReversal').reverseDeposit({
+      depositId: req.params.id, adminId: req.session.user.id, reason, requireFull
+    });
+    if (!out.ok) {
+      const code = out.result === 'not_found' ? 404 : 409;
+      return res.status(code).json({ success: false, error: out.result, ...(out.balance != null ? { balance: out.balance, needed: out.needed } : {}) });
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reverse',
+      `Deposit #${out.depositId} reversed (user #${out.userId}, ${out.depositAmount}) — কারণ: ${out.reason}`, req.ip);
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_REVERSED', category: 'financial', status: 'success', riskLevel: 'high',
+      details: {
+        deposit_id: out.depositId, user_id: out.userId, reason: out.reason, old_status: out.oldStatus, new_status: out.newStatus,
+        balance_before: out.balanceBefore, balance_after: out.balanceAfter, deducted_deposit: out.deductedDeposit,
+        deducted_bonus: out.deductedBonus, due_amount: out.dueAmount, cancelled_bonus_ids: out.cancelledBonusIds,
+        cancelled_free_bet_ids: out.cancelledFreeBetIds, referral_payouts: out.referralPayouts
+      }
+    });
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    console.error('deposit reverse error:', err);
+    return res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
+  }
+});
+
 // ==================== উইথড্র ম্যানেজমেন্ট ====================
 // ==================== উইথড্র (ডুপ্লিকেট — ক্যানোনিকাল পেজে রিডাইরেক্ট) ====================
 // উপরের /deposits-এর মতোই কারণ: /payment/admin/payments-এর উইথড্র ট্যাবই এখন একমাত্র কিউ।

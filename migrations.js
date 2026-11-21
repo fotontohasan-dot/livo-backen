@@ -2124,6 +2124,36 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_reward_adj_reward ON referral_reward_adjustments(reward_id);`);
 
+    // ==================== ডিপোজিট রিভার্সাল (অ্যাডমিন-হাতে, deposit_reverse) ====================
+    // শুধু নতুন টেবিল — বিদ্যমান ডেটা/কলাম অপরিবর্তিত। deposit_id UNIQUE = একটি ডিপোজিট জীবনে একবারই রিভার্স।
+    // due_amount > 0 মানে ব্যালেন্স কম থাকায় যা কাটা যায়নি (বকেয়া) — ব্যালেন্স কখনো ঋণাত্মক হয় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deposit_reversals (
+        id BIGSERIAL PRIMARY KEY,
+        deposit_id INTEGER NOT NULL REFERENCES payment_requests(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        admin_id INTEGER REFERENCES users(id),
+        reason TEXT NOT NULL,
+        deposit_amount NUMERIC(14,2) NOT NULL,
+        deducted_deposit NUMERIC(14,2) NOT NULL DEFAULT 0,
+        deducted_bonus NUMERIC(14,2) NOT NULL DEFAULT 0,
+        due_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        due_status VARCHAR(20) NOT NULL DEFAULT 'none',
+        balance_before NUMERIC(14,2),
+        balance_after NUMERIC(14,2),
+        old_status VARCHAR(20) NOT NULL,
+        new_status VARCHAR(20) NOT NULL DEFAULT 'reversed',
+        cancelled_bonus_ids JSONB,
+        cancelled_free_bet_ids JSONB,
+        referral_payouts JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT deposit_reversals_deposit_uniq UNIQUE (deposit_id),
+        CONSTRAINT deposit_reversals_due_status_chk CHECK (due_status IN ('none','open','settled'))
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_user ON deposit_reversals(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_due ON deposit_reversals(due_status) WHERE due_status = 'open';`);
+
     // কনফিগ (বিদ্যমান site_settings কাঠামো); বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING।
     // referral_tiers: আগের paid রেফারেল সংখ্যা অনুযায়ী (max = ওই টিয়ারের সর্বোচ্চ ক্রমিক, null = অসীম)।
     await pool.query(`
@@ -2376,6 +2406,21 @@ async function applyMigrations(pool) {
       `status IN ('pending','approved','rejected')`,
       `SELECT COUNT(*)::int AS c FROM payment_requests WHERE status NOT IN ('pending','approved','rejected')`
     );
+    // ডিপোজিট রিভার্সাল (deposit_reverse) নতুন স্ট্যাটাস 'reversed' ব্যবহার করে — চেক-কনস্ট্রেইন্টে শুধু সেটি যোগ (কোনো ডেটা/কলাম মোছা নয়)।
+    // বিদ্যমান VALID/NOT VALID অবস্থা বজায় থাকে; DROP+ADD একই মাল্টি-স্টেটমেন্ট (implicit transaction) — মাঝখানে খোলা জানালা নেই। idempotent।
+    {
+      const sv = (await pool.query(
+        `SELECT pg_get_constraintdef(oid) AS def, convalidated FROM pg_constraint
+          WHERE conname = 'payment_requests_status_valid' AND conrelid = 'payment_requests'::regclass`
+      )).rows[0];
+      if (sv && !sv.def.includes("'reversed'")) {
+        await pool.query(
+          `ALTER TABLE payment_requests DROP CONSTRAINT payment_requests_status_valid;
+           ALTER TABLE payment_requests ADD CONSTRAINT payment_requests_status_valid
+             CHECK (status IN ('pending','approved','rejected','reversed'))${sv.convalidated ? '' : ' NOT VALID'};`
+        );
+      }
+    }
     await addCheck(
       'payment_requests', 'payment_requests_type_valid',
       `type IN ('deposit','withdraw')`,

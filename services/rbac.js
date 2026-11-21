@@ -28,6 +28,7 @@ const PERMISSIONS = {
   users_delete: { label: 'ইউজার ডিলিট', group: 'Users' },
   payments_view: { label: 'পেমেন্ট রিকোয়েস্ট দেখা', group: 'Payments' },
   payments_approve: { label: 'ডিপোজিট/উইথড্র অনুমোদন', group: 'Payments' },
+  deposit_reverse: { label: 'অনুমোদিত ডিপোজিট হাতে রিভার্স (কারণ বাধ্যতামূলক)', group: 'Payments' },
   payments_reject: { label: 'ডিপোজিট/উইথড্র বাতিল', group: 'Payments' },
   payment_methods_manage: { label: 'ডিপোজিট অ্যাকাউন্ট/পেমেন্ট মেথড ম্যানেজমেন্ট', group: 'Payments' },
   withdrawal_window_manage: { label: 'উইথড্র সময়সূচি ম্যানেজমেন্ট', group: 'Payments' },
