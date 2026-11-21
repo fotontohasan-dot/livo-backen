@@ -2795,7 +2795,10 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
 router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
-    await grantFreeBet(req.params.id, amount, 'admin');
+    // reason ইউনিক (admin:<অ্যাডমিন id>:<র‍্যান্ডম>) — uniq_free_bet_user_reason থাকায় একই 'admin' reason-এ
+    // দ্বিতীয় ফ্রি বেট নীরবে বাদ পড়ত। বিদ্যমান 'admin' সারি অপরিবর্তিত। (VARCHAR(40)-এর মধ্যে)
+    const adminReason = `admin:${req.session.user.id}:${require('crypto').randomBytes(6).toString('hex')}`;
+    await grantFreeBet(req.params.id, amount, adminReason);
     await logAdminAction(req.session.user.id, req.session.user.username, 'freebet_grant', `${amount} taka free bet to user #${req.params.id}`, req.ip);
     req.flash('success', req.t('admin_freebet_granted').replace('{value}', amount));
   } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
