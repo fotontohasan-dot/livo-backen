@@ -825,6 +825,9 @@ async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
 
   if (request.type === 'deposit') {
+    // একই ইউজারের একাধিক ডিপোজিট একসাথে অনুমোদনে সিরিয়াল ক্রম নিশ্চিত করতে ইউজার-সারি স্পষ্টভাবে লক —
+    // বোনাস-হার (approvedDepositCount) ও ফ্রি বেট পড়ার আগে। হিসাবের মান অপরিবর্তিত।
+    await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [request.user_id]);
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit',$3)`,
