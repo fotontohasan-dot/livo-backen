@@ -136,6 +136,14 @@ describe('payment_requests — ডাটাবেজ CHECK কনস্ট্র
     ).rejects.toMatchObject({ code: '23514' });
   });
 
+  test("'reversed' বৈধ স্ট্যাটাস হিসেবে গৃহীত হয় (ডিপোজিট রিভার্সাল)", async () => {
+    const r = await pool.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, status)
+       VALUES ($1,'deposit','bkash',500,'reversed') RETURNING status`, [userId]
+    );
+    expect(r.rows[0].status).toBe('reversed');
+  });
+
   test('অবৈধ type প্রত্যাখ্যাত হয়', async () => {
     await expect(
       pool.query(
@@ -223,7 +231,7 @@ describe('আর্থিক ডেটার বাস্তব অবস্থ�
         (SELECT COUNT(*) FROM users WHERE coins < 0)                                       AS negative_balances,
         (SELECT COUNT(*) FROM payment_requests WHERE amount IS NULL OR amount <= 0)        AS bad_amounts,
         (SELECT COUNT(*) FROM payment_requests
-          WHERE status NOT IN ('pending','approved','rejected'))                           AS bad_statuses,
+          WHERE status NOT IN ('pending','approved','rejected','reversed'))                AS bad_statuses,
         (SELECT COUNT(*) FROM payment_requests WHERE type NOT IN ('deposit','withdraw'))   AS bad_types,
         (SELECT COUNT(*) FROM payment_requests p
           WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = p.user_id))                 AS orphans
