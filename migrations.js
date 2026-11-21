@@ -2161,6 +2161,15 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_referral_cycle_open ON referral_deposit_cycles(referred_user_id) WHERE status = 'open';`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_cycle_referrer ON referral_deposit_cycles(referrer_id, status);`);
+    // একই সাইকেলের loss_commission দ্বিগুণ ঠেকানো: নতুন nullable cycle_id + আংশিক UNIQUE (বিদ্যমান ডেটা অপরিবর্তিত)
+    await pool.query(`ALTER TABLE referral_commissions ADD COLUMN IF NOT EXISTS cycle_id BIGINT;`);
+    const dupCycle = await pool.query(
+      `SELECT cycle_id FROM referral_commissions WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL
+        GROUP BY cycle_id HAVING COUNT(*) > 1 LIMIT 1`);
+    if (dupCycle.rows.length) {
+      throw new Error('referral_commissions: একই cycle_id-তে loss_commission ডুপ্লিকেট আছে — UNIQUE বসানো বন্ধ; আগে হাতে যাচাই করুন');
+    }
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_refcom_loss_cycle ON referral_commissions(cycle_id) WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL;`);
     await pool.query(`
       INSERT INTO site_settings (key, value) VALUES
       ('referral_bonus_bands', '[{"min":100,"amount":20},{"min":200,"amount":50},{"min":500,"amount":75}]'),
