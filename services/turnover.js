@@ -44,9 +44,9 @@ async function createBonus(client, userId, type, bonusAmount, options = {}) {
   // canWithdraw()-ও এটাকে গোনে না — অ্যাডমিন ছাড় দিলে তবেই 'active' হবে।
   const status = options.status === 'pending_review' ? 'pending_review' : 'active';
   await db.query(
-    `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [userId, type, bonusAmount, sportsReq, casinoReq, status]
+    `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status, deposit_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [userId, type, bonusAmount, sportsReq, casinoReq, status, Number.isInteger(options.depositId) ? options.depositId : null]
   );
 }
 

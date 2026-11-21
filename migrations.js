@@ -2152,6 +2152,9 @@ async function applyMigrations(pool) {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_user ON deposit_reversals(user_id);`);
+    // বোনাস ↔ ডিপোজিট সরাসরি যোগ (নতুন nullable কলাম; পুরোনো সারি NULL — রিভার্সালে বর্ণনা/সময় মিলে ফলব্যাক)।
+    await pool.query(`ALTER TABLE bonuses ADD COLUMN IF NOT EXISTS deposit_id INTEGER REFERENCES payment_requests(id) ON DELETE SET NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonuses_deposit_id ON bonuses(deposit_id) WHERE deposit_id IS NOT NULL;`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_due ON deposit_reversals(due_status) WHERE due_status = 'open';`);
 
     // কনফিগ (বিদ্যমান site_settings কাঠামো); বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING।

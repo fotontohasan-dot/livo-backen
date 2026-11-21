@@ -45,12 +45,19 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
     )).rows[0];
     if (bonusTx) {
       const given = toC(bonusTx.amount);
-      const b = (await client.query(
-        `SELECT id, status FROM bonuses
-          WHERE user_id = $1 AND bonus_type = 'deposit' AND bonus_amount = $2
-          ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
-        [userId, Math.round(given / 100), bonusTx.created_at]
+      // ১) নতুন সারি: deposit_id দিয়ে সরাসরি। ২) পুরোনো সারি (deposit_id NULL): পরিমাণ + সময়ের নৈকট্য।
+      let b = (await client.query(
+        `SELECT id, status FROM bonuses WHERE user_id = $1 AND bonus_type = 'deposit' AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
+        [userId, id]
       )).rows[0];
+      if (!b) {
+        b = (await client.query(
+          `SELECT id, status FROM bonuses
+            WHERE user_id = $1 AND bonus_type = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2
+            ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
+          [userId, Math.round(given / 100), bonusTx.created_at]
+        )).rows[0];
+      }
       if (b && b.status === 'forfeited') {
         bonusC = 0; // আগেই বাতিল (ও তখনই কাটা) — দ্বিগুণ কাটা নয়
       } else {
@@ -81,7 +88,7 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
         await client.query(`UPDATE free_bets SET status = 'reversed' WHERE id = $1`, [fb.id]);
         cancelledFreeBetIds.push(fb.id);
         const fbb = (await client.query(
-          `SELECT id FROM bonuses WHERE user_id = $1 AND bonus_type = 'deposit' AND bonus_amount = $2 AND status = 'active'
+          `SELECT id FROM bonuses WHERE user_id = $1 AND bonus_type = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
             ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
           [userId, Math.round(freeC / 100), fb.used_at]
         )).rows[0];
