@@ -14,6 +14,9 @@
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const rewards = require('./referralRewards');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
@@ -63,6 +66,10 @@ async function createReferral(client, referrerId, referredId) {
 // নিজে আলাদা transaction ব্যবহার করে (pool থেকে), যাতে মূল বেট আটকে না যায়।
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
+  // নতুন নিয়ম: বাজি ধরলে কোনো কমিশন নেই — কমিশন শুধু ডিপোজিট সম্পূর্ণ হারলে ০.৮%
+  // (services/referralRewards.js settleLossCycles)। পুরোনো প্রতি-বাজি ৩-লেভেল কমিশন ডিফল্টে বন্ধ;
+  // site_settings referral_bet_commission_enabled = 'true' দিলে আবার চালু হয়।
+  if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
   const client = await pool.connect();
@@ -165,6 +172,9 @@ async function getReferralStats(userId) {
     // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
     nextBonus: info.mode === 'tier' ? rewards.tierFor(successCount + 1, info.tiers).amount : null,
     program: info,
+    nextBonus: tierFor(successCount + 1, await getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
+    bonusBands: await getBands(),
+    lossCommissionPercent: await getLossCommissionPercent(),
     history: historyRes.rows,
     team: teamRes.rows
   };

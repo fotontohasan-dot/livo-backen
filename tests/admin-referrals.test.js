@@ -83,7 +83,7 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const { userId: referredId, username: referredUsername } = await registerUser();
     await createReferral(null, referrerId, referredId);
 
-    await runEngine(referredId, 100); // < ন্যূনতম ডিপোজিট (৫০০)
+    await runEngine(referredId, 99); // < ন্যূনতম ডিপোজিট (১০০)
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals?search=' + referredUsername);
@@ -184,6 +184,8 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const coinsAfter = Number(after.rows[0].coins);
     // slab: ১,০০০ ও ১,৫০০ দুটোই ১,০০০–১,৯৯৯ ধাপে = ১০০ টাকা — দুইবার দিলে ২০০ হতো
     expect(coinsAfter - coinsBefore).toBe(100);
+    // দুটো ডিপোজিটই ৫০০+ ধাপে (বোনাস ৭৫) — বোনাস একবারই; দুইবার দিলে ১৫০ হতো
+    expect(coinsAfter - coinsBefore).toBe(75);
 
     const refRow = await pool.query('SELECT status FROM referral_rewards WHERE referrer_id=$1 AND referred_user_id=$2', [referrerId, referredId]);
     expect(refRow.rows).toHaveLength(1);

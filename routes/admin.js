@@ -1080,11 +1080,12 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
-  'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
   // রেফারেল বোনাস (ধাপ-ভিত্তিক): ন্যূনতম ডিপোজিট, ক্যাপ, ধাপ-ছক (JSON), টার্নওভার — services/referralRewards.js
   'referral_min_deposit', 'referral_bonus_cap', 'referral_slabs', 'referral_turnover_sports', 'referral_turnover_casino',
+  'referral_loss_commission_percent',
   'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
   // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
   'site_tagline', 'support_phone',
@@ -1200,7 +1201,7 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
       // রেফারেল কমিশন রেট — ০-১০০-এর মধ্যে সংখ্যা না হলে সেভ না করে আগের মান রেখে দেওয়া হয়
       // (ভুল মান যেমন negative বা খালি স্ট্রিং সেভ হলে distributeCommission()-এ ভুল কমিশন যেতে পারত)
-      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'].includes(key)) {
+      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent', 'referral_loss_commission_percent'].includes(key)) {
         const n = parseFloat(value);
         if (!Number.isFinite(n) || n < 0 || n > 100) continue;
         value = String(n);
