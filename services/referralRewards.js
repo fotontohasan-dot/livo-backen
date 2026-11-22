@@ -4,10 +4,8 @@
 // নিয়ম:
 //  • রেফারার বোনাস পায় রেফার-করা ইউজারের প্রথম যোগ্য (approved, ≥ ন্যূনতম) ডিপোজিটে, সাইন-আপে নয়।
 //  • প্রতি রেফার-করা ইউজারে একবারই — referral_rewards.UNIQUE(referred_user_id) + রেফারার-স্তরের advisory lock।
-//  • বোনাস মোড (env REFERRAL_BONUS_MODE = slab | tier, ডিফল্ট slab):
-//      slab = Y-এর যোগ্য ডিপোজিটের পরিমাণ → ধাপ-ছক (site_settings.referral_slabs), ক্যাপ referral_bonus_cap (ডিফল্ট ১,০০০)।
-//      tier = পুরোনো ক্রমিক টিয়ার (১০০/২০০/৪০০/৮০০/১৫০০) — আগের পথ, মোছা হয়নি।
-//  • টিয়ার (tier মোড) = আগের 'paid' রেফারেল সংখ্যা + ১ (legacy_paid/pending_review/rejected/reversed গোনা নয়)।
+//  • বোনাস = রেফার-করা ইউজারের ডিপোজিটের অঙ্কের ধাপ (১০০→২০, ২০০–৪৯৯→৫০, ৫০০+→৭৫); সেটিং referral_bonus_bands।
+//  • ডিপোজিট-হার কমিশন ০.৮%: নিচে 'ডিপোজিট-হার কমিশন' অংশ (referral_deposit_cycles)।
 //  • ফোন/পেমেন্ট-অ্যাকাউন্ট/ডিভাইস মিল → pending_review (কোনো কয়েন বা লেজার নয়)। শুধু IP মিল → flag নয়,
 //    evidence-এ নোট। নিজেকে রেফার → rejected।
 //  • রেফার-করা ইউজার কোনো রেফারেল বোনাস পায় না (First Deposit Bonus আলাদা, অপরিবর্তিত)।
@@ -17,7 +15,19 @@ const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const { createBonus } = require('./turnover');
 
-const DEFAULT_MIN_DEPOSIT = 500;
+const DEFAULT_MIN_DEPOSIT = 100;
+// প্রথম-ডিপোজিট বোনাস এখন রেফার-করা ইউজারের ডিপোজিটের অঙ্কের ওপর নির্ভর করে (সর্বোচ্চ যে ধাপের min ≤ অঙ্ক):
+//   ১০০–১৯৯ → ২০, ২০০–৪৯৯ → ৫০, ৫০০+ → ৭৫
+const DEFAULT_BANDS = [
+  { min: 100, amount: 20 },
+  { min: 200, amount: 50 },
+  { min: 500, amount: 75 }
+];
+// ডিপোজিট হারের কমিশন (শতাংশ): রেফার-করা ইউজারের ডিপোজিট করা টাকা সম্পূর্ণ হারলে ডিপোজিটের এই % রেফারার পায়
+const DEFAULT_LOSS_COMMISSION_PERCENT = 0.8;
+// ব্যালেন্স এর নিচে নামলে "সম্পূর্ণ হারা" ধরা হয়; আর শেষ কার্যকলাপের এতক্ষণ পর পর্যন্ত অপেক্ষা (মিনিট)
+const LOSS_BALANCE_THRESHOLD = 1;
+const LOSS_QUIET_MINUTES = 10;
 const DEFAULT_TIERS = [
   { max: 1, amount: 100 },
   { max: 5, amount: 200 },
@@ -135,6 +145,44 @@ function tierFor(ordinal, tiers = DEFAULT_TIERS) {
   return { tier: tiers.length, amount: last.amount };
 }
 
+
+// ---------------------------------------------------------------- ডিপোজিট-অঙ্ক ভিত্তিক বোনাস ধাপ
+function parseBands(raw) {
+  try {
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    let prev = -1;
+    const out = [];
+    for (const b of arr) {
+      const min = Number(b && b.min), amt = Number(b && b.amount);
+      if (!Number.isFinite(min) || min <= 0 || !Number.isFinite(amt) || amt < 0 || min <= prev) return null;
+      prev = min;
+      out.push({ min, amount: amt });
+    }
+    return out;
+  } catch (_) { return null; }
+}
+
+async function getBands() {
+  return parseBands(await getSetting('referral_bonus_bands')) || DEFAULT_BANDS;
+}
+
+// ডিপোজিট অঙ্কের জন্য বোনাস; কোনো ধাপের নিচে হলে { tier: 0, amount: 0 }
+function bonusForDeposit(depositAmount, bands = DEFAULT_BANDS) {
+  const d = Number(depositAmount);
+  let hit = { tier: 0, amount: 0 };
+  if (!Number.isFinite(d)) return hit;
+  for (let i = 0; i < bands.length; i++) {
+    if (d >= bands[i].min) hit = { tier: i + 1, amount: bands[i].amount };
+  }
+  return hit;
+}
+
+async function getLossCommissionPercent() {
+  const n = parseFloat(await getSetting('referral_loss_commission_percent'));
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : DEFAULT_LOSS_COMMISSION_PERCENT;
+}
+
 // ---------------------------------------------------------------- জালিয়াতি-গেট
 // ফোন: শেষ ১০ অঙ্ক দিয়ে মেলানো (+880 / 0 প্রিফিক্সের পার্থক্য উপেক্ষা)।
 function phoneKey(phone) {
@@ -221,9 +269,7 @@ async function processReferralReward(referredUserId, depositId) {
   // কনফিগ আগে পড়া — client ধরে রেখে আরেকটা pool connection চাওয়া (settings ক্যাশ-মিস) pool আটকাতে পারে
   let cfg;
   try {
-    const mode = getBonusMode();
-    cfg = { mode, minDeposit: await getMinDeposit(), tiers: await getTiers() };
-    if (mode === 'slab') { cfg.slabs = await getSlabs(); cfg.cap = await getBonusCap(); }
+    cfg = { minDeposit: await getMinDeposit(), tiers: await getTiers(), bands: await getBands() };
   } catch (e) {
     console.error('referral reward config error (retry_pending):', e.message);
     await markRetryPending(referredUserId, depositId).catch(() => {});
@@ -296,23 +342,9 @@ async function runInTx(client, referredUserId, depositId, cfg) {
     return { outcome: 'pending_review', reasons };
   }
 
-  let tier; let amount;
-  if (cfg.mode === 'slab') {
-    // ধাপ-ভিত্তিক: Y-এর যোগ্য ডিপোজিটের পরিমাণ → বোনাস (ক্যাপসহ)
-    const hit = slabFor(dep.amount, cfg.slabs, cfg.cap);
-    if (!hit) return { outcome: 'below_min' }; // কনফিগে প্রথম ধাপ ন্যূনতমের ওপরে হলে — পরে বড় ডিপোজিটে ট্রিগার
-    tier = hit.slab; amount = hit.amount;
-    evidence.mode = 'slab';
-    evidence.qualifying_amount = Number(dep.amount);
-  } else {
-    // পুরোনো টিয়ার: আগের paid সংখ্যা (legacy_paid ও অন্য স্ট্যাটাস গোনা নয়)
-    const cnt = await client.query(
-      `SELECT COUNT(*)::int AS n FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
-      [referrerId]
-    );
-    ({ tier, amount } = tierFor(cnt.rows[0].n + 1, cfg.tiers));
-    evidence.mode = 'tier';
-  }
+  // বোনাস = রেফার-করা ইউজারের যোগ্য (প্রথম) ডিপোজিটের অঙ্ক অনুযায়ী ধাপ (রেফারারের আগের রেফার সংখ্যার ওপর নির্ভর করে না)
+  const { tier, amount } = bonusForDeposit(dep.amount, cfg.bands);
+  if (!(amount > 0)) return { outcome: 'below_min' };
 
   const row = await upsertFinal(client, existing, {
     referredUserId, referrerId, status: 'paid', tier, amount,
@@ -337,7 +369,7 @@ async function runInTx(client, referredUserId, depositId, cfg) {
   await client.query(
     `INSERT INTO notifications (user_id, title, message, type)
      VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
-    [referrerId, `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${amount} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
+    [referrerId, `আপনার রেফার করা বন্ধু প্রথম ডিপোজিট করেছে! আপনি ${amount} টাকা বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
   );
   return { outcome: 'paid', tier, amount, referrerId };
 }
@@ -381,10 +413,148 @@ async function markRetryPending(referredUserId, depositId) {
   );
 }
 
+
+// ================================================================ ডিপোজিট-হার কমিশন (০.৮%)
+// নিয়ম: রেফার-করা ইউজার ডিপোজিট করলে একটা "সাইকেল" খোলে (ব্যালেন্স থাকা পর্যন্ত পরের ডিপোজিট একই সাইকেলে যোগ হয়)।
+// ইউজারের ব্যালেন্স শূন্য হয়ে গেলে (কোনো পেন্ডিং বাজি নেই, কিছুক্ষণ কার্যকলাপ নেই, সাইকেলের মধ্যে উইথড্র নেই)
+// সাইকেলের মোট ডিপোজিটের ০.৮% রেফারার পায়। মাঝে কত জিতেছে/বাজি ধরেছে তা ধরা হয় না; জিতলে বা শুধু বাজি ধরলে কমিশন নেই।
+// লেজার: referral_commissions (reason='loss_commission', level 1) + coin_transactions।
+
+async function recordCycleDeposit(userId, depositId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const dep = await client.query(
+      `SELECT id, user_id, type, status, amount FROM payment_requests WHERE id = $1`, [depositId]);
+    const d = dep.rows[0];
+    if (!d || d.type !== 'deposit' || d.status !== 'approved' || Number(d.user_id) !== Number(userId)) {
+      await client.query('ROLLBACK'); return { outcome: 'not_qualifying' };
+    }
+    const ref = await client.query(`SELECT referrer_id FROM referrals WHERE referred_id = $1`, [userId]);
+    const referrerId = ref.rows[0] && ref.rows[0].referrer_id;
+    if (!referrerId || Number(referrerId) === Number(userId)) { await client.query('ROLLBACK'); return { outcome: 'no_referral' }; }
+
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`referral_cycle:${userId}`]);
+    const open = await client.query(
+      `SELECT id, deposit_ids FROM referral_deposit_cycles WHERE referred_user_id = $1 AND status = 'open' FOR UPDATE`, [userId]);
+    if (open.rows[0]) {
+      if ((open.rows[0].deposit_ids || []).map(Number).includes(Number(depositId))) {
+        await client.query('ROLLBACK'); return { outcome: 'already_recorded' };
+      }
+      await client.query(
+        `UPDATE referral_deposit_cycles
+            SET deposited = deposited + $2, deposit_ids = array_append(deposit_ids, $3)
+          WHERE id = $1`, [open.rows[0].id, d.amount, d.id]);
+    } else {
+      await client.query(
+        `INSERT INTO referral_deposit_cycles (referred_user_id, referrer_id, deposited, deposit_ids)
+         VALUES ($1, $2, $3, ARRAY[$4::int])`, [userId, referrerId, d.amount, d.id]);
+    }
+    await client.query('COMMIT');
+    return { outcome: 'recorded' };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    console.error('recordCycleDeposit error:', e.message);
+    return { outcome: 'error' };
+  } finally {
+    client.release();
+  }
+}
+
+// ইউজারের সাইকেল এখন "সম্পূর্ণ হারা" কিনা দেখে, হলে কমিশন দেয়। একটা সাইকেল একবারই পেআউট পায়।
+async function settleOneCycle(cycleId, percent) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const cRes = await client.query(
+      `SELECT * FROM referral_deposit_cycles WHERE id = $1 AND status = 'open' FOR UPDATE`, [cycleId]);
+    const c = cRes.rows[0];
+    if (!c) { await client.query('ROLLBACK'); return { outcome: 'gone' }; }
+
+    const u = await client.query(`SELECT coins FROM users WHERE id = $1 FOR UPDATE`, [c.referred_user_id]);
+    if (!u.rows[0] || Number(u.rows[0].coins || 0) >= LOSS_BALANCE_THRESHOLD) {
+      await client.query('ROLLBACK'); return { outcome: 'still_has_balance' };
+    }
+    const busy = await client.query(
+      `SELECT
+         EXISTS (SELECT 1 FROM bets WHERE user_id = $1 AND status = 'pending') AS pending_bets,
+         EXISTS (SELECT 1 FROM accumulators WHERE user_id = $1 AND status = 'pending') AS pending_accas,
+         GREATEST(
+           COALESCE((SELECT MAX(created_at) FROM bets WHERE user_id = $1), 'epoch'::timestamp),
+           COALESCE((SELECT MAX(created_at) FROM coin_transactions WHERE user_id = $1), 'epoch'::timestamp),
+           COALESCE((SELECT MAX(created_at) FROM provider_transactions WHERE user_id = $1), 'epoch'::timestamp)
+         ) > NOW() - ($2 || ' minutes')::interval AS recent_activity`,
+      [c.referred_user_id, String(LOSS_QUIET_MINUTES)]);
+    const b = busy.rows[0];
+    if (b.pending_bets || b.pending_accas || b.recent_activity) {
+      await client.query('ROLLBACK'); return { outcome: 'not_settled_yet' };
+    }
+
+    // সাইকেলের মধ্যে উইথড্র হলে "সম্পূর্ণ হারা" নয় — কমিশন নেই
+    const wd = await client.query(
+      `SELECT 1 FROM payment_requests
+        WHERE user_id = $1 AND type = 'withdraw' AND status IN ('pending','approved') AND created_at >= $2 LIMIT 1`,
+      [c.referred_user_id, c.opened_at]);
+    // রেফারেল যদি আটকানো/বাতিল (জালিয়াতি-গেট) হয় — কমিশন নেই
+    const rw = await client.query(`SELECT status FROM referral_rewards WHERE referred_user_id = $1`, [c.referred_user_id]);
+    const rwStatus = rw.rows[0] && rw.rows[0].status;
+
+    let status = 'lost_paid', commission = Math.round(Number(c.deposited) * percent) / 100;
+    if (wd.rows.length) { status = 'closed_withdrawn'; commission = 0; }
+    else if (['pending_review', 'rejected', 'reversed'].includes(rwStatus)) { status = 'closed_held'; commission = 0; }
+    else if (!(commission > 0)) { status = 'closed_zero'; commission = 0; }
+
+    await client.query(
+      `UPDATE referral_deposit_cycles SET status = $2, commission = $3, closed_at = NOW() WHERE id = $1`,
+      [c.id, status, commission]);
+
+    if (status === 'lost_paid') {
+      await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [commission, c.referrer_id]);
+      await client.query(
+        `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
+         VALUES ($1, $2, 1, $3, 'loss_commission')`, [c.referrer_id, c.referred_user_id, commission]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description)
+         VALUES ($1, $2, 'referral_commission', $3)`,
+        [c.referrer_id, commission, `রেফারেল ডিপোজিট-হার কমিশন (${percent}%)`]);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message, type)
+         VALUES ($1, 'রেফারেল কমিশন!', $2, 'success')`,
+        [c.referrer_id, `আপনার রেফার করা বন্ধুর ডিপোজিট করা টাকা সম্পূর্ণ শেষ হওয়ায় আপনি ${commission} টাকা (${percent}%) কমিশন পেয়েছেন।`]);
+    }
+    await client.query('COMMIT');
+    return { outcome: status, commission };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    console.error('settleOneCycle error:', e.message);
+    return { outcome: 'error' };
+  } finally {
+    client.release();
+  }
+}
+
+// শিডিউলার থেকে ডাকা — ব্যালেন্স < ১ সব খোলা সাইকেল যাচাই।
+async function settleLossCycles(limit = 100) {
+  const percent = await getLossCommissionPercent();
+  const r = await pool.query(
+    `SELECT c.id FROM referral_deposit_cycles c
+       JOIN users u ON u.id = c.referred_user_id
+      WHERE c.status = 'open' AND COALESCE(u.coins, 0) < $2
+      ORDER BY c.id LIMIT $1`, [limit, LOSS_BALANCE_THRESHOLD]);
+  const tally = {};
+  for (const row of r.rows) {
+    const o = await settleOneCycle(row.id, percent);
+    tally[o.outcome] = (tally[o.outcome] || 0) + 1;
+  }
+  return { scanned: r.rows.length, tally };
+}
+
 // ডিপোজিট COMMIT-এর পরে সব নিশ্চিতকরণ পথ থেকে এটাই ডাকা হয়। কখনো throw করে না।
 async function afterDepositCommit(userId, depositId) {
   try {
-    return await processReferralReward(userId, depositId);
+    const out = await processReferralReward(userId, depositId);
+    await recordCycleDeposit(userId, depositId); // কখনো throw করে না
+    return out;
   } catch (e) {
     console.error('afterDepositCommit referral error:', e.message);
     return { outcome: 'error' };
@@ -407,6 +577,7 @@ async function retryPending(limit = 50) {
 module.exports = {
   processReferralReward, afterDepositCommit, retryPending, collectEvidence,
   tierFor, parseTiers, getTiers, getMinDeposit, phoneKey,
-  getBonusMode, parseSlabs, getSlabs, getBonusCap, slabFor,
-  DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT, DEFAULT_SLABS, DEFAULT_BONUS_CAP, DEFAULT_TURNOVER
+  parseBands, getBands, bonusForDeposit, getLossCommissionPercent,
+  recordCycleDeposit, settleOneCycle, settleLossCycles,
+  DEFAULT_TIERS, DEFAULT_BANDS, DEFAULT_MIN_DEPOSIT, DEFAULT_LOSS_COMMISSION_PERCENT
 };

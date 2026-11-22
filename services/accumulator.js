@@ -145,7 +145,7 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
     // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
     // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
     // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
-    await addTurnover(client, userId, 'sports', stake);
+    // Turnover V2: acca settle হলে (settleSelectionsForMarket) গোনা হয়।
     await client.query('COMMIT');
 
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
@@ -262,6 +262,8 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
         `UPDATE accumulators SET status = 'lost', settled_at = NOW() WHERE id = $1`,
         [accaId]
       );
+      // Turnover V2: হারলেও যোগ্য acca-র স্টেক টার্নওভারে গোনা হয় (total odds-এ min odds যাচাই)।
+      await addTurnover(client, acca.user_id, 'sports', acca.stake, { ref: `acca:${accaId}`, odds: acca.total_odd });
       const ln = await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
          VALUES ($1, 'অ্যাকুমুলেটর', $2, 'error') RETURNING *`,
@@ -276,6 +278,7 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
         `UPDATE accumulators SET status = 'won', settled_at = NOW() WHERE id = $1`,
         [accaId]
       );
+      await addTurnover(client, acca.user_id, 'sports', acca.stake, { ref: `acca:${accaId}`, odds: acca.total_odd });
       await client.query(
         `INSERT INTO coin_transactions (user_id, amount, type, description)
          VALUES ($1, $2, 'accumulator_win', 'অ্যাকুমুলেটর জয়')`,
