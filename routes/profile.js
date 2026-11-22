@@ -632,23 +632,58 @@ router.get('/api/vip-progress', isAuth, requireFeature('vip'), async (req, res) 
 });
 
 // ==================== রেফারেল ====================
+// রেফারেল লিংক ও শেয়ার-URL সার্ভারে বানানো: সব মান encodeURIComponent, স্কিম স্থির (https / fb-messenger) —
+// ইউজার-নিয়ন্ত্রিত কিছু কখনো href-এর স্কিম/হোস্ট হয় না (javascript: সম্ভব নয়)। EJS-এ <%= %> দিয়ে HTML-escape হয়।
+// encodeURIComponent ! ' ( ) * বাদ রাখে — সেগুলোও percent-encode করা হয়, যাতে URL-এ কোনো কোটেশন-জাতীয় অক্ষর না থাকে।
+const encodeStrict = (v) => encodeURIComponent(v).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+function buildReferralShare(req, baseUrl, code) {
+  const e = encodeStrict;
+  const refLink = code ? `${baseUrl}/register?ref=${e(code)}` : '';
+  if (!refLink) return { refLink: '', shareLinks: null };
+  const text = req.t('ref_share_message');
+  return {
+    refLink,
+    shareLinks: {
+      whatsapp: 'https://wa.me/?text=' + e(text + ' ' + refLink),
+      telegram: 'https://t.me/share/url?url=' + e(refLink) + '&text=' + e(text),
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + e(refLink),
+      messenger: 'fb-messenger://share/?link=' + e(refLink)
+    }
+  };
+}
+
 router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => {
+  const baseUrl = getBaseUrl(req);
   try {
-    const stats = await getReferralStats(req.session.user.id);
-    const baseUrl = getBaseUrl(req);
+    const uid = req.session.user.id;
+    const stats = await getReferralStats(uid);
+    // কোড সেশন নয়, DB থেকে (সেশন পুরোনো হতে পারে); শুধু নিজের সারি
+    const codeRow = await pool.query('SELECT referral_code FROM users WHERE id = $1', [uid]);
+    const referralCode = (codeRow.rows[0] && codeRow.rows[0].referral_code) || '';
+    const share = buildReferralShare(req, baseUrl, referralCode);
     res.render('profile/referral', {
       user: req.session.user,
+      referralCode,
+      refLink: share.refLink,
+      shareLinks: share.shareLinks,
       referralCount: stats.totalReferrals,
       stats,
       baseUrl
     });
   } catch (err) {
     console.error('referral page error:', err.message);
-    const baseUrl = getBaseUrl(req);
+    const referralCode = (req.session.user && req.session.user.referral_code) || '';
+    const share = buildReferralShare(req, baseUrl, referralCode);
     res.render('profile/referral', {
       user: req.session.user,
+      referralCode,
+      refLink: share.refLink,
+      shareLinks: share.shareLinks,
       referralCount: 0,
-      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: null, program: null, history: [], team: [] },
+      stats: {
+        totalReferrals: 0, pendingReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: null, program: null,
+        history: [], team: [], commissionPercents: [2.5, 1.5, 0.8], funnel: { clicks: 0, signups: 0, deposits: 0 }, nextStep: null
+      },
       baseUrl
     });
   }

@@ -41,11 +41,24 @@
      would suddenly start winning and change the layout. */
   .im77-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .im77-2 { font-size: 40px; margin-bottom: 8px; }
-  .im77-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .im77-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .rf-pending { color: #f59e0b; font-size: 22px; font-weight: bold; }
+  .rf-sentence { color: var(--text-main); font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
+  .rf-funnel { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .rf-step { flex: 1; text-align: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px 6px; }
+  .rf-arrow { color: var(--text-muted); font-size: 16px; }
+  .rf-share-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .rf-share-btn { display: block; text-align: center; text-decoration: none; color: #fff; border-radius: 8px; padding: 10px 6px; font-size: 13px; font-weight: bold; }
+  .rf-wa { background: #25d366; }
+  .rf-tg { background: #229ed9; }
+  .rf-fb { background: #1877f2; }
+  .rf-ms { background: #a334fa; }
+  .rf-copy { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
   .im77-4 { display: flex; gap: 8px; align-items: center; }
 </style>
 
 <%- include('../partials/navbar') %>
+<% const numLoc = locals.lang === 'en' ? 'en-US' : 'bn-BD'; const fmtN = (n) => Number(n).toLocaleString(numLoc); const fx = stats.funnel || { clicks: 0, signups: 0, deposits: 0 }; %>
 <div class="container dz76-1">
   <%- include('../partials/flash') %>
 
@@ -66,21 +79,25 @@
   <!-- পরিসংখ্যান -->
   <div class="im77-3">
     <div class="dz76-7">
-      <div class="dz76-8"><%= stats.totalReferrals %></div>
+      <div class="dz76-8"><%= fmtN(stats.totalReferrals) %></div>
       <div class="dz76-9"><%= t.total_referrals %></div>
     </div>
     <div class="dz76-7">
-      <div class="dz76-10"><%= stats.successfulReferrals %></div>
+      <div class="dz76-10"><%= fmtN(stats.successfulReferrals) %></div>
       <div class="dz76-9"><%= t.successful_referrals %></div>
     </div>
     <div class="dz76-7">
-      <div class="dz76-11"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
+      <div class="rf-pending"><%= fmtN(stats.pendingReferrals || 0) %></div>
+      <div class="dz76-9"><%= t('ref_pending_label') %></div>
+    </div>
+    <div class="dz76-7">
+      <div class="dz76-11"><%= fmtN(stats.totalEarnings) %></div>
       <div class="dz76-9"><%= t.total_earnings %></div>
     </div>
   </div>
 
   <!-- বোনাস তথ্য: ধাপ-ছক (slab) বা পুরোনো ক্রমিক টিয়ার -->
-  <% const prog = stats.program || null; const numLoc = locals.lang === 'en' ? 'en-US' : 'bn-BD'; const fmtN = (n) => Number(n).toLocaleString(numLoc); %>
+  <% const prog = stats.program || null; %>
   <div class="dz76-12">
     <% if (prog && prog.mode === 'slab') { %>
       <div class="dz76-13"><%= t('ref_slab_title') %></div>
@@ -104,12 +121,45 @@
     <div class="dz76-9"><%= t('ref_friend_note') %></div>
   </div>
 
+  <!-- পরের ধাপ -->
+  <% const ns = stats.nextStep || null; %>
+  <% if (ns) { %>
+  <div class="dz76-19">
+    <div class="dz76-22"><%= t('ref_next_step_title') %></div>
+    <% if (ns.kind === 'first') { %>
+      <div class="rf-sentence"><%= t('ref_next_first').replace('{min}', fmtN(ns.min)).replace('{amount}', fmtN(ns.amount)) %></div>
+    <% } else if (ns.kind === 'up') { %>
+      <div class="rf-sentence"><%= t('ref_next_up').replace('{dep}', fmtN(ns.deposit)).replace('{delta}', fmtN(ns.delta)).replace('{min}', fmtN(ns.min)).replace('{amount}', fmtN(ns.amount)) %></div>
+    <% } else { %>
+      <div class="rf-sentence"><%= t('ref_next_top') %></div>
+    <% } %>
+  </div>
+  <% } %>
+
+  <!-- কমিশন (সরল বাক্য) -->
+  <% const cp = stats.commissionPercents || [2.5, 1.5, 0.8]; %>
+  <div class="dz76-19">
+    <div class="rf-sentence"><%= t('ref_commission_simple').replace('{r1}', cp[0]).replace('{r2}', cp[1]).replace('{r3}', cp[2]) %></div>
+  </div>
+
+  <!-- ক্লিক → সাইন-আপ → ডিপোজিট -->
+  <div class="dz76-19">
+    <div class="dz76-22"><%= t('ref_funnel_title') %></div>
+    <div class="rf-funnel">
+      <div class="rf-step"><div class="dz76-8"><%= fmtN(fx.clicks) %></div><div class="dz76-9"><%= t('ref_funnel_clicks') %></div></div>
+      <div class="rf-arrow">→</div>
+      <div class="rf-step"><div class="dz76-8"><%= fmtN(fx.signups) %></div><div class="dz76-9"><%= t('ref_funnel_signups') %></div></div>
+      <div class="rf-arrow">→</div>
+      <div class="rf-step"><div class="dz76-10"><%= fmtN(fx.deposits) %></div><div class="dz76-9"><%= t('ref_funnel_deposits') %></div></div>
+    </div>
+  </div>
+
   <!-- রেফারেল কোড -->
   <div class="dz76-15">
     <div class="dz76-16"><%= t.your_referral_code %></div>
     <div class="im77-4">
       <div class="dz76-17" id="ref-code">
-        <%= user.referral_code || 'N/A' %>
+        <%= referralCode || 'N/A' %>
       </div>
       <button class="dz76-18" data-referral-action="copy"><%= t.copy_short %></button>
     </div>
@@ -119,9 +169,18 @@
   <div class="dz76-19">
     <div class="dz76-16"><%= t.your_referral_link %></div>
     <div class="im77-4">
-      <div class="dz76-20" id="ref-link">
-        <%= baseUrl %>/register?ref=<%= user.referral_code %>
-      </div>
+      <div class="dz76-20" id="ref-link"><%= refLink %></div>
+      <button class="rf-copy" data-referral-action="copy-link"><%= t.copy_short %></button>
+    </div>
+    <% if (shareLinks) { %>
+    <div class="rf-share-row">
+      <a class="rf-share-btn rf-wa" href="<%= shareLinks.whatsapp %>" target="_blank" rel="noopener noreferrer"><%= t('ref_share_whatsapp') %></a>
+      <a class="rf-share-btn rf-tg" href="<%= shareLinks.telegram %>" target="_blank" rel="noopener noreferrer"><%= t('ref_share_telegram') %></a>
+      <a class="rf-share-btn rf-fb" href="<%= shareLinks.facebook %>" target="_blank" rel="noopener noreferrer"><%= t('ref_share_facebook') %></a>
+      <a class="rf-share-btn rf-ms" href="<%= shareLinks.messenger %>" rel="noopener noreferrer"><%= t('ref_share_messenger') %></a>
+    </div>
+    <% } %>
+    <div class="im77-4 rf-share-row">
       <button class="dz76-21" data-referral-action="share"><%= t.share %></button>
     </div>
   </div>
@@ -164,7 +223,7 @@
               <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>
             </div>
           </div>
-          <div class="dz76-32">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
+          <div class="dz76-32">+<%= fmtN(h.amount) %></div>
         </div>
       <% }) %>
     <% } else { %>
@@ -173,6 +232,6 @@
   </div>
 </div>
 
-<script type="application/json" id="profile-referralConfig"><%- jsonScriptSafe({ referralCode: user.referral_code, baseUrl: baseUrl }) %></script>
+<script type="application/json" id="profile-referralConfig"><%- jsonScriptSafe({ referralCode: referralCode, baseUrl: baseUrl, refLink: refLink, msgCodeCopied: t('ref_msg_code_copied'), msgLinkCopied: t('ref_msg_link_copied'), shareTitle: t('ref_share_title'), shareText: t('ref_share_message') }) %></script>
 <script src="/js/views/profile-referral.js"></script>
 </body></html>

@@ -9,21 +9,28 @@
   var el = document.getElementById('profile-referralConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
 
+  function toast(msg) { if (msg) alert(msg); }
   function copyCode() {
     const code = cfg.referralCode;
-    navigator.clipboard.writeText(code).then(() => alert('কোড কপি হয়েছে!'));
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => toast(cfg.msgCodeCopied));
+  }
+  function copyLink() {
+    if (!cfg.refLink) return;
+    navigator.clipboard.writeText(cfg.refLink).then(() => toast(cfg.msgLinkCopied));
   }
   function shareLink() {
-    const link = cfg.baseUrl + '/register?ref=' + encodeURIComponent(cfg.referralCode);
+    const link = cfg.refLink;
+    if (!link) return;
     if (navigator.share) {
-      navigator.share({ title: 'BET420 ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
+      navigator.share({ title: cfg.shareTitle, text: cfg.shareText, url: link });
     } else {
-      navigator.clipboard.writeText(link).then(() => alert('লিংক কপি হয়েছে!'));
+      navigator.clipboard.writeText(link).then(() => toast(cfg.msgLinkCopied));
     }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    var actions = { copy: copyCode, share: shareLink };
+    var actions = { copy: copyCode, 'copy-link': copyLink, share: shareLink };
     document.querySelectorAll('[data-referral-action]').forEach(function (btn) {
       var fn = actions[btn.getAttribute('data-referral-action')];
       if (fn) btn.addEventListener('click', fn);
