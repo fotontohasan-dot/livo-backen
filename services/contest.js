@@ -3,6 +3,10 @@
 // মাস শেষে অ্যাডমিন শীর্ষ রেফারকারীদের প্রাইজ দেবে (ম্যানুয়ালি)।
 
 const { pool } = require('../db');
+const businessTime = require('../utils/businessTime');
+
+// rf.created_at TIMESTAMP (tz ছাড়া) — মাসের সীমানা Asia/Dhaka ব্যবসায়িক টাইমজোনে
+const RF_MONTH = (tz) => `to_char(((rf.created_at AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE ${tz}::text), 'YYYY-MM')`;
 
 // প্রাইজ কাঠামো (শুধু দেখানোর জন্য — বাস্তব প্রাইজ অ্যাডমিন দেবে)
 const PRIZES = [
@@ -21,10 +25,11 @@ async function getLeaderboard(currentUserId) {
             COUNT(rf.id) AS referrals
      FROM referrals rf
      JOIN users u ON rf.referrer_id = u.id
-     WHERE to_char(rf.created_at, 'YYYY-MM') = to_char(CURRENT_DATE, 'YYYY-MM')
+     WHERE ${RF_MONTH('$2')} = $1
      GROUP BY u.id, u.username
      ORDER BY referrals DESC, u.id ASC
-     LIMIT 20`
+     LIMIT 20`,
+    [businessTime.businessMonthKey(), businessTime.sqlTimezone()]
   );
 
   const leaders = r.rows.map((row, i) => ({
@@ -43,14 +48,14 @@ async function getLeaderboard(currentUserId) {
       `SELECT COUNT(rf.id) AS referrals
        FROM referrals rf
        WHERE rf.referrer_id = $1
-         AND to_char(rf.created_at, 'YYYY-MM') = to_char(CURRENT_DATE, 'YYYY-MM')`,
-      [currentUserId]
+         AND ${RF_MONTH('$3')} = $2`,
+      [currentUserId, businessTime.businessMonthKey(), businessTime.sqlTimezone()]
     );
     myRank = { referrals: parseInt(mr.rows[0].referrals) };
   }
 
   // চলতি মাসের নাম
-  const monthName = new Date().toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+  const monthName = businessTime.monthLabelBn(businessTime.businessMonthKey());
 
   return { leaders, myRank, prizes: PRIZES, monthName };
 }
@@ -63,15 +68,14 @@ async function getContestWinnersForMonth(monthsBack) {
     `SELECT u.id, u.username, COUNT(rf.id) AS referrals
      FROM referrals rf
      JOIN users u ON rf.referrer_id = u.id
-     WHERE to_char(rf.created_at, 'YYYY-MM') = to_char(CURRENT_DATE - ($1 || ' months')::interval, 'YYYY-MM')
+     WHERE ${RF_MONTH('$2')} = $1
      GROUP BY u.id, u.username
      ORDER BY referrals DESC, u.id ASC
      LIMIT 5`,
-    [monthsBack]
+    [businessTime.businessMonthKey(new Date(), monthsBack), businessTime.sqlTimezone()]
   );
-  const monthDate = new Date(new Date().setMonth(new Date().getMonth() - monthsBack));
-  const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
-  const monthName = monthDate.toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+  const monthKey = businessTime.businessMonthKey(new Date(), monthsBack);
+  const monthName = businessTime.monthLabelBn(monthKey);
   const leaders = r.rows.map((row, idx) => ({
     rank: idx + 1,
     userId: row.id,

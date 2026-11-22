@@ -132,7 +132,7 @@ router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   let bonusPct = 100;
   try {
     const before = await approvedDepositCount(pool, req.session.user.id);
-    bonusPct = bonusPercentFor(before, new Date().getDay() === 5);
+    bonusPct = bonusPercentFor(before, businessTime.businessWeekday() === 5);
   } catch (e) {
     console.error('deposit bonus pct error:', e.message);
   }
@@ -720,24 +720,9 @@ const DEPOSIT_METHOD_META = {
 
 function resolveDepositDateRange(query) {
   const { quick, from, to } = query;
-  const fmt = (d) => d.toISOString().slice(0, 10);
-  let dateFrom = from || '', dateTo = to || '';
-  const today = new Date();
-  if (quick === 'today') {
-    dateFrom = dateTo = fmt(today);
-  } else if (quick === '7d') {
-    const d = new Date(today); d.setDate(d.getDate() - 7);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === '30d') {
-    const d = new Date(today); d.setDate(d.getDate() - 30);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === '90d') {
-    const d = new Date(today); d.setDate(d.getDate() - 90);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === 'year') {
-    dateFrom = `${today.getFullYear()}-01-01`; dateTo = fmt(today);
-  }
-  return { dateFrom, dateTo };
+  const range = businessTime.quickRange(quick);
+  if (range && quick !== 'yesterday' && quick !== '7days') return range;
+  return { dateFrom: from || '', dateTo: to || '' };
 }
 
 // মেথড-ভিত্তিক ডিপোজিট রিপোর্ট — আগে এই পেজেই তিন জায়গায় আলাদা করে
@@ -757,8 +742,8 @@ router.get('/admin/deposits', rbac.requirePermission('payments_view'), async (re
     const params = [method];
     let dateClause = '';
     if (dateFrom && dateTo) {
-      dateClause = ` AND pr.created_at::date BETWEEN $2 AND $3`;
-      params.push(dateFrom, dateTo);
+      dateClause = ` AND ${businessTime.sqlBusinessDate('pr.created_at', '$4')} BETWEEN $2 AND $3`;
+      params.push(dateFrom, dateTo, businessTime.sqlTimezone());
     }
 
     const listRes = await pool.query(
@@ -772,9 +757,9 @@ router.get('/admin/deposits', rbac.requirePermission('payments_view'), async (re
       `SELECT method, COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
        FROM payment_requests
        WHERE type='deposit' AND status='approved' AND method = ANY($1::text[])
-       ${dateFrom && dateTo ? 'AND created_at::date BETWEEN $2 AND $3' : ''}
+       ${dateFrom && dateTo ? `AND ${businessTime.sqlBusinessDate('created_at', '$4')} BETWEEN $2 AND $3` : ''}
        GROUP BY method`,
-      dateFrom && dateTo ? [VALID_METHODS, dateFrom, dateTo] : [VALID_METHODS]
+      dateFrom && dateTo ? [VALID_METHODS, dateFrom, dateTo, businessTime.sqlTimezone()] : [VALID_METHODS]
     );
     const totals = {};
     VALID_METHODS.forEach((m) => { totals[m] = { total: 0, cnt: 0 }; });
@@ -833,7 +818,7 @@ async function creditApprovedDeposit(client, request) {
 
     if (request.want_bonus) {
       const before = await approvedDepositCount(client, request.user_id, request.id);
-      const isFriday = new Date().getDay() === 5;
+      const isFriday = businessTime.businessWeekday() === 5; // Asia/Dhaka বার (UTC নয়)
       const pct = bonusPercentFor(before, isFriday);
       bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
       if (bonusGiven > 0) {

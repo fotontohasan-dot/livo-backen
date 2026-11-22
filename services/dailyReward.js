@@ -5,10 +5,11 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+const businessTime = require('../utils/businessTime');
 
-// আজকের তারিখ (সার্ভার লোকাল) — YYYY-MM-DD
+// আজকের ব্যবসায়িক দিন (Asia/Dhaka) — YYYY-MM-DD
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return businessTime.today();
 }
 
 // ==================== ১. বেট ধরলে দৈনিক টার্নওভার আপডেট ====================

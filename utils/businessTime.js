@@ -70,6 +70,24 @@ function tzOffsetMinutes(at = new Date()) {
 }
 
 /**
+ * ব্যবহারকারীর লেখা তারিখকে কড়া 'YYYY-MM-DD'-এ আনে (স্বয়ংক্রিয় সংশোধন)।
+ * গ্রহণযোগ্য: বছর-আগে + '-' '/' '.' বা স্পেস বিভাজক, মাস/দিন ১–২ অঙ্ক (2026-3-5, 2026/03/05),
+ * বাংলা অঙ্কও (২০২৬-০৩-০৫)। বাস্তব ক্যালেন্ডার-তারিখ না হলে (2026-02-30) বা চেনা না গেলে null।
+ */
+function normalizeDay(input) {
+  if (input === undefined || input === null) return null;
+  let s = String(input).trim();
+  if (!s) return null;
+  s = s.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
+  const m = /^(\d{4})[-/.\s]+(\d{1,2})[-/.\s]+(\d{1,2})$/.exec(s);
+  if (!m) return null;
+  const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, d, 12));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/**
  * SQL-এ ব্যবহারের জন্য টাইমজোন নাম। `DATE(created_at AT TIME ZONE $tz)`
  * লেখার সময় হার্ডকোড না করে এখান থেকে নিলে সব জায়গায় একই সংজ্ঞা থাকে।
  */
@@ -88,4 +106,49 @@ function sqlTimezone() {
   return BUSINESS_TZ;
 }
 
-module.exports = { today, businessDay, businessWeekday, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };
+/**
+ * ব্যবসায়িক টাইমজোনে মাসের কী 'YYYY-MM'; monthsBack মাস আগের মাসও চাওয়া যায়।
+ * `new Date().setMonth(...)` ৩১ তারিখে মাস গড়িয়ে যেত (৩১ মার্চ − ১ মাস = ৩ মার্চ),
+ * তাই এখানে শুধু বছর/মাস পূর্ণসংখ্যায় হিসাব।
+ */
+function businessMonthKey(date = new Date(), monthsBack = 0) {
+  const [y, m] = businessDay(date).split('-').map(Number);
+  const idx = y * 12 + (m - 1) - monthsBack;
+  const yy = Math.floor(idx / 12);
+  const mm = (idx % 12) + 1;
+  return `${yy}-${String(mm).padStart(2, '0')}`;
+}
+
+/** 'YYYY-MM' মাসের নাম, বাংলায় (ব্যবসায়িক টাইমজোনে)। */
+function monthLabelBn(monthKey) {
+  const d = new Date(`${monthKey}-15T12:00:00Z`);
+  return d.toLocaleDateString('bn-BD', { month: 'long', year: 'numeric', timeZone: BUSINESS_TZ });
+}
+
+/**
+ * "today / yesterday / 7days / 7d / 30d / 90d / year" দ্রুত-ফিল্টারের তারিখ-রেঞ্জ,
+ * ব্যবসায়িক দিনে ('YYYY-MM-DD')। অচেনা মান হলে null।
+ */
+function quickRange(quick, now = new Date()) {
+  const t = businessDay(now);
+  switch (quick) {
+    case 'today': return { dateFrom: t, dateTo: t };
+    case 'yesterday': { const y = addDays(t, -1); return { dateFrom: y, dateTo: y }; }
+    case '7days': case '7d': return { dateFrom: addDays(t, -7), dateTo: t };
+    case '30d': return { dateFrom: addDays(t, -30), dateTo: t };
+    case '90d': return { dateFrom: addDays(t, -90), dateTo: t };
+    case 'year': return { dateFrom: `${t.slice(0, 4)}-01-01`, dateTo: t };
+    default: return null;
+  }
+}
+
+/**
+ * `TIMESTAMP` (tz ছাড়া, সেশন-টাইমজোনের স্থানীয় সময় হিসেবে লেখা) কলামের ব্যবসায়িক তারিখ,
+ * SQL এক্সপ্রেশন হিসেবে। tzParam হলো টাইমজোন-নামের প্যারামিটার-প্লেসহোল্ডার, যেমন '$3'।
+ * `col::date` ডাটাবেস সার্ভারের টাইমজোনে (Render-এ UTC) কাটত।
+ */
+function sqlBusinessDate(col, tzParam) {
+  return `((${col} AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE ${tzParam}::text)::date`;
+}
+
+module.exports = { normalizeDay, today, businessDay, businessWeekday, businessMonthKey, monthLabelBn, quickRange, sqlBusinessDate, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };

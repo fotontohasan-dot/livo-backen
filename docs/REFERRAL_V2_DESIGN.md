@@ -95,3 +95,14 @@ CREATE TABLE referral_reward_adjustments (  -- রিভার্সাল অ�
   DELETE FROM site_settings WHERE key IN ('referral_min_deposit','referral_tiers');
   ```
   `referrals`, `referral_commissions`, `bonuses`, `coin_transactions`-এ কোনো ব্যাকফিল-লেখা নেই, তাই এগুলোর রোলব্যাক লাগে না।
+
+## bonus_held মাইগ্রেশন ও Rollback (V2 single model)
+- ব্যাকফিল: `referrals.bonus_held = true` সারি → `referral_rewards.status = 'pending_review'` (amount = `bonus_amount`, কারণ = `hold_reason` বা `legacy held bonus (V2 backfill)`)। `ON CONFLICT (referred_user_id) DO NOTHING`, তাই আবার চালালেও নিরাপদ। ব্যালেন্স/লেজার/`bonuses`/কলাম অপরিবর্তিত, কিছু মোছা নয়।
+- `bonus_held`, `hold_reason`, `signup_bonus_paid` কলাম DB-তে থাকে; কোড আর এগুলো পড়া/লেখা করে না (অ্যাডমিন/ইউজার ভিউ `referral_rewards` থেকে একই নামের ডেরিভড ফিল্ড দেখায়)।
+- **Rollback** (শুধু এই ব্যাকফিলের সারি; আগে ইঞ্জিন-কোড revert করতে হবে):
+  ```sql
+  DELETE FROM referral_rewards
+   WHERE status = 'pending_review' AND review_reason IN ('legacy held bonus (V2 backfill)')
+     AND qualifying_deposit_id IS NULL AND paid_at IS NULL;
+  ```
+  `hold_reason` থেকে নেওয়া কারণসহ সারির জন্য `referrals.bonus_held = true` ও `referral_rewards.referred_user_id` মিলিয়ে নির্বাচন করুন। `referrals` টেবিলে কিছু বদলানো হয়নি, তাই সেখানে রোলব্যাক লাগে না।

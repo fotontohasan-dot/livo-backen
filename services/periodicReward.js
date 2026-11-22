@@ -5,6 +5,7 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+const businessTime = require('../utils/businessTime');
 
 const WEEKLY_RATE = 0.10;
 const WEEKLY_MAX = 50000;
@@ -20,7 +21,9 @@ const MONTHLY_TIERS = [
 
 // সপ্তাহের শনাক্তকার (যেমন 2026-W08) — ক্লেইম ডুপ্লিকেট আটকাতে
 function weekKey(d = new Date()) {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  // সার্ভার-লোকাল (UTC) তারিখ নয় — Asia/Dhaka ব্যবসায়িক তারিখ
+  const [by, bm, bd] = businessTime.businessDay(d).split('-').map(Number);
+  const date = new Date(Date.UTC(by, bm - 1, bd));
   const dayNum = (date.getUTCDay() + 6) % 7;
   date.setUTCDate(date.getUTCDate() - dayNum + 3);
   const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
@@ -30,8 +33,9 @@ function weekKey(d = new Date()) {
 
 // গত মাসের কী (যেমন 2026-05)
 function lastMonthKey(d = new Date()) {
-  const x = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`;
+  const [by, bm] = businessTime.businessDay(d).split('-').map(Number);
+  const x = new Date(Date.UTC(by, bm - 2, 1)); // গত মাস (জানুয়ারিতে আগের বছরের ডিসেম্বর)
+  return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 // ==================== সাপ্তাহিক ক্যাশব্যাক ====================
@@ -40,8 +44,8 @@ async function getWeeklyStatus(userId) {
   const r = await pool.query(
     `SELECT COALESCE(SUM(total_bet),0) AS bet, COALESCE(SUM(total_win),0) AS win
      FROM daily_losses
-     WHERE user_id = $1 AND loss_date >= CURRENT_DATE - INTERVAL '7 days'`,
-    [userId]
+     WHERE user_id = $1 AND loss_date >= $2::date - INTERVAL '7 days'`,
+    [userId, businessTime.today()]
   );
   const netLoss = Number(r.rows[0].bet) - Number(r.rows[0].win);
   let amount = netLoss > 0 ? Math.floor(netLoss * WEEKLY_RATE) : 0;
