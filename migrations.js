@@ -410,6 +410,20 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referrer ON referrals(referrer_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referred ON referrals(referred_id);`);
 
+    // রেফারেল লিংক ক্লিক গণনা (শুধু নতুন টেবিল)। কাঁচা IP রাখা হয় না — visitor_hash = HMAC(secret, ip|ua)।
+    // UNIQUE(referrer, visitor, দিন) = একই দর্শকের একই দিনের পুনরাবৃত্ত ক্লিক একবারই গোনা হয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id BIGSERIAL PRIMARY KEY,
+        referrer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        visitor_hash CHAR(64) NOT NULL,
+        click_day DATE NOT NULL DEFAULT CURRENT_DATE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT referral_clicks_dedup UNIQUE (referrer_id, visitor_hash, click_day)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_clicks_referrer ON referral_clicks(referrer_id);`);
+
     // রেফারেল বোনাস: রেফার-করা ইউজারের প্রথম নিশ্চিত ডিপোজিটে রেফারারকে। আটকানো (অ্যাডমিন রিভিউ) অবস্থা ও
     // পরিমাণ রেকর্ড। idempotent; ব্যালেন্স/সেটেলমেন্টের সাথে সম্পর্ক নেই।
     await pool.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_held BOOLEAN NOT NULL DEFAULT false;`);

@@ -220,6 +220,14 @@ router.get('/register', (req, res) => {
   } else {
     req.session.botCaptcha = null;
   }
+  if (ref) {
+    // রেফারেল ক্লিক গণনা — fire-and-forget; ব্যর্থ হলেও পাতা রেন্ডার হয়।
+    require('../services/referralClicks').recordReferralClick({
+      code: ref, ip: getReqIp(req), userAgent: req.get('user-agent'),
+      purpose: req.get('purpose') || req.get('sec-purpose') || req.get('x-purpose'),
+      viewerId: req.session && req.session.user ? req.session.user.id : null
+    }).catch((e) => console.error('referral click error:', e.message));
+  }
   res.render('registration', { ref, captcha, formRenderedAt: Date.now() });
 });
 

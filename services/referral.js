@@ -156,10 +156,29 @@ async function getReferralStats(userId) {
     [userId]
   );
 
+  // ক্লিক → সাইন-আপ → ডিপোজিট (শুধু এই ইউজারের নিজের রেফারেল)
+  const clicksRes = await pool.query(`SELECT COUNT(*) FROM referral_clicks WHERE referrer_id = $1`, [userId]);
+  const depositorsRes = await pool.query(
+    `SELECT COUNT(DISTINCT r.referred_id) FROM referrals r
+       JOIN payment_requests p ON p.user_id = r.referred_id AND p.type = 'deposit' AND p.status = 'approved'
+      WHERE r.referrer_id = $1`, [userId]
+  );
+  // সর্বশেষ সফল রেফারের প্রথম যোগ্য ডিপোজিটের পরিমাণ — "পরের ধাপ" হিসাবের জন্য
+  const lastQual = await pool.query(
+    `SELECT p.amount FROM referral_rewards rr JOIN payment_requests p ON p.id = rr.qualifying_deposit_id
+      WHERE rr.referrer_id = $1 AND rr.status IN ('paid','legacy_paid') ORDER BY rr.id DESC LIMIT 1`, [userId]
+  );
+
   const successCount = parseInt(successRes.rows[0].count);
   const info = await getReferralProgramInfo();
+  const totalReferrals = parseInt(totalRes.rows[0].count);
+  const rates = await getCommissionRates();
   return {
-    totalReferrals: parseInt(totalRes.rows[0].count),
+    totalReferrals,
+    pendingReferrals: Math.max(0, totalReferrals - successCount),
+    commissionPercents: rates.map((r) => Math.round(r * 10000) / 100),
+    funnel: { clicks: parseInt(clicksRes.rows[0].count), signups: totalReferrals, deposits: parseInt(depositorsRes.rows[0].count) },
+    nextStep: computeNextStep(info, lastQual.rows[0] ? Number(lastQual.rows[0].amount) : null),
     successfulReferrals: successCount,
     totalEarnings: Number(earnRes.rows[0].total),
     // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
@@ -168,6 +187,18 @@ async function getReferralStats(userId) {
     history: historyRes.rows,
     team: teamRes.rows
   };
+}
+
+// বোনাস ধাপ-তালিকায় "পরের ধাপ" (শুধু slab মোড)। dep = সর্বশেষ সফল রেফারের প্রথম ডিপোজিট (না থাকলে null)।
+function computeNextStep(info, dep) {
+  if (!info || info.mode !== 'slab' || !info.slabs || !info.slabs.length) return null;
+  const slabs = info.slabs;
+  if (dep === null || !Number.isFinite(dep)) return { kind: 'first', min: slabs[0].min, amount: slabs[0].amount };
+  let idx = -1;
+  slabs.forEach((s, i) => { if (dep >= s.min) idx = i; });
+  if (idx >= slabs.length - 1) return { kind: 'top' };
+  const next = slabs[idx + 1];
+  return { kind: 'up', deposit: dep, min: next.min, amount: next.amount, delta: Math.max(0, next.min - dep) };
 }
 
 // ইউজার-পাতা/popup-এর জন্য চলতি কনফিগ: ধাপ-ছক (পরিসরসহ), ক্যাপ, ন্যূনতম, টার্নওভার, মোড।
@@ -197,6 +228,7 @@ module.exports = {
   distributeCommission,
   getReferralStats,
   getReferralProgramInfo,
+  computeNextStep,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES
 };
