@@ -14,16 +14,6 @@
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
 
-// ==================== বোনাসের গুণ (multiplier) নিয়ম ====================
-// deposit.sports এখন অ্যাডমিন প্যানেলের 'turnover_multiplier' সেটিং থেকে আসে (ডিফল্ট ৫x)
-const RULES = {
-  deposit:  { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x (ডিফল্ট), ক্যাসিনো ৩৫x
-  daily:    { sports: 3, casino: 0 },   // দৈনিক রিওয়ার্ড: স্পোর্টস ৩x, ক্যাসিনো প্রযোজ্য নয়
-  // রেফারেল বোনাস আগে সরাসরি ব্যালেন্সে যেত, `bonuses` টেবিলে কোনো সারি হতো না,
-  // তাই canWithdraw() কিছুই আটকাত না — ভুয়া অ্যাকাউন্ট বানিয়ে ন্যূনতম ডিপোজিট
-  // করেই বোনাস তুলে নেওয়া যেত। এখন এটাও টার্নওভার-লকড।
-  // রেফারেল বোনাস: স্পোর্টস ৫x ও ক্যাসিনো ৫x (ডিফল্ট) — site_settings referral_turnover_sports / referral_turnover_casino থেকে কনফিগযোগ্য।
-  referral: { sports: 5, casino: 5 }
 const DEFAULTS = {
   multiplier: 5,        // বোনাস সহ — admin: turnover_multiplier
   noBonusMultiplier: 1, // বোনাস ছাড়া — admin: turnover_no_bonus_multiplier
@@ -50,12 +40,6 @@ async function readConfigValues(db) {
       const r = await db.query('SELECT key, value FROM site_settings WHERE key = ANY($1::text[])', [CONFIG_KEYS]);
       for (const row of (r && r.rows) || []) values[row.key] = row.value;
     } catch (_) { /* নিচে getSetting() ফলব্যাক */ }
-  }
-  if (type === 'referral') {
-    // 0 বৈধ (ওই খাতে শর্ত নেই); অবৈধ/ফাঁকা হলে ডিফল্ট
-    const pick = (raw, dflt) => { const n = Number(raw); return raw !== null && raw !== undefined && raw !== '' && Number.isFinite(n) && n >= 0 ? n : dflt; };
-    rule.sports = pick(await getSetting('referral_turnover_sports'), rule.sports);
-    rule.casino = pick(await getSetting('referral_turnover_casino'), rule.casino);
   }
   const missing = CONFIG_KEYS.filter((k) => values[k] === undefined);
   const fetched = await Promise.all(missing.map((k) => getSetting(k)));
@@ -226,27 +210,6 @@ async function addTurnover(a, b, c, d, e) {
   }
 }
 
-// একটা বোনাসের শর্ত পূরণ হয়েছে কিনা দেখে status আপডেট
-async function checkAndComplete(bonusId, db = pool) {
-  const r = await db.query(`SELECT * FROM bonuses WHERE id = $1`, [bonusId]);
-  const b = r.rows[0];
-  if (!b || b.status !== 'active') return;
-
-  // ডিপোজিট বোনাস: স্পোর্টস বা ক্যাসিনো — যেকোনো একটা পূরণ হলেই completed
-  // দৈনিক রিওয়ার্ড: শুধু স্পোর্টস পূরণ হলে completed
-  let done = false;
-  if (b.bonus_type === 'deposit') {
-    const sportsOk = Number(b.sports_required) > 0 && Number(b.sports_done) >= Number(b.sports_required);
-    const casinoOk = Number(b.casino_required) > 0 && Number(b.casino_done) >= Number(b.casino_required);
-    done = sportsOk || casinoOk;
-  } else if (b.bonus_type === 'referral') {
-    // রেফারেল বোনাস: যে খাতে শর্ত > ০ (স্পোর্টস ও ক্যাসিনো) সব কটিই পূরণ হতে হবে — নইলে ক্যাসিনো ৫x বাকি থাকতেও লক খুলত
-    const sportsOk = Number(b.sports_required) <= 0 || Number(b.sports_done) >= Number(b.sports_required);
-    const casinoOk = Number(b.casino_required) <= 0 || Number(b.casino_done) >= Number(b.casino_required);
-    done = sportsOk && casinoOk;
-  } else {
-    done = Number(b.sports_done) >= Number(b.sports_required);
-  }
 // ==================== ৪. স্ট্যাটাস / ড্যাশবোর্ড ====================
 function shape(b) {
   const required = Number(b.required) || 0;

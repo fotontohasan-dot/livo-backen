@@ -91,32 +91,12 @@
     </div>
   </div>
 
-  <!-- বোনাস তথ্য: ধাপ-ছক (slab) বা পুরোনো ক্রমিক টিয়ার -->
-  <% const prog = stats.program || null; const numLoc = locals.lang === 'en' ? 'en-US' : 'bn-BD'; const fmtN = (n) => Number(n).toLocaleString(numLoc); %>
+  <!-- পরের বোনাস তথ্য -->
   <div class="dz76-12">
-    <% if (prog && prog.mode === 'slab') { %>
-      <div class="dz76-13"><%= t('ref_slab_title') %></div>
-      <% prog.slabs.forEach(sl => { %>
-        <div class="dz76-23">
-          <div class="dz76-9"><%= sl.max === null ? t('ref_slab_plus').replace('{from}', fmtN(sl.min)) : t('ref_slab_range').replace('{from}', fmtN(sl.min)).replace('{to}', fmtN(sl.max)) %></div>
-          <div class="dz76-14"><%= fmtN(sl.amount) %> <%= t('ref_taka') %></div>
-        </div>
-      <% }) %>
-      <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
-      <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
-    <% } else { %>
-      <div class="dz76-13"><%= t.next_referral_reward %></div>
-      <div class="dz76-14"><%= stats.nextBonus === null || stats.nextBonus === undefined ? '' : fmtN(stats.nextBonus) + ' ' + t('ref_taka') %></div>
-      <% if (prog) { %>
-        <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
-        <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
-      <% } %>
-    <% } %>
     <div class="dz76-13"><%= t.next_referral_reward %></div>
     <div class="dz76-14">বন্ধুর ডিপোজিট অনুযায়ী ৳<%= ((stats.bonusBands || [])[0] || {amount:0}).amount %> – ৳<%= ((stats.bonusBands || []).slice(-1)[0] || {amount:0}).amount %></div>
     <div class="dz76-9"><%= t.referral_condition %></div>
     <div class="dz76-9"><%= t('ref_first_deposit_info') %></div>
-    <div class="dz76-9"><%= t('ref_friend_note') %></div>
   </div>
 
   <!-- রেফারেল নিয়ম -->
@@ -182,7 +162,7 @@
             <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
           </div>
           <div>
-            <% if (member.signup_bonus_paid) { %>
+            <% if (member.signup_bonus_paid && !member.bonus_held) { %>
               <span class="dz76-25"><%= t('ref_status_bonus_received') %></span>
             <% } else { %>
               <span class="dz76-27"><%= t('ref_status_pending') %></span>

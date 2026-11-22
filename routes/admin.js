@@ -1083,8 +1083,6 @@ const SETTING_KEYS = [
   'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
-  // রেফারেল বোনাস (ধাপ-ভিত্তিক): ন্যূনতম ডিপোজিট, ক্যাপ, ধাপ-ছক (JSON), টার্নওভার — services/referralRewards.js
-  'referral_min_deposit', 'referral_bonus_cap', 'referral_slabs', 'referral_turnover_sports', 'referral_turnover_casino',
   'referral_loss_commission_percent',
   'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
   // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
@@ -1207,21 +1205,6 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
         value = String(n);
       }
       // রেফারেল বোনাস কনফিগ — অবৈধ মান সেভ না করে আগের মান রাখা হয় (ভুল মানে ভুল পেআউট ঠেকাতে)
-      if (key === 'referral_min_deposit' || key === 'referral_bonus_cap') {
-        const n = Number(value);
-        if (!Number.isFinite(n) || n <= 0) continue;
-        value = String(n);
-      }
-      if (key === 'referral_turnover_sports' || key === 'referral_turnover_casino') {
-        const n = Number(value);
-        if (value.trim() === '' || !Number.isFinite(n) || n < 0 || n > 1000) continue;
-        value = String(n);
-      }
-      if (key === 'referral_slabs') {
-        const parsed = require('../services/referralRewards').parseSlabs(value);
-        if (!parsed) continue;
-        value = JSON.stringify(parsed);
-      }
 
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
@@ -2301,9 +2284,6 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     const total = parseInt(countRes.rows[0].count);
 
     const summaryRes = await pool.query(`
-      SELECT (SELECT COUNT(*) FROM referrals) AS total_referrals,
-             (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
-             (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count
       SELECT COUNT(*) AS total_referrals,
              (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
              (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count

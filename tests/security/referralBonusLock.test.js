@@ -69,8 +69,6 @@ describe('রেফারেল বোনাসে টার্নওভার �
   });
 
   test('ন্যূনতম ডিপোজিটের নিচে হলে বোনাসও নেই, লকও নেই', async () => {
-    await runEngine(referredId, 100); // ৫০০-র নিচে
-    await runEngine(referredId, 499); // ৫০০-র নিচে (সীমান্ত)
     await runEngine(referredId, 99); // ন্যূনতম (১০০)-র নিচে
 
     const bonuses = await pool.query('SELECT id FROM deposit_turnovers WHERE user_id = $1', [referrerId]);
