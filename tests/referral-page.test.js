@@ -1,6 +1,7 @@
 // ==================== ইউজার রেফারেল পাতা (আসল Postgres) ====================
 // নিজের ডেটা মাত্র, শেয়ার-লিংক escape, ক্লিক→সাইন-আপ→ডিপোজিট গণনা, ডুপ্লিকেট/বট ক্লিক বাদ, পরের ধাপ।
-const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
+const request = require('supertest');
+const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
 const { pool } = require('../db');
 const { makeDeposit, cleanup } = require('./helpers/referralDeposit');
 const { getReferralStats, computeNextStep } = require('../services/referral');
@@ -104,7 +105,7 @@ describe('ইউজার রেফারেল পাতা', () => {
 
   test('ক্লিক গণনা: ডুপ্লিকেট একবার, ভিন্ন দর্শক আলাদা, বট/প্রিভিউ/অবৈধ কোড/নিজের লিংক বাদ; কাঁচা IP নেই', async () => {
     const R = await signup();
-    const g = (ua) => R.agent.constructor && require('supertest')(require('../app')).get(`/register?ref=${R.code}`).set('User-Agent', ua);
+    const g = (ua) => request(app).get(`/register?ref=${R.code}`).set('User-Agent', ua);
     await g(REALISTIC_UA); await waitClicks(R.id, 1);
     await g(REALISTIC_UA); await g(REALISTIC_UA);
     await new Promise((r) => setTimeout(r, 400));
@@ -112,7 +113,7 @@ describe('ইউজার রেফারেল পাতা', () => {
     await g(UA2); await waitClicks(R.id, 2);
     expect(await clicks(R.id)).toBe(2);
     await g('WhatsApp/2.23 A'); await g('facebookexternalhit/1.1'); await g('TelegramBot (like TwitterBot)');
-    await require('supertest')(require('../app')).get('/register?ref=NOPE-NO-SUCH').set('User-Agent', UA2);
+    await request(app).get('/register?ref=NOPE-NO-SUCH').set('User-Agent', UA2);
     await new Promise((r) => setTimeout(r, 400));
     expect(await clicks(R.id)).toBe(2);
     // সার্ভিস-স্তরে: নিজের লিংক, ডুপ্লিকেট
