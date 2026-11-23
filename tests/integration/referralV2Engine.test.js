@@ -58,12 +58,13 @@ describe('পেআউট নিয়ম', () => {
     expect(Number(rw.amount)).toBe(75);
     expect(Number(rw.qualifying_deposit_id)).toBe(dep);
 
-    // Turnover V2: বোনাস deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, ডিপোজিট ০) — required = ৭৫ × turnover_multiplier (৩),
+    // Turnover V2: বোনাস deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, ডিপোজিট ০) — required = ৭৫ × turnover_multiplier (সেটিং থেকে পড়া; ডিফল্ট ৫),
     // স্পোর্টস ও ক্যাসিনো দুটোই একই টার্গেটে গোনা হয়।
     const bonus = (await pool.query(`SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).rows;
     expect(bonus).toHaveLength(1);
     expect(Number(bonus[0].bonus_amount)).toBe(75);
-    expect(Number(bonus[0].required)).toBe(225);
+    const mult = Number(await require('../../services/settings').getSetting('turnover_multiplier'));
+    expect(Number(bonus[0].required)).toBe(75 * mult);
     expect(bonus[0].status).toBe('active');
 
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);

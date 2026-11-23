@@ -19,7 +19,8 @@ const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DE
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
-const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+// বাজির ওপর ৩-ধাপ কমিশন ডিফল্টে বন্ধ (০)। আগের ডিফল্ট ছিল ২.৫/১.৫/০.৮% — docs/COMMISSION_OFF_NOTES.md দেখুন।
+const DEFAULT_COMMISSION_RATES = [0, 0, 0]; // Tier 1,2,3
 
 // অ্যাডমিন-কনফিগারড কমিশন রেট (fraction, যেমন 0.025 = 2.5%) — site_settings থেকে,
 // ৩০ সেকেন্ড ক্যাশড getSetting() দিয়ে, তাই প্রতি বাজিতে আলাদা DB কল লাগে না।
@@ -71,6 +72,8 @@ async function distributeCommission(bettorId, stake) {
   if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
+  // তিন হারই ০ হলে কিছুই লেখা হয় না — ট্রানজ্যাকশনও খোলা হয় না
+  if (rates.every(r => !(r > 0))) return;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
