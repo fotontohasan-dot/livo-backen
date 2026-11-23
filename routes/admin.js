@@ -1148,6 +1148,27 @@ const BONUS_SETTING_KEYS = new Set([
   'turnover_expiry_hours', 'turnover_cashout_counts'
 ]);
 
+// ফর্মের ডিফল্ট (views/admin/settings.ejs) — সেটিং সারি না থাকলে ফর্ম এই মান পাঠায়, তাই এটাকে "অপরিবর্তিত" ধরা হয়
+const BONUS_SETTING_DEFAULTS = {
+  turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5',
+  turnover_expiry_hours: '0', turnover_cashout_counts: '0'
+};
+// turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
+const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k);
+// সিক্রেট-জাতীয় key-র মান কখনো লগে যায় না — শুধু "বদলেছে"
+const SECRET_SETTING_KEY_RE = /(token|secret|passw(or)?d|passwd|api[_-]?key|private|credential|signature|salt)/i;
+const auditVal = (v) => (v === null || v === undefined || v === '') ? '(খালি)' : String(v).slice(0, 200);
+const buildBonusAuditDetail = (c) => c.secret
+  ? `সেটিং ${c.key} বদলেছে`
+  : `সেটিং ${c.key} বদলেছে | পুরোনো: ${auditVal(c.oldV)} → নতুন: ${auditVal(c.newV)}`;
+const sameSettingValue = (a, b) => {
+  const x = a === null || a === undefined ? '' : String(a).trim();
+  const y = b === null || b === undefined ? '' : String(b).trim();
+  if (x === y) return true;
+  const nx = Number(x), ny = Number(y);
+  return x !== '' && y !== '' && Number.isFinite(nx) && Number.isFinite(ny) && nx === ny;
+};
+
 // settings_edit অথবা bonus_manage — যেকোনো একটা থাকলে ফর্মে ঢোকা যায়; কোনোটাই না থাকলে
 // আগের মতোই rbac.requirePermission('settings_edit')-এর স্বাভাবিক প্রত্যাখ্যান + UNAUTHORIZED_ACCESS লগ।
 // কোন key সেভ হবে সেটা হ্যান্ডলারে req.settingsAccess দিয়ে আলাদা হয়।
@@ -1175,8 +1196,23 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
     const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
 
+    // বোনাস/টার্নওভার key-র পুরোনো মান — অডিট লগের জন্য (সেভ করার আগেই পড়া)
+    const auditKeys = SETTING_KEYS.filter(isBonusAuditKey);
+    const prevBonus = {};
+    (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [auditKeys]))
+      .rows.forEach(r => { prevBonus[r.key] = r.value; });
+    const bonusChanges = [];   // { key, oldV, newV, secret }
+    const deniedBonusKeys = []; // bonus_manage ছাড়া যে turnover_* বদলাতে চেয়েছিল
+
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
+      if (!canBonus && BONUS_SETTING_KEYS.has(key) && key in req.body) {
+        // আগে চুপচাপ বাদ যেত — এখন জানানো হবে। ফর্ম সবসময় বর্তমান মান পাঠায়, তাই শুধু আসলেই ভিন্ন মান হলে।
+        let rawD = req.body[key];
+        if (Array.isArray(rawD)) rawD = rawD[rawD.length - 1];
+        const cur = key in prevBonus ? prevBonus[key] : BONUS_SETTING_DEFAULTS[key];
+        if (!sameSettingValue(rawD, cur)) deniedBonusKeys.push(key);
+      }
       // turnover_* শুধু bonus_manage-ওয়ালা বদলাতে পারে; বাকি সব key শুধু settings_edit-ওয়ালা
       if (BONUS_SETTING_KEYS.has(key) ? !canBonus : !canEdit) continue;
       if (!(key in req.body)) continue;
@@ -1206,11 +1242,19 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       }
       // রেফারেল বোনাস কনফিগ — অবৈধ মান সেভ না করে আগের মান রাখা হয় (ভুল মানে ভুল পেআউট ঠেকাতে)
 
+      if (isBonusAuditKey(key) && !sameSettingValue(prevBonus[key], value)) {
+        bonusChanges.push({ key, oldV: prevBonus[key], newV: value, secret: SECRET_SETTING_KEY_RE.test(key) });
+      }
+
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
         [key, value]
       );
+    }
+
+    if (deniedBonusKeys.length) {
+      req.flash('error', req.t('admin_turnover_needs_bonus_manage').replace('{keys}', deniedBonusKeys.join(', ')));
     }
 
     // চেকবক্স আনচেক থাকলে ব্রাউজার req.body-তে maintenance_mode ফিল্ডটাই পাঠায় না,
@@ -1235,6 +1279,20 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       await loadSettings();
     } catch (e) {
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
+    }
+    // প্রতি বদলানো বোনাস/টার্নওভার key-র জন্য আলাদা অডিট এন্ট্রি (পুরোনো → নতুন; সিক্রেট হলে শুধু "বদলেছে")
+    for (const c of bonusChanges) {
+      try {
+        const detail = buildBonusAuditDetail(c);
+        await logAdminAction(req.session.user.id, req.session.user.username, 'SETTING_CHANGE', detail, req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'BONUS_SETTING_CHANGED', category: 'settings', status: 'success', riskLevel: 'medium',
+          details: c.secret ? { key: c.key, changed: true } : { key: c.key, old: auditVal(c.oldV), new: auditVal(c.newV) }
+        }).catch(e => console.error('logAuditEvent (BONUS_SETTING_CHANGED) error:', e.message));
+      } catch (e) {
+        console.error('bonus setting audit failed (settings already saved):', e && e.message);
+      }
     }
     try {
       if (maintenanceBool && !wasOn) {
@@ -2260,17 +2318,12 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
     }
     // V2: বোনাস-অবস্থা শুধু referral_rewards থেকে (সাইন-আপ-ফ্ল্যাগ/bonus_held পড়া বন্ধ; কলাম DB-তে থাকে)।
-    // paid/legacy_paid = বোনাস পাওয়া; held = pending_review (অ্যাডমিন রিভিউ); retry_pending আলাদা।
+    // paid/legacy_paid = বোনাস পাওয়া; held = pending_review (অ্যাডমিন রিভিউয়ের অপেক্ষায়); retry_pending ও rejected আলাদা; বাকি সব pending।
     if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
     if (status === 'held') conditions.push("rr.status = 'pending_review'");
     if (status === 'retry_pending') conditions.push("rr.status = 'retry_pending'");
     if (status === 'rejected') conditions.push("rr.status IN ('rejected','reversed')");
     if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid','pending_review','rejected','reversed'))");
-    // V2: বোনাস-অবস্থা referral_rewards থেকে — paid/legacy_paid = বোনাস পাওয়া;
-    // pending_review = আটকানো (আগের "held"), অ্যাডমিন রিভিউয়ের অপেক্ষায়; বাকি সব pending।
-    if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
-    if (status === 'held') conditions.push("rr.status = 'pending_review'");
-    if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid','pending_review'))");
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -2298,8 +2351,6 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
               (rr.status = 'pending_review') AS bonus_held,
               rr.status AS reward_status, rr.review_reason AS hold_reason,
               rr.tier AS reward_tier, rr.amount AS reward_amount, r.created_at,
-              COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid, rr.status AS reward_status,
-              (rr.status = 'pending_review') AS bonus_held, rr.review_reason AS hold_reason, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
               COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned
@@ -5741,4 +5792,5 @@ router.get('/cron-jobs/status/json', rbac.requirePermission('cron_jobs_manage'),
 
 // ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
 
+router.__test = { SECRET_SETTING_KEY_RE, buildBonusAuditDetail, isBonusAuditKey };
 module.exports = router;

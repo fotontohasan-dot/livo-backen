@@ -13,7 +13,9 @@
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
-const rewards = require('./referralRewards');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
