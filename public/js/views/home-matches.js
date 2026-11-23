@@ -8,8 +8,13 @@
   var listEl = document.getElementById('hhList');
   var tabsEl = document.getElementById('hhTabs');
   var leagueSel = document.getElementById('hhLeague');
-  // সাইডবারে সর্বোচ্চ সারি: ভিউ থেকে data-max (ডিফল্ট ৮, কখনো ৮-এর বেশি নয়)
-  var MAX_ROWS = Math.min(Math.max(parseInt(root.getAttribute('data-max'), 10) || 8, 1), 8);
+  // সর্বোচ্চ সারি: ডেস্কটপ ডান সাইডবারে ৮, মোবাইলে ছোট সারিতে ৫ (সার্ভার data-max-* দিয়ে দেয়)।
+  function capRows() {
+    var desk = window.matchMedia && window.matchMedia('(min-width: 1024px)').matches;
+    var n = parseInt(root.getAttribute(desk ? 'data-max-desktop' : 'data-max-mobile'), 10);
+    return n > 0 ? n : 24;
+  }
+  var MAX_ROWS = capRows();
   var ALL = [];
   var filter = null;      // null = pick a default once data arrives
   var league = '';
@@ -69,6 +74,7 @@
   }
 
   function render() {
+    MAX_ROWS = capRows();
     var rows = ALL.filter(passes).sort(function (x, y) {
       if (isLive(x) !== isLive(y)) return isLive(x) ? -1 : 1;
       return when(x) - when(y);

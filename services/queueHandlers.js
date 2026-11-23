@@ -113,7 +113,7 @@ queue.registerHandler('fraud_scan', async (payload) => {
 // এই জব শুধু গৌণ হিসাব (turnover, cashback, VIP, mission, loyalty, badge)।
 // তাই জব ব্যর্থ বা রিট্রাই হলেও টাকার অঙ্কে কোনো প্রভাব পড়ে না।
 queue.registerHandler('provider_wallet_effects', async (payload) => {
-  const { kind, userId, gameId, amount } = payload;
+  const { kind, userId, gameId, amount, provider, providerTxId } = payload;
   if (!userId || !Number.isFinite(Number(amount))) return;
   const amt = Number(amount);
 
@@ -138,7 +138,8 @@ queue.registerHandler('provider_wallet_effects', async (payload) => {
   const { checkBadges } = require('./badges');
 
   if (kind === 'bet') {
-    await addTurnover(userId, 'casino', amt);
+    // Turnover V2: Casino বেট জিতুক-হারুক গোনা হয়; tx id থাকলে কিউ-রিট্রাইয়ে দুবার গোনা হয় না।
+    await addTurnover(userId, 'casino', amt, providerTxId ? { ref: `casino:${provider || 'p'}:${providerTxId}` } : {});
     await addBet(userId, amt, category);
     await addVipTurnover(userId, amt);
     await distributeCommission(userId, amt);

@@ -256,6 +256,16 @@ describe('A-Z User Journey', () => {
       [userId]
     );
 
+    // Turnover V2: প্রতিটি approved ডিপোজিটের (বোনাস ছাড়া ডিপোজিট × ১) টার্নওভার পূরণ না হওয়া পর্যন্ত
+    // উইথড্র লক থাকে (৬. Deposit-এ ১০০০ জমা)। এই ধাপের বিষয় উইথড্র রিকোয়েস্টের হিসাব, ওয়েজারিং নয় —
+    // তাই লকটা পূরণ-হওয়া ধরা হচ্ছে; লকের নিজস্ব আচরণ tests/unit/turnoverV2.test.js ও
+    // tests/render/criticalPageUiStates.test.js-এ যাচাই হয়।
+    await pool.query(
+      `UPDATE deposit_turnovers SET status='completed', completed_at=NOW(), updated_at=NOW()
+        WHERE user_id=$1 AND status='active'`,
+      [userId]
+    );
+
     const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
     const csrf = await csrfFor(agent, '/payment/withdraw');
     const res = await agent.post('/payment/withdraw').type('form').send({

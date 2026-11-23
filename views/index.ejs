@@ -1,133 +1,393 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
-<%
-  // ক্যাসিনো-প্রথম হোম। ফিল্টার সার্ভার-সাইডে (সাধারণ GET লিংক) — JS বন্ধ থাকলেও কাজ করে।
-  const f = casino.filters;
-  const facets = casino.facets;
-  function homeHref(o) {
-    const p = new URLSearchParams();
-    const m = Object.assign({ cat: f.category, provider: f.provider, q: f.q, letter: f.letter }, o || {});
-    Object.keys(m).forEach(function (k) { if (m[k]) p.set(k, m[k]); });
-    const qs = p.toString();
-    return '/' + (qs ? '?' + qs : '') + '#casino';
-  }
-  function catLabel(name) {
-    const k = homeCasino.categoryLabelKey(name);
-    return k ? t[k] : name;
-  }
-  const liveCat = facets.categories.find(function (c) { return /live/i.test(c.name); });
-  const liveHref = liveCat ? '/?cat=' + encodeURIComponent(liveCat.name) + '#casino' : '/games';
-  const showRails = !casino.filtered && f.page === 1;
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-%>
 
 <style nonce="<%= cspNonce %>">
-  @keyframes livedot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .3; transform: scale(1.4); } }
-  <%- include('partials/home-shortcut-css') %>
-  /* ===== প্রধান ন্যাভ (অনুভূমিক স্ক্রলযোগ্য চিপ) ===== */
-  .main-cat-nav { display: flex; gap: 8px; padding: 4px 12px 12px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .sp26-1.sp26-1 { display: none; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz48-1 { flex: 1; overflow: hidden; }
+  .dz48-2 { font-size: 12px; color: var(--text-muted); white-space: nowrap; animation: marquee-text 18s linear infinite; }
+  .dz48-3 { font-family: 'Teko', sans-serif; font-size: 30px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase; }
+  .dz48-4 { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+  .dz48-5 { background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px; }
+  .dz48-6 { font-size: 9px; margin-left: 4px; }
+  .dz48-7 { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 12px 10px; }
+  .dz48-8 { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
+  .dz48-9 { padding: 0 12px 15px 12px; }
+  .dz48-10 { position: relative; }
+  .dz48-11 { padding-right: 45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(201, 162, 39,0.2); }
+  .dz48-12 { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .dz48-13 { width: 130px; border-radius: 8px; display: block; }
+@keyframes livedot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.4); }
+}
+@keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+
+/* এই সেকশনের সব var(--fa-gold*)/var(--fa-*) রেফারেন্স নিচের গ্লোবাল থিম টোকেনে
+   (public/css/style.css) সরাসরি পয়েন্ট করা হয়েছে, যাতে body.light-mode টগলে হোমপেজের
+   হিরো ব্যাজ/ক্যাটাগরি/প্রোভাইডার বাটন ইত্যাদিও বাকি সাইটের মতো থিম-অ্যাওয়্যার থাকে। */
+
+.promo-banner {
+  background: linear-gradient(135deg, #1C1E22 0%, #0F1012 100%);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-left: none;
+  border-right: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 12px 0;
+}
+
+.promo-banner-content {
+  background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 100%);
+  padding: 16px 14px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+}
+
+.promo-banner-badge {
+  background: var(--grad-gold);
+  color: #000;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
+}
+
+/* Shortcuts Menu Bar */
+.shortcut-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 0 0 12px 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+  border-radius: 0;
+  padding: 7px 0;
+}
+
+.shortcut-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+}
+
+.shortcut-item:hover {
+  transform: translateY(-1px);
+  opacity: 0.85;
+}
+
+.shortcut-icon-wrapper {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-accent);
+  margin-bottom: 3px;
+  box-shadow: none;
+}
+
+.shortcut-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-main);
+  text-align: center;
+  letter-spacing: 0.1px;
+}
+
+/* Horizontal Navigation Tabs */
+.horizontal-nav-container {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 5px 12px 15px 12px;
+  scrollbar-width: none;
+}
+.horizontal-nav-container::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-tab-item {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  border-radius: 30px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-tab-item.active {
+  background: var(--grad-gold);
+  color: var(--text-inverse) !important;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);
+}
+
+.nav-tab-item.active i {
+  color: var(--text-inverse);
+}
+
+.game-grid-premium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 0 12px;
+}
+
+/* এখনো চালু হয়নি এমন গেম — দেখা যায়, কিন্তু খেলা যায় না।
+   সার্ভারে লজিক নেই বলে ক্লিক নিষ্ক্রিয়; ব্যাজে "শীঘ্রই" লেখা থাকে। */
+.game-card-soon { opacity: .55; cursor: not-allowed; filter: grayscale(.6); }
+.game-card-soon:hover { transform: none; }
+.badge-soon { background: #6b7280; color: #fff; }
+
+.game-card-premium {
+  background: var(--grad-surface);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.game-card-premium:hover {
+  transform: scale(1.02);
+  border-color: var(--gold);
+}
+
+.game-thumb-wrapper {
+  aspect-ratio: 16/10;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  position: relative;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.game-info-premium {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.game-title-premium {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-provider-premium {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-badge-premium {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #1a1200;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--grad-gold);
+  box-shadow: 0 2px 8px rgba(201, 162, 39,0.45);
+}
+.game-badge-premium.badge-new { background: linear-gradient(135deg, #34d399 0%, var(--primary) 100%); color: var(--text-inverse); box-shadow: 0 2px 8px var(--primary-glow); }
+.game-badge-premium.badge-hot::before { content: "\f06d"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
+.game-badge-premium.badge-new::before { content: "\f005"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
+
+.marquee-container-premium {
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.2);
+  border-radius: 8px;
+  margin: 10px 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marquee-label-premium {
+  color: var(--text-accent);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* ===== Golden Shimmer / Glow — Welcome Banner + Jackpot (dark & light mode) ===== */
+@keyframes goldShimmerSweep {
+  0%   { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+@keyframes goldGlowPulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.35), 0 0 18px rgba(201, 162, 39,0.25), 0 2px 4px rgba(0,0,0,0.6); }
+  50%      { text-shadow: 0 0 16px rgba(255,215,0,0.65), 0 0 32px rgba(201, 162, 39,0.5), 0 2px 4px rgba(0,0,0,0.6); }
+}
+
+.promo-banner {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,215,0,0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(201, 162, 39,0.14) 0%, transparent 50%),
+    linear-gradient(135deg, #1C1E22 0%, #0F1012 100%) !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.5), inset 0 0 25px rgba(201, 162, 39,0.08) !important;
+}
+
+.promo-banner::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.16) 45%, rgba(255,215,0,0.3) 50%, rgba(255,235,160,0.16) 55%, transparent 100%);
+  animation: goldShimmerSweep 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.promo-banner-title {
+  animation: goldGlowPulse 3s ease-in-out infinite;
+}
+
+.jackpot-board {
+  background:
+    radial-gradient(circle at center, rgba(255,215,0,0.10) 0%, transparent 60%),
+    radial-gradient(circle at center, #1F2226 0%, #0D0E10 100%) !important;
+}
+
+.jackpot-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.09) 45%, rgba(255,215,0,0.18) 50%, rgba(255,235,160,0.09) 55%, transparent 100%);
+  animation: goldShimmerSweep 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.jackpot-title, #jp-num {
+  animation: goldGlowPulse 3s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+.promo-banner-content, .promo-banner > div:last-child {
+  position: relative;
+  z-index: 2;
+}
+
+/* Light mode: keep the same rich dark gold card, but frame it so it visibly floats off a white page */
+body.light-mode .promo-banner {
+  border: 1.5px solid var(--gold) !important;
+  box-shadow: 0 10px 30px rgba(201, 162, 39,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+}
+</style>
+
+<!-- HERO SECTION সরানো হয়েছে (ইউজারের অনুরোধে) —
+     বড় প্রোমোশনাল হেডলাইন ব্যানার এবং
+     তার CTA/স্ট্যাট ব্লকসহ সম্পূর্ণ সেকশনটা বাদ দেওয়া হয়েছে। সংশ্লিষ্ট .hero-* CSS
+     শুধু এই সেকশনেই ব্যবহৃত হতো, তাই সেটাও একসাথে সরানো হলো। -->
+
+<!-- ===== টিকার বার (bk666-স্টাইল), হেডার/নেভবারের ঠিক নিচে =====
+     পুরনো স্ট্যাটিক মার্কি (t.home_marquee) সরিয়ে partials/announcements.ejs-এর
+     ডায়নামিক 'scrolling' টিকার ব্যবহার করা হলো, যাতে একই জায়গায় দুটো টিকার
+     না দেখায় এবং অ্যাডমিন প্যানেল থেকে তৈরি নোটিশ এখানে রিয়েল-টাইমে আসে। -->
+<%- include('partials/announcements') %>
+
+<%
+  const c = casino;
+  const f = c.filters;
+  const url = function (over) {
+    const p = Object.assign({ q: f.q, category: f.category, provider: f.provider, letter: f.letter }, over || {});
+    const parts = [];
+    ['q', 'category', 'provider', 'letter', 'page'].forEach(function (k) { if (p[k]) parts.push(k + '=' + encodeURIComponent(p[k])); });
+    return '/' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const catLabel = function (x) { return (x.key && t['hc_cat_' + x.key]) || x.name; };
+%>
+
+<!-- ===== মূল ন্যাভিগেশন: ক্যাসিনো, লাইভ ক্যাসিনো, ক্রিকেট, স্পোর্টস, তারপর বাকি ট্যাব ===== -->
+<style nonce="<%= cspNonce %>">
+  .main-cat-nav {
+    display: flex; gap: 8px; padding: 4px 12px 14px;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
   .main-cat-nav::-webkit-scrollbar { display: none; }
-  .main-cat-item { flex: 0 0 auto; min-width: 62px; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 9px 10px; border-radius: 14px; text-decoration: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1; text-align: center; transition: background .2s, color .2s, border-color .2s; }
+  .main-cat-item {
+    flex: 0 0 auto; min-width: 62px; min-height: 62px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    padding: 9px 10px; border-radius: 14px; text-decoration: none;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1;
+    text-align: center; transition: background .2s, color .2s, border-color .2s;
+  }
   .main-cat-item i { font-size: 17px; }
   .main-cat-item:active { background: rgba(255,255,255,0.09); }
-  .main-cat-item.is-primary { background: var(--grad-gold); color: #1a1a1a; border-color: transparent; }
-  .main-cat-item:focus-visible, .cat-chip:focus-visible, .prov-chip:focus-visible, .az-link:focus-visible, .hc-card:focus-visible, .hb-btn:focus-visible, .hc-more:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .main-cat-item.is-primary {
+    background: var(--grad-gold); color: #1a1a1a; border-color: transparent;
+  }
   @media (min-width: 768px) {
     .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
     .main-cat-item { min-width: 88px; font-size: 12px; }
     .main-cat-item i { font-size: 20px; }
   }
-
-  /* ===== শেল: মোবাইলে এক কলাম, ডেস্কটপে বাঁ-সাইডবার | মূল | ডান-সাইডবার ===== */
-  .home-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 0 84px; }
-  .home-cats { min-width: 0; }
-  .home-main { min-width: 0; }
-  .home-matches { min-width: 0; }
-  @media (min-width: 1024px) {
-    .home-shell { grid-template-columns: 210px minmax(0, 1fr) 290px; align-items: start; padding: 0 16px 24px; }
-    .home-cats, .home-matches { position: sticky; top: 70px; max-height: calc(100vh - 90px); overflow-y: auto; }
-    .pub-bottom-nav { display: none; }
-  }
-
-  /* ===== ক্যাটাগরি: মোবাইলে অনুভূমিক চিপ, ডেস্কটপে উল্লম্ব তালিকা ===== */
-  .home-cat-nav { display: flex; gap: 8px; padding: 0 12px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .home-cat-nav::-webkit-scrollbar { display: none; }
-  .cat-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-  .cat-chip small { opacity: .7; font-weight: 600; }
-  .cat-chip.active { background: var(--grad-gold); color: #000; border-color: transparent; }
-  @media (min-width: 1024px) {
-    .home-cat-nav { flex-direction: column; padding: 0; overflow: visible; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 14px; padding: 8px; }
-    .cat-chip { border-radius: 10px; justify-content: space-between; border: 0; background: transparent; }
-    .cat-chip.active { background: var(--gold-soft, rgba(201,162,39,.18)); color: var(--text-accent); }
-  }
-
-  /* ===== প্রোমো স্লাইডার ===== */
-  .hb { position: relative; margin: 0 12px 12px; border-radius: 14px; overflow: hidden; background: var(--bg-card); }
-  .hb-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
-  .hb-track::-webkit-scrollbar { display: none; }
-  .hb-slide { flex: 0 0 100%; scroll-snap-align: start; display: block; aspect-ratio: 21 / 8; min-height: 110px; }
-  .hb-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .hb-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.55) !important; color: #fff !important; cursor: pointer; z-index: 2; }
-  .hb-prev { left: 8px; } .hb-next { right: 8px; }
-  .promo-banner { background: linear-gradient(135deg, #1C1E22 0%, #0F1012 100%); border: 1px solid rgba(201,162,39,.3); position: relative; overflow: hidden; margin: 0 12px 12px; border-radius: 14px; }
-  .promo-banner-content { padding: 16px 14px; min-height: 120px; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2; }
-  .promo-banner-badge { background: var(--grad-gold); color: #000; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 20px; align-self: flex-start; text-transform: uppercase; }
-  .promo-banner-title { font-family: 'Teko', sans-serif; font-size: 28px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px; text-transform: uppercase; }
-  .promo-banner-desc { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
-  .promo-banner-cta { display: inline-block; background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px; text-decoration: none; }
-  .promo-banner-art { position: absolute; right: 0; top: 0; height: 100%; width: auto; opacity: .85; }
-
-  /* ===== সার্চ, প্রোভাইডার, A-Z ===== */
-  .home-search { display: flex; gap: 8px; padding: 0 12px 10px; }
-  .home-search input[type=search] { flex: 1; min-width: 0; padding: 10px 16px; border-radius: 30px; background: rgba(255,255,255,.04); border: 1px solid rgba(201,162,39,.2); color: var(--text-main); }
-  .home-search button { border-radius: 30px; padding: 0 18px; font-weight: 800; font-size: 12px; cursor: pointer; }
-  .home-chips { display: flex; gap: 8px; padding: 0 12px 10px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .home-chips::-webkit-scrollbar { display: none; }
-  .prov-chip { flex: 0 0 auto; padding: 6px 14px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-  .prov-chip.active { border-color: var(--gold); color: var(--text-accent); box-shadow: 0 0 0 2px rgba(201,162,39,.2); }
-  .az-index { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
-  .az-link { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 800; text-decoration: none; color: var(--text-main); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
-  .az-link.active { background: var(--grad-gold); color: #000; border-color: transparent; }
-  .az-link.is-empty { opacity: .3; cursor: default; }
-  .home-label { font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 0 12px 6px; text-transform: uppercase; letter-spacing: .4px; }
-
-  /* ===== গেম সারি ও গ্রিড ===== */
-  .hc-section { margin: 0 0 14px; }
-  .hc-head { display: flex; justify-content: space-between; align-items: center; padding: 0 12px 8px; }
-  .hc-head h2 { margin: 0; font-size: 15px; }
-  .hc-head a { font-size: 12px; font-weight: 700; color: var(--gold); text-decoration: none; }
-  .hc-rail { display: flex; gap: 10px; overflow-x: auto; padding: 0 12px 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .hc-rail::-webkit-scrollbar { display: none; }
-  .hc-rail .hc-card { flex: 0 0 120px; }
-  .hc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 12px; }
-  @media (min-width: 640px) { .hc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  @media (min-width: 1024px) { .hc-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 12px; } .hc-rail .hc-card { flex-basis: 140px; } }
-  .hc-card { display: block; text-decoration: none; color: inherit; border-radius: 12px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-glass); }
-  .hc-card img, .hc-thumb-fallback { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
-  .hc-thumb-fallback { display: flex; align-items: center; justify-content: center; font-size: 30px; background: rgba(255,255,255,.04); }
-  .hc-meta { padding: 6px 8px 8px; }
-  .hc-name { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hc-prov { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hc-suspended { opacity: .5; filter: grayscale(.7); pointer-events: none; }
-  .hc-empty { padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
-  .hc-more { display: block; margin: 14px 12px 0; padding: 11px; text-align: center; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-glass); color: var(--gold); font-weight: 800; font-size: 13px; text-decoration: none; }
-
-  /* ===== লাইভ ম্যাচ: ডেস্কটপে ডান সংকীর্ণ সাইডবার, মোবাইলে ক্যাসিনোর নিচে ছোট সারি ===== */
-  <%- include('partials/home-hub-css') %>
-  @media (max-width: 1023px) {
-    .home-hub .hh-list { display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; }
-    .home-hub .hh-row { flex: 0 0 230px; }
-    .home-hub .hh-empty, .home-hub .hh-more { flex: 0 0 100%; }
-  }
-  @media (min-width: 1024px) { .home-hub { margin: 0; } .hh-list { grid-template-columns: 1fr; } }
 </style>
-<%- include('partials/announcements') %>
-
-<%- include('partials/flash') %>
-
 <nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
-  <a href="/games" class="main-cat-item is-primary"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
-  <a href="<%= liveHref %>" class="main-cat-item"><i class="fas fa-video"></i><span><%= t.cat_live_casino %></span></a>
+  <a href="/#casinoHome" class="main-cat-item is-primary"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
+  <a href="<%= c.liveCategory ? url({ category: c.liveCategory, q: '', provider: '', letter: '' }) + '#allGames' : '/#casinoHome' %>" class="main-cat-item"><i class="fas fa-video"></i><span><%= t.cat_live_casino %></span></a>
   <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
   <a href="/sports" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
   <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
@@ -137,113 +397,263 @@
   <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span><%= t.cat_promotions %></span></a>
 </nav>
 
-<div class="home-shell" id="casino">
-  <aside class="home-cats">
-    <nav class="home-cat-nav" id="categoryTabs" aria-label="<%= t.home_casino_categories %>">
-      <a class="cat-chip <%= !f.category ? 'active' : '' %>" href="<%= homeHref({ cat: '', provider: '', q: '', letter: '' }) %>"><%= t.all %></a>
-      <% facets.categories.forEach(function (c) { %>
-        <a class="cat-chip <%= f.category === c.name ? 'active' : '' %>" href="<%= homeHref({ cat: c.name, provider: '', q: '', letter: '' }) %>" aria-label="<%= catLabel(c.name) %> (<%= c.count %>)"><span><%= catLabel(c.name) %></span> <small><%= c.count %></small></a>
-      <% }); %>
-    </nav>
-  </aside>
+<%- include('partials/flash') %>
 
-  <main class="home-main">
-    <% if (banners && banners.length) { %>
-    <section class="hb" aria-roledescription="carousel" aria-label="<%= t.home_banners %>">
-      <div class="hb-track" id="homeBanners" tabindex="0">
-        <% banners.forEach(function (b, i) { %>
-          <% if (b.link_url) { %><a class="hb-slide" href="<%= b.link_url %>"><img src="<%= b.image_url %>" alt="<%= b.title %>" <%= i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' %> decoding="async"></a>
-          <% } else { %><div class="hb-slide"><img src="<%= b.image_url %>" alt="<%= b.title %>" <%= i === 0 ? 'loading=eager' : 'loading=lazy' %> decoding="async"></div><% } %>
-        <% }); %>
-      </div>
-      <% if (banners.length > 1) { %>
-      <button type="button" class="hb-btn hb-prev" id="hbPrev" aria-label="<%= t.home_banner_prev %>"><i class="fas fa-chevron-left"></i></button>
-      <button type="button" class="hb-btn hb-next" id="hbNext" aria-label="<%= t.home_banner_next %>"><i class="fas fa-chevron-right"></i></button>
-      <% } %>
-    </section>
+<style nonce="<%= cspNonce %>">
+  /* ===== ক্যাসিনো-প্রথম লেআউট: মোবাইল = এক কলাম, ডেস্কটপ = বাম ক্যাটাগরি | মূল | ডান ম্যাচ ===== */
+  .cs-layout { display: grid; gap: 12px; padding: 0 12px 16px; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "cats" "top" "matches" "all"; }
+  @media (min-width: 1024px) {
+    .cs-layout { grid-template-columns: 210px minmax(0, 1fr) 290px; align-items: start;
+      grid-template-areas: "cats top matches" "cats all matches"; max-width: 1480px; margin: 0 auto; }
+  }
+  .cs-cats { grid-area: cats; }
+  .cs-top { grid-area: top; min-width: 0; }
+  .cs-matches { grid-area: matches; min-width: 0; }
+  .cs-all { grid-area: all; min-width: 0; }
+  .cs-matches .home-hub { margin: 0; }
+  @media (min-width: 1024px) { .cs-matches { position: sticky; top: 8px; } }
+
+  /* ক্যাটাগরি: মোবাইলে অনুভূমিক চিপ, ডেস্কটপে উল্লম্ব তালিকা */
+  .cs-cat-list { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0; padding: 0; list-style: none; }
+  .cs-cat-list::-webkit-scrollbar { display: none; }
+  @media (min-width: 1024px) {
+    .cs-cats { background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 14px; padding: 8px; position: sticky; top: 8px; }
+    .cs-cat-list { flex-direction: column; overflow: visible; gap: 4px; }
+  }
+  .cs-chip { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; box-sizing: border-box;
+    min-height: 36px; padding: 7px 14px; border-radius: 20px; text-decoration: none; font-size: 12.5px; font-weight: 700;
+    color: var(--text-muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); white-space: nowrap; }
+  .cs-chip small { opacity: .7; font-weight: 600; }
+  .cs-chip:hover { color: var(--text-main); }
+  .cs-chip:focus-visible, .cs-card:focus-visible, .cs-az a:focus-visible, .cs-btn:focus-visible, .cs-search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .cs-chip.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  @media (min-width: 1024px) { .cs-cats .cs-chip { border-radius: 10px; width: 100%; } }
+
+  /* ব্যানার স্লাইডার (শুধু CSS scroll-snap, কোনো JS লাইব্রেরি নয়) */
+  .cs-banners { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; border-radius: 14px; }
+  .cs-banners::-webkit-scrollbar { display: none; }
+  .cs-banner { flex: 0 0 100%; scroll-snap-align: start; display: block; border-radius: 14px; overflow: hidden; background: var(--bg-surface); }
+  .cs-banner img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 6; object-fit: cover; }
+
+  .cs-search { display: flex; gap: 8px; margin: 12px 0; }
+  .cs-search input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border-glass); background: var(--bg-surface); color: var(--text-main); font-size: 14px; }
+  .cs-btn { padding: 10px 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center;
+    background: var(--grad-gold) !important; color: #000 !important; }
+  .cs-btn.ghost { background: rgba(255,255,255,.06) !important; color: var(--text-main) !important; border: 1px solid var(--border-glass); }
+  .cs-sec-title { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; font-size: 15px; font-weight: 800; }
+  .cs-sec-title a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; }
+  .cs-h-scroll { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .cs-h-scroll::-webkit-scrollbar { display: none; }
+  .cs-h-scroll .cs-card { flex: 0 0 132px; }
+  .cs-az { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0; padding: 0; list-style: none; }
+  .cs-az::-webkit-scrollbar { display: none; }
+  @media (min-width: 768px) { .cs-az { flex-wrap: wrap; overflow-x: visible; } }
+  .cs-az a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 800;
+    color: var(--text-muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+  .cs-az a.active { background: var(--grad-gold); color: #000; border-color: transparent; }
+  .cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .cs-card { display: block; text-decoration: none; color: var(--text-main); background: var(--bg-card, var(--bg-surface)); border: 1px solid var(--border-glass); border-radius: 12px; overflow: hidden; }
+  .cs-card img, .cs-thumb-fallback { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 28px; background: rgba(255,255,255,.04); }
+  .cs-meta { padding: 7px 9px 9px; }
+  .cs-name { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-prov { font-size: 10.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-suspended { opacity: .55; cursor: not-allowed; filter: grayscale(.7); }
+  .cs-empty { grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+  .cs-pager { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+  .cs-block { margin-top: 12px; }
+</style>
+
+<div class="cs-layout" id="casinoHome">
+  <!-- ক্যাসিনো ক্যাটাগরি: ডেস্কটপে বাঁ সাইডবার, মোবাইলে অনুভূমিক চিপ (শুধু DB-তে থাকা, খালি ক্যাটাগরি আসে না) -->
+  <nav class="cs-cats" aria-label="<%= t.hc_categories %>">
+    <ul class="cs-cat-list">
+      <li><a class="cs-chip <%= !f.category ? 'active' : '' %>" href="<%= url({ category: '', page: '' }) %>#allGames" <%- !f.category ? 'aria-current="true"' : '' %> aria-label="<%= t.all %>"><span><%= t.all %></span></a></li>
+      <% c.categories.forEach(function (cat) { %>
+      <li><a class="cs-chip <%= f.category === cat.name ? 'active' : '' %>" href="<%= url({ category: cat.name, page: '' }) %>#allGames" <%- f.category === cat.name ? 'aria-current="true"' : '' %> aria-label="<%= catLabel(cat) %>"><span><%= catLabel(cat) %></span> <small><%= cat.count %></small></a></li>
+      <% }); %>
+    </ul>
+  </nav>
+
+  <div class="cs-top">
+    <!-- (১) প্রোমো ব্যানার স্লাইডার: বিদ্যমান promotions টেবিল; না থাকলে আগের স্ট্যাটিক ওয়েলকাম ব্যানার -->
+    <% if (c.banners.length) { %>
+    <div class="cs-banners" role="region" aria-label="<%= t.hc_promo_banners %>" tabindex="0">
+      <% c.banners.forEach(function (b, i) { %>
+      <% if (b.link) { %><a class="cs-banner" href="<%= b.link %>" aria-label="<%= b.title || t.hc_promo_banners %>"><img src="<%= b.image %>" alt="<%= b.title %>" <%- i === 0 ? 'loading="eager"' : 'loading="lazy"' %> decoding="async" width="960" height="360"></a>
+      <% } else { %><div class="cs-banner"><img src="<%= b.image %>" alt="<%= b.title %>" <%- i === 0 ? 'loading="eager"' : 'loading="lazy"' %> decoding="async" width="960" height="360"></div><% } %>
+      <% }); %>
+    </div>
     <% } else { %>
-    <div class="promo-banner">
-      <div class="promo-banner-content">
-        <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
-        <h1 class="promo-banner-title">100% Welcome Bonus</h1>
-        <p class="promo-banner-desc"><%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.</p>
-        <div><a href="/payment/deposit" class="promo-banner-cta"><%= t.get_now %></a></div>
-      </div>
-      <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg" alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
+<div class="promo-banner">
+  <div class="promo-banner-content">
+    <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
+    <h1 class="promo-banner-title dz48-3">
+      100% Welcome Bonus
+    </h1>
+    <p class="dz48-4">
+      <%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.
+    </p>
+    <div>
+      <a href="/payment/deposit" class="btn dz48-5">
+        <%= t.get_now %> <i class="fas fa-chevron-right dz48-6"></i>
+      </a>
+    </div>
+  </div>
+  <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg"
+       alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
+</div>
+    <% } %>
+
+    <!-- (২) গেম সার্চ -->
+    <form class="cs-search" method="get" action="/" role="search" aria-label="<%= t.hc_search_label %>">
+      <% if (f.category) { %><input type="hidden" name="category" value="<%= f.category %>"><% } %>
+      <% if (f.provider) { %><input type="hidden" name="provider" value="<%= f.provider %>"><% } %>
+      <% if (f.letter) { %><input type="hidden" name="letter" value="<%= f.letter %>"><% } %>
+      <input type="search" name="q" value="<%= f.q %>" maxlength="60" placeholder="<%= t.hc_search_ph %>" aria-label="<%= t.hc_search_label %>">
+      <button type="submit" class="cs-btn"><%= t.hc_search_btn %></button>
+    </form>
+
+    <!-- (৩) প্রোভাইডার ফিল্টার -->
+    <% if (c.providers.length) { %>
+    <div class="cs-block">
+      <ul class="cs-cat-list" aria-label="<%= t.hc_providers %>">
+        <li><a class="cs-chip <%= !f.provider ? 'active' : '' %>" href="<%= url({ provider: '', page: '' }) %>#allGames" aria-label="<%= t.hc_providers %>: <%= t.all %>"><span><%= t.all %></span></a></li>
+        <% c.providers.forEach(function (p) { %>
+        <li><a class="cs-chip <%= f.provider === p.name ? 'active' : '' %>" href="<%= url({ provider: p.name, page: '' }) %>#allGames" <%- f.provider === p.name ? 'aria-current="true"' : '' %> aria-label="<%= t.hc_providers %>: <%= p.name %>"><span><%= p.name %></span></a></li>
+        <% }); %>
+      </ul>
     </div>
     <% } %>
 
-    <%- include('partials/home-shortcuts') %>
-
-    <form class="home-search" role="search" method="get" action="/#casino">
-      <% if (f.category) { %><input type="hidden" name="cat" value="<%= f.category %>"><% } %>
-      <% if (f.provider) { %><input type="hidden" name="provider" value="<%= f.provider %>"><% } %>
-      <% if (f.letter) { %><input type="hidden" name="letter" value="<%= f.letter %>"><% } %>
-      <input type="search" id="gameSearch" name="q" value="<%= f.q %>" maxlength="60" placeholder="<%= t.search_placeholder %>" aria-label="<%= t.home_search_label %>">
-      <button type="submit"><%= t.home_search_button %></button>
-    </form>
-
-    <% if (facets.providers.length) { %>
-    <div class="home-label"><%= t.home_providers %></div>
-    <nav class="home-chips" id="providerChips" aria-label="<%= t.home_providers %>">
-      <a class="prov-chip <%= !f.provider ? 'active' : '' %>" href="<%= homeHref({ provider: '' }) %>"><%= t.all %></a>
-      <% facets.providers.forEach(function (p) { %>
-        <a class="prov-chip <%= f.provider === p.name ? 'active' : '' %>" href="<%= homeHref({ provider: f.provider === p.name ? '' : p.name }) %>" aria-label="<%= p.name %> (<%= p.count %>)"><%= p.name %></a>
-      <% }); %>
-    </nav>
+    <!-- (৪) A-Z ইনডেক্স (শুধু ইংরেজি নামের প্রথম অক্ষর; যে অক্ষরে গেম আছে সেগুলোই) -->
+    <% if (c.letters.length) { %>
+    <div class="cs-block">
+      <ul class="cs-az" aria-label="<%= t.hc_az %>">
+        <% c.letters.forEach(function (l) { %>
+        <li><a class="<%= f.letter === l ? 'active' : '' %>" href="<%= url({ letter: f.letter === l ? '' : l, page: '' }) %>#allGames" <%- f.letter === l ? 'aria-current="true"' : '' %> aria-label="<%= t.hc_letter_label.replace('{l}', l) %>"><%= l %></a></li>
+        <% }); %>
+      </ul>
+    </div>
     <% } %>
 
-    <div class="home-label"><%= t.home_az_index %></div>
-    <nav class="az-index" id="azIndex" aria-label="<%= t.home_az_index %>">
-      <% letters.forEach(function (L) { %>
-        <% if (facets.letters.indexOf(L) === -1) { %><span class="az-link is-empty" aria-disabled="true"><%= L %></span>
-        <% } else { %><a class="az-link <%= f.letter === L ? 'active' : '' %>" href="<%= homeHref({ letter: f.letter === L ? '' : L }) %>" aria-label="<%= L %>"<%- f.letter === L ? ' aria-current="true"' : '' %>><%= L %></a><% } %>
-      <% }); %>
-    </nav>
-    <% if (casino.filtered) { %><div class="home-label"><a class="hc-more" href="/#casino"><%= t.home_clear_filters %></a></div><% } %>
-
-    <% if (showRails) { %>
-      <% [['popular', t.home_popular, casino.rails.popular], ['new', t.home_new, casino.rails.new]].forEach(function (r) { if (r[2].length) { %>
-      <section class="hc-section" aria-label="<%= r[1] %>">
-        <div class="hc-head"><h2><%= r[1] %></h2><a href="#allGames"><%= t.home_see_all %></a></div>
-        <div class="hc-rail"><% r[2].forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %></div>
-      </section>
-      <% } }); %>
-      <% facets.categories.forEach(function (c) { const list = casino.rails.byCategory[c.name] || []; if (!list.length) return; %>
-      <section class="hc-section" aria-label="<%= catLabel(c.name) %>">
-        <div class="hc-head"><h2><%= catLabel(c.name) %></h2><a href="<%= homeHref({ cat: c.name }) %>"><%= t.home_see_all %></a></div>
-        <div class="hc-rail"><% list.forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %></div>
-      </section>
+    <!-- (৫) জনপ্রিয়, নতুন, প্রতি ক্যাটাগরির সারি (ফিল্টার সক্রিয় থাকলে লুকানো — নিচের গ্রিডে ফল) -->
+    <% if (!c.filtered) { %>
+      <% if (c.popular.length) { %>
+      <div class="cs-sec-title"><span><%= t.hc_popular %></span><a href="/#allGames" aria-label="<%= t.hc_popular %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% c.popular.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
+      <% } %>
+      <% if (c.fresh.length) { %>
+      <div class="cs-sec-title"><span><%= t.hc_new %></span><a href="/#allGames" aria-label="<%= t.hc_new %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% c.fresh.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
+      <% } %>
+      <% c.rowsByCat.forEach(function (row) { %>
+      <div class="cs-sec-title"><span><%= catLabel(row) %></span><a href="<%= url({ category: row.name, q: '', provider: '', letter: '', page: '' }) %>#allGames" aria-label="<%= catLabel(row) %>: <%= t.hc_see_all %>"><%= t.hc_see_all %></a></div>
+      <div class="cs-h-scroll"><% row.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %></div>
       <% }); %>
     <% } %>
+  </div>
 
-    <section class="hc-section" id="allGames" aria-label="<%= t.home_all_games %>">
-      <div class="hc-head"><h2><%= t.home_all_games %></h2></div>
-      <div class="hc-grid" id="gameContainer">
-        <% casino.page.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g, t: t }) %><% }); %>
-      </div>
-      <% if (!casino.page.games.length) { %><div class="hc-empty"><%= t.no_games_found %></div><% } %>
-      <% if (casino.page.hasMore) { %><a class="hc-more" rel="next" href="<%= homeHref({}).replace('#casino', '') + (homeHref({}).indexOf('?') === -1 ? '?' : '&') %>page=<%= f.page + 1 %>#allGames"><%= t.load_more %></a><% } %>
-    </section>
-  </main>
-
-  <aside class="home-matches" aria-label="<%= t.home_live_matches %>">
-    <section class="home-hub" id="homeHub" data-max="8"
+  <!-- লাইভ ম্যাচ: ডেস্কটপে ডান সংকীর্ণ সাইডবার (সর্বোচ্চ ৮), মোবাইলে ক্যাসিনো সেকশনের নিচে ছোট সারি (সর্বোচ্চ ৫)।
+       ক্লিক-পথ (/matches/:id) ও বাজি আচরণ অপরিবর্তিত; ডেটা আগের মতোই /matches/api/live। -->
+  <aside class="cs-matches" aria-label="<%= t.hc_live_matches %>">
+<section class="home-hub" id="homeHub"
+         data-max-desktop="<%= c.matchCaps.sidebar %>" data-max-mobile="<%= c.matchCaps.mobile %>"
          data-empty="<%= t.hub_no_matches || 'No matches in this view' %>"
          data-more="<%= t.hub_view_all || 'View all matches' %>"
          data-competitions="<%= t.hub_competitions || 'Competitions' %>">
-      <div class="hh-head"><h3><%= t.home_live_matches %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
-      <div class="hh-tabs" id="hhTabs">
-        <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
-        <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
-        <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
-        <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
-      </div>
-      <div class="hh-list" id="hhList"></div>
-    </section>
+  <div class="hh-head"><h3><%= t.hc_live_matches %></h3><a href="/matches"><%= t.hub_view_all || 'View all matches' %></a></div>
+  <div class="hh-tabs" id="hhTabs">
+    <button type="button" class="hh-tab" data-filter="live"><%= t.hub_inplay || 'In-Play' %></button>
+    <button type="button" class="hh-tab" data-filter="today"><%= t.hub_today || 'Today' %></button>
+    <button type="button" class="hh-tab" data-filter="tomorrow"><%= t.hub_tomorrow || 'Tomorrow' %></button>
+    <select class="hh-select" id="hhLeague" aria-label="<%= t.hub_competitions || 'Competitions' %>"><option value=""><%= t.hub_competitions || 'Competitions' %></option></select>
+  </div>
+  <div class="hh-list" id="hhList"></div>
+</section>
   </aside>
+
+  <!-- (৬) সব গেম — A-Z ক্রম, আইডেম্পোটেন্ট পেজিনেশন (একই URL = একই ফল) -->
+  <section class="cs-all" id="allGames" aria-label="<%= t.hc_all_games %>">
+    <div class="cs-sec-title">
+      <span><%= c.filtered ? t.hc_results : t.hc_all_games %></span>
+      <% if (c.filtered) { %><a href="/#allGames"><%= t.hc_clear %></a><% } %>
+    </div>
+    <div class="cs-grid">
+      <% if (!c.grid.games.length) { %><div class="cs-empty"><%= t.no_games_found %></div><% } %>
+      <% c.grid.games.forEach(function (g) { %><%- include('partials/home-game-card', { g: g }) %><% }); %>
+    </div>
+    <% if (c.grid.page > 1 || c.grid.hasMore) { %>
+    <div class="cs-pager">
+      <% if (c.grid.page > 1) { %><a class="cs-btn ghost" rel="prev" href="<%= url({ page: c.grid.page > 2 ? c.grid.page - 1 : '' }) %>#allGames"><%= t.hc_prev %></a><% } %>
+      <% if (c.grid.hasMore) { %><a class="cs-btn" rel="next" href="<%= url({ page: c.grid.page + 1 }) %>#allGames"><%= t.hc_more %></a><% } %>
+    </div>
+    <% } %>
+  </section>
 </div>
+<style nonce="<%= cspNonce %>">
+  .home-hub { margin: 4px 12px 14px; padding: 12px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-glass); }
+  .hh-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; }
+  .hh-head h3 { margin: 0; font-size: 15px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+  .hh-head a { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .hh-tabs { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 10px; padding-bottom: 2px; }
+  .hh-tabs::-webkit-scrollbar { display: none; }
+  /* style.css-এর গ্লোবাল `button { background:#f42a41 !important; color:#fff !important }` এই ট্যাবগুলোকে
+     লাল করে active অবস্থা মুছে দিত; তাই বেশি specificity + !important দিয়ে হাবের নিজস্ব রং ফেরানো হলো। */
+  .home-hub .hh-tab, .home-hub .hh-select { flex: 0 0 auto; box-sizing: border-box; min-height: 34px; padding: 7px 16px; border-radius: 20px; font-family: inherit; font-weight: 700; font-size: 12px; line-height: 1.2; white-space: nowrap; cursor: pointer; background: rgba(255,255,255,.04) !important; border: 1px solid rgba(255,255,255,.08) !important; color: var(--text-muted) !important; }
+  .home-hub .hh-tab:hover { background: rgba(255,255,255,.09) !important; color: var(--text-main, #fff) !important; }
+  .home-hub .hh-tab.active, .home-hub .hh-tab.active:hover { background: var(--grad-gold) !important; color: #000 !important; border-color: transparent !important; }
+  .home-hub .hh-select { max-width: 200px; text-overflow: ellipsis; }
+  @media (max-width: 480px) {
+    .home-hub { margin: 4px 8px 12px; padding: 10px; }
+    .home-hub .hh-tab, .home-hub .hh-select { padding: 7px 12px; }
+    .home-hub .hh-select { max-width: 150px; }
+  }
+  .hh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  .hh-row { display: block; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); text-decoration: none; color: inherit; }
+  .hh-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-muted); }
+  .hh-league { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .hh-live { background: #dc2626; color: #fff; font-weight: 800; padding: 1px 8px; border-radius: 8px; animation: livedot 1.4s infinite; }
+  .hh-team { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 13px; font-weight: 700; }
+  .hh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hh-score { color: var(--gold); }
+  .hh-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; flex-shrink: 0; }
+  .hh-logo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  .hh-empty, .hh-more { grid-column: 1 / -1; text-align: center; padding: 14px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+</style>
 <script src="/js/views/home-matches.js" defer></script>
+<!-- ===== 3D Hero Particles Background ===== -->
+<div id="hero-3d" style="position:absolute; top:0; left:0; right:0; height:400px; z-index:-1;"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/js/views/index-hero3d.js"></script>
+
+<!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
+<div class="shortcut-bar">
+  <a href="/payment/deposit" class="shortcut-item">
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-wallet"></i>
+    </div>
+    <div class="shortcut-label"><%= t.deposit %></div>
+  </a>
+  <a href="/payment/withdraw" class="shortcut-item">
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-hand-holding-dollar"></i>
+    </div>
+    <div class="shortcut-label"><%= t.withdrawal %></div>
+  </a>
+  <a href="/profile/rewards" class="shortcut-item">
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-trophy"></i>
+    </div>
+    <div class="shortcut-label"><%= t.reward %></div>
+  </a>
+  <a href="/profile/cashback" class="shortcut-item">
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-coins"></i>
+    </div>
+    <div class="shortcut-label"><%= t.rebate %></div>
+  </a>
+</div>
 
 <!-- ===== Mega Jackpot + Recent Big Wins ===== -->
 <style nonce="<%= cspNonce %>">
@@ -356,7 +766,7 @@
 <!-- ===== Footer ===== -->
 <%- include('partials/footer', { showHomeFeatures: true }) %>
 
-<%- include('partials/bottom-nav') %>
+<%- include('partials/bottom-nav', { variant: 'casino' }) %>
 <%- include('partials/floating-promo') %>
 
 </body></html>
