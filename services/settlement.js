@@ -1,4 +1,5 @@
 // services/settlement.js
+const { addTurnover } = require('./turnover');
 // ---------------------------------------------------------------------------
 // Single-bet and whole-market settlement for Back and Lay bets.
 // Every function takes an open transaction `client`; the caller does BEGIN/COMMIT.
@@ -60,6 +61,12 @@ async function settleBet(client, bet, won) {
       `INSERT INTO coin_transactions (user_id, amount, type, description, ref_bet_id) VALUES ($1,$2,$3,$4,$5)`,
       [bet.user_id, credit, type, description, bet.id]
     );
+  }
+
+  // Turnover V2: যোগ্য বেট জিতুক/হারুক settle হলে টার্নওভারে যোগ (demo নয়)।
+  // ref = bet:<id> → একই বেট দুবার গোনা হয় না; min odds সার্ভারে যাচাই।
+  if (!bet.is_demo) {
+    await addTurnover(client, bet.user_id, 'sports', refundAmount(bet), { ref: `bet:${bet.id}`, odds: bet.odd });
   }
 
   const label = kind === 'lay' ? 'Lay' : '';
