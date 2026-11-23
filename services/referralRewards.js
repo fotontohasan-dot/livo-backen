@@ -452,9 +452,11 @@ async function settleOneCycle(cycleId, percent) {
 
     if (status === 'lost_paid') {
       await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [commission, c.referrer_id]);
+      // কমিশনও বোনাস: একই transaction-এ টার্নওভার লক (সেটিং-এর গুণক, ডিফল্ট ৫x)
+      await createBonus(client, c.referrer_id, 'referral_commission', commission);
       await client.query(
-        `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
-         VALUES ($1, $2, 1, $3, 'loss_commission')`, [c.referrer_id, c.referred_user_id, commission]);
+        `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason, cycle_id)
+         VALUES ($1, $2, 1, $3, 'loss_commission', $4)`, [c.referrer_id, c.referred_user_id, commission, c.id]);
       await client.query(
         `INSERT INTO coin_transactions (user_id, amount, type, description)
          VALUES ($1, $2, 'referral_commission', $3)`,

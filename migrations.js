@@ -2203,24 +2203,7 @@ async function applyMigrations(pool) {
     console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
 
 
-    // ==================== রেফারেল ডিপোজিট-হার (০.৮%) লস-কমিশন: সাইকেল টেবিল (শুধু নতুন টেবিল/কলাম; কিছু মোছা হয় না)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS referral_deposit_cycles (
-        id BIGSERIAL PRIMARY KEY,
-        referred_user_id INTEGER NOT NULL REFERENCES users(id),
-        referrer_id INTEGER NOT NULL REFERENCES users(id),
-        deposited NUMERIC(14,2) NOT NULL DEFAULT 0,
-        deposit_ids INTEGER[] NOT NULL DEFAULT '{}',
-        status VARCHAR(20) NOT NULL DEFAULT 'open',
-        commission NUMERIC(12,2) NOT NULL DEFAULT 0,
-        opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        closed_at TIMESTAMP,
-        CONSTRAINT referral_deposit_cycles_status_chk CHECK (status IN
-          ('open','lost_paid','closed_withdrawn','closed_held','closed_zero'))
-      );
-    `);
-    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_referral_cycle_open ON referral_deposit_cycles(referred_user_id) WHERE status = 'open';`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_cycle_referrer ON referral_deposit_cycles(referrer_id, status);`);
+    // ==================== রেফারেল ডিপোজিট-হার (০.৮%) লস-কমিশন: শুধু নতুন nullable কলাম + UNIQUE (টেবিল ওপরের main-ব্লকেই তৈরি; কিছু মোছা হয় না)
     // একই সাইকেলের loss_commission দ্বিগুণ ঠেকানো: নতুন nullable cycle_id + আংশিক UNIQUE (বিদ্যমান সারি অক্ষত)
     await pool.query(`ALTER TABLE referral_commissions ADD COLUMN IF NOT EXISTS cycle_id BIGINT;`);
     const dupCycle = await pool.query(
