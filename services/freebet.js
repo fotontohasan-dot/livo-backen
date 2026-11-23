@@ -4,7 +4,22 @@
 
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
+const { getSetting } = require('./settings');
 const { t } = require('../utils/i18n');
+
+// প্রথম-ডিপোজিট ফ্রি বেট (reason = 'first_deposit')
+const FIRST_DEPOSIT_REASON = 'first_deposit';
+const FIRST_DEPOSIT_MIN_AMOUNT = 500;     // এর নিচে যোগ্য নয়
+const FIRST_DEPOSIT_TIER_LIMIT = 10000;   // ≤ এটা হলে ছোট অঙ্ক, > হলে বড় অঙ্ক
+const FIRST_DEPOSIT_SMALL = 30;
+const FIRST_DEPOSIT_LARGE = 50;
+
+// ডিপোজিট অঙ্ক থেকে প্রথম-ডিপোজিট ফ্রি বেটের পরিমাণ (০ = যোগ্য নয়)
+function firstDepositFreeBetAmount(depositAmount) {
+  const a = Number(depositAmount);
+  if (!Number.isFinite(a) || a < FIRST_DEPOSIT_MIN_AMOUNT) return 0;
+  return a <= FIRST_DEPOSIT_TIER_LIMIT ? FIRST_DEPOSIT_SMALL : FIRST_DEPOSIT_LARGE;
+}
 
 // ইউজারকে ফ্রি বেট দেওয়া
 async function grantFreeBet(userId, amount, reason) {
@@ -27,6 +42,59 @@ async function grantFreeBet(userId, amount, reason) {
     );
   } catch (e) {
     console.error('grantFreeBet error:', e.message);
+  }
+}
+
+// grantFreeBet-এর client-সংস্করণ: কলারের খোলা transaction-এর client দিয়ে চলে (নিজে BEGIN/COMMIT করে না),
+// এরর গিলে ফেলে না — কলার সিদ্ধান্ত নেবে। বিদ্যমান pool-সংস্করণ grantFreeBet অপরিবর্তিত।
+// নোটিফিকেশন পাঠায় না (ফ্রি বেট প্রোফাইলের ফ্রি বেট পাতায় দেখা যায়)।
+// নতুন সারি তৈরি হলে true, (user_id, reason) আগে থেকেই থাকলে false।
+async function grantFreeBetWithClient(client, userId, amount, reason) {
+  if (!amount || amount <= 0) return false;
+  const inserted = await client.query(
+    `INSERT INTO free_bets (user_id, amount, reason, status) VALUES ($1, $2, $3, 'active')
+     ON CONFLICT DO NOTHING RETURNING id`,
+    [userId, amount, reason || 'reward']
+  );
+  return inserted.rowCount > 0;
+}
+
+// প্রতি ইউজার একবার, প্রথম যোগ্য approved ডিপোজিটে ফ্রি বেট (≥৫০০; ≤১০০০০ → ৩০, >১০০০০ → ৫০)।
+//  - যে ডিপোজিটে want_bonus (First Deposit Bonus) নেওয়া হয়েছে সেখানে নয়।
+//  - "first_deposit সারি আছে কিনা" দেখে সিদ্ধান্ত (ডিপোজিট গুনে নয়); সমান্তরাল দুই অনুমোদনেও
+//    uniq_free_bet_user_reason ইনডেক্স + ON CONFLICT DO NOTHING একটাই রাখে।
+//  - ডিপোজিটের transaction-এর client দিয়ে চলে → ডিপোজিট রোলব্যাক হলে ফ্রি বেটও যায়।
+//  - SAVEPOINT: ফ্রি বেট অংশে এরর হলেও ডিপোজিট অনুমোদন (ব্যালেন্স/বোনাস) চলে, এরর লগ হয়।
+// ফেরত: দেওয়া পরিমাণ (০ = দেওয়া হয়নি)।
+async function grantFirstDepositFreeBet(client, request) {
+  if (!request || request.type !== 'deposit' || request.want_bonus) return 0;
+  const amount = firstDepositFreeBetAmount(request.amount);
+  if (amount <= 0) return 0;
+  try {
+    await client.query('SAVEPOINT first_deposit_freebet');
+  } catch (e) {
+    console.error('grantFirstDepositFreeBet savepoint error:', e.message);
+    return 0;
+  }
+  try {
+    const exists = await client.query(
+      'SELECT 1 FROM free_bets WHERE user_id = $1 AND reason = $2 LIMIT 1',
+      [request.user_id, FIRST_DEPOSIT_REASON]
+    );
+    if (exists.rowCount > 0) {
+      await client.query('RELEASE SAVEPOINT first_deposit_freebet');
+      return 0;
+    }
+    const granted = await grantFreeBetWithClient(client, request.user_id, amount, FIRST_DEPOSIT_REASON);
+    await client.query('RELEASE SAVEPOINT first_deposit_freebet');
+    return granted ? amount : 0;
+  } catch (e) {
+    try {
+      await client.query('ROLLBACK TO SAVEPOINT first_deposit_freebet');
+      await client.query('RELEASE SAVEPOINT first_deposit_freebet');
+    } catch (_) { /* ignore — কলারের transaction নিজেই ব্যর্থ হবে */ }
+    console.error('grantFirstDepositFreeBet error:', e.message);
+    return 0;
   }
 }
 
@@ -66,7 +134,13 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
 
     // টাকা যোগ + টার্নওভার বোনাস তৈরি
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [fb.amount, userId]);
-    await createBonus(client, userId, 'deposit', fb.amount);
+    // শুধু first_deposit সারিতে free_bet_turnover_multiplier (ডিফল্ট ৩x); বাকি ফ্রি বেট আগের নিয়মে ('deposit')
+    if (fb.reason === FIRST_DEPOSIT_REASON) {
+      const m = Number(await getSetting('free_bet_turnover_multiplier'));
+      await createBonus(client, userId, 'free_bet', fb.amount, { multiplier: Number.isFinite(m) && m > 0 ? m : 3 });
+    } else {
+      await createBonus(client, userId, 'deposit', fb.amount);
+    }
 
     await client.query(
       `UPDATE free_bets SET status = 'used', used_at = NOW() WHERE id = $1 AND status = 'active'`,
@@ -89,4 +163,7 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
   }
 }
 
-module.exports = { grantFreeBet, hasFreeBetReason, getAllFreeBets, claimFreeBet };
+module.exports = {
+  grantFreeBet, grantFreeBetWithClient, grantFirstDepositFreeBet, firstDepositFreeBetAmount,
+  hasFreeBetReason, getAllFreeBets, claimFreeBet, FIRST_DEPOSIT_REASON
+};
