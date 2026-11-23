@@ -3575,5 +3575,11 @@
   "pfm_responsible_gaming": "দায়িত্বশীল গেমিং",
   "pfm_kyc_verify": "কেওয়াইসি যাচাই",
   "pfm_choose_avatar": "প্রোফাইল ছবি বাছাই করুন",
-  "admin_turnover_needs_bonus_manage": "এই টার্নওভার সেটিং ({keys}) বদলানোর জন্য bonus_manage পারমিশন লাগে — এগুলো সেভ হয়নি।"
+  "admin_turnover_needs_bonus_manage": "এই টার্নওভার সেটিং ({keys}) বদলানোর জন্য bonus_manage পারমিশন লাগে — এগুলো সেভ হয়নি।",
+  "arf_review_not_found": "রেকর্ড পাওয়া যায়নি",
+  "arf_review_already": "এই রেকর্ড আগেই প্রক্রিয়া হয়ে গেছে",
+  "arf_review_approved": "বোনাস অনুমোদিত হয়েছে",
+  "arf_review_rejected": "বোনাস বাতিল করা হয়েছে",
+  "arf_review_reason_required": "বাতিলের কারণ দেওয়া বাধ্যতামূলক",
+  "arf_review_reason_ph": "বাতিলের কারণ (বাধ্যতামূলক)"
 }

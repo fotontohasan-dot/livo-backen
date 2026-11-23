@@ -94,7 +94,13 @@ const MAX_BONUS = 15000;
 // (creditApprovedDeposit) একই হিসাব ব্যবহার করে, যাতে দুটো কখনো আলাদা না হয়।
 async function approvedDepositCount(db, userId, excludeRequestId = null) {
   const r = await db.query(
-    `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND ($2::int IS NULL OR id <> $2)`,
+    // approved ছাড়াও: reversed ডিপোজিট, যেটায় ডিপোজিট বোনাস আগে দেওয়া হয়েছিল — "প্রথম" ১০০% বোনাস রিভার্সের পরেও দ্বিতীয়বার মেলে না।
+    // (বোনাস ছাড়া reversed ডিপোজিট গোনা হয় না — ইউজার তখনও বোনাস পায়নি।)
+    `SELECT COUNT(*) FROM payment_requests p WHERE p.user_id=$1 AND p.type='deposit' AND ($2::int IS NULL OR p.id <> $2)
+        AND (p.status='approved'
+          OR (p.status='reversed' AND EXISTS (
+                SELECT 1 FROM coin_transactions c
+                 WHERE c.user_id = p.user_id AND c.type = 'deposit_bonus' AND c.description = 'ডিপোজিট বোনাস (#' || p.id || ')')))`,
     [userId, excludeRequestId]
   );
   return parseInt(r.rows[0].count, 10) || 0;
@@ -831,7 +837,7 @@ async function creditApprovedDeposit(client, request) {
           `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit_bonus',$3)`,
           [request.user_id, bonusGiven, `ডিপোজিট বোনাস (#${request.id})`]
         );
-        await createBonus(client, request.user_id, 'deposit', bonusGiven);
+        await createBonus(client, request.user_id, 'deposit', bonusGiven, { depositId: request.id });
       }
     }
     // প্রথম যোগ্য ডিপোজিটে ফ্রি বেট (want_bonus নিলে নয়) — একই transaction, SAVEPOINT-এ আলাদা: এরর হলে ডিপোজিট চলে
