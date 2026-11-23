@@ -63,13 +63,15 @@ async function loadConfig(db) {
 // ==================== ১. Deposit-এর টার্নওভার তৈরি ====================
 // Deposit approve হলে (routes/payment.js creditApprovedDeposit) প্রতিবার ডাকা হয়।
 // bonusAmount > 0 হলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
-async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit' }) {
+async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit', multiplierOverride = null }) {
   const deposit = Math.max(0, Math.round(Number(depositAmount) || 0));
   const bonus = Math.max(0, Math.round(Number(bonusAmount) || 0));
   if (deposit + bonus <= 0) return null;
 
   const cfg = await loadConfig(client);
-  const multiplier = bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier;
+  const ov = Number(multiplierOverride);
+  // multiplierOverride: নির্দিষ্ট উৎসের (যেমন প্রথম-ডিপোজিট ফ্রি বেট) আলাদা গুণক; না দিলে আগের নিয়ম
+  const multiplier = Number.isFinite(ov) && ov > 0 ? ov : (bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier);
   const required = (deposit + bonus) * multiplier;
   const expiresAt = cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
 
@@ -89,7 +91,7 @@ async function createDepositTurnover(client, { userId, depositId = null, deposit
 // Deposit = 0, তাই required = Bonus × multiplier — একই নিয়ম, একই সিস্টেম।
 async function createBonus(client, userId, type, bonusAmount, options = {}) {
   if (options.status === 'pending_review') return null; // অ্যাডমিন ছাড় না দেওয়া পর্যন্ত গোনা হয় না
-  return createDepositTurnover(client, { userId, depositId: null, depositAmount: 0, bonusAmount, source: type });
+  return createDepositTurnover(client, { userId, depositId: null, depositAmount: 0, bonusAmount, source: type, multiplierOverride: options.multiplier });
 }
 
 // ==================== ২. মেয়াদ শেষ হওয়া এন্ট্রি ====================
