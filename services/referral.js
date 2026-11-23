@@ -2,7 +2,7 @@
 // রেফারেল: রেকর্ড তৈরি, মাল্টি-লেভেল কমিশন, ইউজারের পরিসংখ্যান।
 //
 // রেফারেল বোনাস (রেফারারকে) এখন শুধু V2 ইঞ্জিনে — services/referralRewards.js:
-//   রেফার-করা ইউজারের প্রথম যোগ্য ডিপোজিটে (approved, ≥ ন্যূনতম) ধাপ-ভিত্তিক (slab) বোনাস, ঠিক একবার।
+//   রেফার-করা ইউজারের প্রথম যোগ্য ডিপোজিটে (approved, ≥ ন্যূনতম) ডিপোজিট-অঙ্ক-ভিত্তিক ধাপে বোনাস, ঠিক একবার।
 //   সাইন-আপে কোনো বোনাস নেই; রেফার-করা ইউজার কোনো রেফারেল বোনাস পায় না।
 //   পুরোনো signup-বোনাস / bonus_held হোল্ড-মডেল বন্ধ (কলাম DB-তে থাকে, ব্যবহার নেই)।
 //
@@ -163,38 +163,15 @@ async function getReferralStats(userId) {
   );
 
   const successCount = parseInt(successRes.rows[0].count);
-  const info = await getReferralProgramInfo();
   return {
     totalReferrals: parseInt(totalRes.rows[0].count),
     successfulReferrals: successCount,
     totalEarnings: Number(earnRes.rows[0].total),
-    nextBonus: tierFor(successCount + 1, await getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
-    bonusBands: await getBands(),
-    lossCommissionPercent: await getLossCommissionPercent(),
+    nextBonus: rewards.tierFor(successCount + 1, await rewards.getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
+    bonusBands: await rewards.getBands(),
+    lossCommissionPercent: await rewards.getLossCommissionPercent(),
     history: historyRes.rows,
     team: teamRes.rows
-  };
-}
-
-// ইউজার-পাতা/popup-এর জন্য চলতি কনফিগ: ধাপ-ছক (পরিসরসহ), ক্যাপ, ন্যূনতম, টার্নওভার, মোড।
-async function getReferralProgramInfo() {
-  const mode = rewards.getBonusMode();
-  const minDeposit = await rewards.getMinDeposit();
-  const cap = await rewards.getBonusCap();
-  const raw = await rewards.getSlabs();
-  const slabs = raw.map((sl, i) => ({
-    min: sl.min,
-    max: i < raw.length - 1 ? raw[i + 1].min - 1 : null,
-    amount: Math.min(sl.amount, cap)
-  }));
-  const num = (v, d) => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 0 ? n : d; };
-  return {
-    mode, minDeposit, cap, slabs,
-    tiers: await rewards.getTiers(),
-    turnover: {
-      sports: num(await getSetting('referral_turnover_sports'), rewards.DEFAULT_TURNOVER.sports),
-      casino: num(await getSetting('referral_turnover_casino'), rewards.DEFAULT_TURNOVER.casino)
-    }
   };
 }
 
@@ -202,7 +179,6 @@ module.exports = {
   createReferral,
   distributeCommission,
   getReferralStats,
-  getReferralProgramInfo,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES
 };

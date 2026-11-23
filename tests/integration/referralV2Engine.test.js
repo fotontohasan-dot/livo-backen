@@ -41,10 +41,6 @@ describe('কনফিগ ও টিয়ার', () => {
   test('ডিফল্ট কনফিগ: ন্যূনতম ১০০ ও টিয়ার settings-এ সিডেড', async () => {
     expect(await engine.getMinDeposit()).toBe(100);
     expect(await engine.getTiers()).toEqual(engine.DEFAULT_TIERS);
-    expect(await engine.getSlabs()).toEqual(engine.DEFAULT_SLABS);
-    expect(await engine.getBonusCap()).toBe(1000);
-    expect(engine.getBonusMode({})).toBe('slab');
-    expect(engine.getBonusMode({ REFERRAL_BONUS_MODE: 'tier' })).toBe('tier');
     expect(engine.parseTiers('not json')).toBeNull();
     expect(engine.parseTiers('[{"max":5,"amount":10}]')).toBeNull(); // শেষ টিয়ারে max থাকলে অবৈধ
   });
@@ -130,7 +126,6 @@ describe('পেআউট নিয়ম', () => {
     expect(got).toEqual([20, 50, 75, 20, 50, 50, 75]);
     expect(await coins(referrer)).toBe(20 + 50 + 75 + 20 + 50 + 50 + 75);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referrer_id=$1 AND status='paid'`, [referrer])).toBe(7);
-    } finally { delete process.env.REFERRAL_BONUS_MODE; }
   });
 
   test('একই রেফারারের ৫টি সমান্তরাল ডিপোজিটে বোনাস রেস নেই (৫×৭৫)', async () => {

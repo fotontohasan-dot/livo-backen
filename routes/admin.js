@@ -1241,21 +1241,6 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
         value = String(n);
       }
       // রেফারেল বোনাস কনফিগ — অবৈধ মান সেভ না করে আগের মান রাখা হয় (ভুল মানে ভুল পেআউট ঠেকাতে)
-      if (key === 'referral_min_deposit' || key === 'referral_bonus_cap') {
-        const n = Number(value);
-        if (!Number.isFinite(n) || n <= 0) continue;
-        value = String(n);
-      }
-      if (key === 'referral_turnover_sports' || key === 'referral_turnover_casino') {
-        const n = Number(value);
-        if (value.trim() === '' || !Number.isFinite(n) || n < 0 || n > 1000) continue;
-        value = String(n);
-      }
-      if (key === 'referral_slabs') {
-        const parsed = require('../services/referralRewards').parseSlabs(value);
-        if (!parsed) continue;
-        value = JSON.stringify(parsed);
-      }
 
       if (isBonusAuditKey(key) && !sameSettingValue(prevBonus[key], value)) {
         bonusChanges.push({ key, oldV: prevBonus[key], newV: value, secret: SECRET_SETTING_KEY_RE.test(key) });
@@ -2352,9 +2337,10 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     const total = parseInt(countRes.rows[0].count);
 
     const summaryRes = await pool.query(`
-      SELECT (SELECT COUNT(*) FROM referrals) AS total_referrals,
+      SELECT COUNT(*) AS total_referrals,
              (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
              (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count
+      FROM referrals
     `);
     const commissionSummaryRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM referral_commissions`);
 

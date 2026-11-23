@@ -36,19 +36,6 @@ const DEFAULT_TIERS = [
   { max: null, amount: 1500 }
 ];
 
-// slab: [{ min, amount }] — একটি ধাপ min থেকে পরের ধাপের min-এর আগ পর্যন্ত (শেষটি অসীম)।
-// ৫০০–৯৯৯ = ৭৫; ১,০০০–১,৯৯৯ = ১০০; ২,০০০–৪,৯৯৯ = ২০০; ৫,০০০–৯,৯৯৯ = ৩০০; ১০,০০০–২৯,৯৯৯ = ৫০০; ৩০,০০০+ = ১,০০০
-const DEFAULT_SLABS = [
-  { min: 500, amount: 75 },
-  { min: 1000, amount: 100 },
-  { min: 2000, amount: 200 },
-  { min: 5000, amount: 300 },
-  { min: 10000, amount: 500 },
-  { min: 30000, amount: 1000 }
-];
-const DEFAULT_BONUS_CAP = 1000;
-const DEFAULT_TURNOVER = { sports: 5, casino: 5 };
-
 function advisoryKey(referrerId) {
   return `referral_rewards:${referrerId}`;
 }
@@ -76,51 +63,6 @@ function parseTiers(raw) {
   } catch (_) {
     return null;
   }
-}
-
-// ---------------------------------------------------------------- slab কনফিগ
-function getBonusMode(env = process.env) {
-  return String(env.REFERRAL_BONUS_MODE || '').toLowerCase() === 'tier' ? 'tier' : 'slab';
-}
-
-// বৈধ হলে [{min, amount}] (min কঠোরভাবে ক্রমবর্ধমান, amount ≥ ০), নইলে null।
-function parseSlabs(raw) {
-  try {
-    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    let prev = -1;
-    const out = [];
-    for (const t of arr) {
-      const min = Number(t && t.min);
-      const amount = Number(t && t.amount);
-      if (!Number.isFinite(min) || min <= 0 || min <= prev) return null;
-      if (!Number.isFinite(amount) || amount < 0) return null;
-      prev = min;
-      out.push({ min, amount });
-    }
-    return out;
-  } catch (_) {
-    return null;
-  }
-}
-
-async function getSlabs() {
-  return parseSlabs(await getSetting('referral_slabs')) || DEFAULT_SLABS;
-}
-
-async function getBonusCap() {
-  const n = Number(await getSetting('referral_bonus_cap'));
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_BONUS_CAP;
-}
-
-// ডিপোজিটের পরিমাণ → { slab (১-ভিত্তিক), amount (ক্যাপসহ) }; প্রথম ধাপের নিচে হলে null।
-function slabFor(depositAmount, slabs = DEFAULT_SLABS, cap = DEFAULT_BONUS_CAP) {
-  const a = Number(depositAmount);
-  if (!Number.isFinite(a)) return null;
-  let idx = -1;
-  for (let i = 0; i < slabs.length; i++) { if (a >= slabs[i].min) idx = i; else break; }
-  if (idx < 0) return null;
-  return { slab: idx + 1, amount: Math.min(slabs[idx].amount, cap) };
 }
 
 async function getTiers() {
@@ -352,7 +294,7 @@ async function runInTx(client, referredUserId, depositId, cfg) {
   });
   if (!row) return { outcome: 'already_processed' }; // ON CONFLICT DO NOTHING — অন্য কেউ আগেই claim করেছে
 
-  // একই ট্রানজ্যাকশনে: কয়েন, ওয়েজারিং লক (কনফিগযোগ্য, ডিফল্ট ৫x স্পোর্টস / ৫x ক্যাসিনো — bonuses-এ আলাদা সারি), লেজার, রেকর্ড, নোটিফিকেশন
+  // একই ট্রানজ্যাকশনে: কয়েন, ওয়েজারিং লক (৩x স্পোর্টস / ০x ক্যাসিনো), লেজার, রেকর্ড, নোটিফিকেশন
   await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, referrerId]);
   await createBonus(client, referrerId, 'referral', amount);
   await client.query(

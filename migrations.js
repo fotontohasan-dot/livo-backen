@@ -2141,16 +2141,36 @@ async function applyMigrations(pool) {
       ('referral_tiers', '[{"max":1,"amount":100},{"max":5,"amount":200},{"max":15,"amount":400},{"max":50,"amount":800},{"max":null,"amount":1500}]')
       ON CONFLICT (key) DO NOTHING;
     `);
-    // ধাপ-ভিত্তিক (slab) বোনাস কনফিগ — services/referralRewards.js; অ্যাডমিন /admin/settings থেকে সম্পাদনাযোগ্য।
-    // বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING। referral_min_deposit ওপরেই ('500') বসানো।
+
+
+    // ==================== রেফারেল নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস + ০.৮% ডিপোজিট-হার কমিশন ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_deposit_cycles (
+        id BIGSERIAL PRIMARY KEY,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id),
+        referrer_id INTEGER NOT NULL REFERENCES users(id),
+        deposited NUMERIC(14,2) NOT NULL DEFAULT 0,
+        deposit_ids INTEGER[] NOT NULL DEFAULT '{}',
+        status VARCHAR(20) NOT NULL DEFAULT 'open',
+        commission NUMERIC(12,2) NOT NULL DEFAULT 0,
+        opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        closed_at TIMESTAMP,
+        CONSTRAINT referral_deposit_cycles_status_chk CHECK (status IN
+          ('open','lost_paid','closed_withdrawn','closed_held','closed_zero'))
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_referral_cycle_open ON referral_deposit_cycles(referred_user_id) WHERE status = 'open';`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_cycle_referrer ON referral_deposit_cycles(referrer_id, status);`);
     await pool.query(`
       INSERT INTO site_settings (key, value) VALUES
-      ('referral_slabs', '[{"min":500,"amount":75},{"min":1000,"amount":100},{"min":2000,"amount":200},{"min":5000,"amount":300},{"min":10000,"amount":500},{"min":30000,"amount":1000}]'),
-      ('referral_bonus_cap', '1000'),
-      ('referral_turnover_sports', '5'),
-      ('referral_turnover_casino', '5')
+      ('referral_bonus_bands', '[{"min":100,"amount":20},{"min":200,"amount":50},{"min":500,"amount":75}]'),
+      ('referral_loss_commission_percent', '0.8'),
+      ('referral_bet_commission_enabled', 'false')
       ON CONFLICT (key) DO NOTHING;
     `);
+    // পুরোনো ডিফল্ট ন্যূনতম (৫০০) থাকলে নতুন নিয়মের ১০০-তে নামানো; অ্যাডমিনের নিজের সেট করা মান অপরিবর্তিত।
+    await pool.query(`UPDATE site_settings SET value = '100' WHERE key = 'referral_min_deposit' AND value = '500'`);
+    console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
 
 
     // ==================== রেফারেল নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস + ০.৮% ডিপোজিট-হার কমিশন ====================
