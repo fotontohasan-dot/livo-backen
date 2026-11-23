@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
 const { createBonus, canWithdraw } = require('../services/turnover');
+const { grantFirstDepositFreeBet } = require('../services/freebet');
 const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
@@ -809,6 +810,9 @@ async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
 
   if (request.type === 'deposit') {
+    // একই ইউজারের একাধিক ডিপোজিট একসাথে অনুমোদনে সিরিয়াল ক্রম নিশ্চিত করতে ইউজার-সারিতে স্পষ্ট লক —
+    // বোনাস-হার (approvedDepositCount) ও ফ্রি বেট পড়ার আগে। হিসাবের মান অপরিবর্তিত।
+    await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [request.user_id]);
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit',$3)`,
@@ -830,6 +834,8 @@ async function creditApprovedDeposit(client, request) {
         await createBonus(client, request.user_id, 'deposit', bonusGiven);
       }
     }
+    // প্রথম যোগ্য ডিপোজিটে ফ্রি বেট (want_bonus নিলে নয়) — একই transaction, SAVEPOINT-এ আলাদা: এরর হলে ডিপোজিট চলে
+    await grantFirstDepositFreeBet(client, request);
     // রেফারেল বোনাস এখানে নয় — ডিপোজিট COMMIT-এর পরে আলাদা ট্রানজ্যাকশনে (services/referralRewards.js)।
   }
 

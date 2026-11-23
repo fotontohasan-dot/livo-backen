@@ -850,6 +850,12 @@ async function applyMigrations(pool) {
       ON CONFLICT (key) DO NOTHING;
     `);
 
+    // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইমের টার্নওভার গুণক (শুধু reason='first_deposit' সারির জন্য); বিদ্যমান মান অক্ষত
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES ('free_bet_turnover_multiplier', '3')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
     // maintenance_mode আগে প্রতিটা স্টার্টআপে জোর করে 'false' করা হতো
     // (`DO UPDATE SET value = 'false'`)। ফলে অ্যাডমিন মেইনটেন্যান্স চালু করার
     // পর সার্ভার রিস্টার্ট হলেই — ডিপ্লয়, ক্র্যাশ রিকভারি বা Render-এর

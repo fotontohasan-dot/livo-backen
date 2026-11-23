@@ -16,7 +16,9 @@ const RULES = {
   // রেফারেল বোনাস: স্পোর্টস ৫x ও ক্যাসিনো ৫x (ডিফল্ট) — site_settings referral_turnover_sports / referral_turnover_casino থেকে কনফিগযোগ্য।
   referral: { sports: 5, casino: 5 },
   // ডিপোজিট-হার (০.৮%) লস-কমিশন: এটাও টার্নওভার-লকড, ডিফল্ট ৫x (referral_turnover_sports/casino সেটিং)
-  referral_commission: { sports: 5, casino: 5 }
+  referral_commission: { sports: 5, casino: 5 },
+  // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইম: সেটিং free_bet_turnover_multiplier (ডিফল্ট ৩x) — স্পোর্টস ও ক্যাসিনো দুটোতেই
+  free_bet: { sports: 3, casino: 3 }
 };
 
 // ==================== ১. বোনাস তৈরি ====================
@@ -29,6 +31,10 @@ async function createBonus(client, userId, type, bonusAmount, options = {}) {
 
   if (type === 'deposit') {
     rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
+  }
+  if (type === 'free_bet') {
+    const m = Number(await getSetting('free_bet_turnover_multiplier'));
+    if (Number.isFinite(m) && m > 0) { rule.sports = m; rule.casino = m; }
   }
   if (type === 'referral' || type === 'referral_commission') {
     // 0 বৈধ (ওই খাতে শর্ত নেই); অবৈধ/ফাঁকা হলে ডিফল্ট
