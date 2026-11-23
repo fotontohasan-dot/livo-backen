@@ -14,7 +14,9 @@ const RULES = {
   // তাই canWithdraw() কিছুই আটকাত না — ভুয়া অ্যাকাউন্ট বানিয়ে ন্যূনতম ডিপোজিট
   // করেই বোনাস তুলে নেওয়া যেত। এখন এটাও টার্নওভার-লকড।
   // রেফারেল বোনাস: স্পোর্টস ৫x ও ক্যাসিনো ৫x (ডিফল্ট) — site_settings referral_turnover_sports / referral_turnover_casino থেকে কনফিগযোগ্য।
-  referral: { sports: 5, casino: 5 }
+  referral: { sports: 5, casino: 5 },
+  // ডিপোজিট-হার (০.৮%) লস-কমিশন: এটাও টার্নওভার-লকড, ডিফল্ট ৫x (referral_turnover_sports/casino সেটিং)
+  referral_commission: { sports: 5, casino: 5 }
 };
 
 // ==================== ১. বোনাস তৈরি ====================
@@ -28,7 +30,7 @@ async function createBonus(client, userId, type, bonusAmount, options = {}) {
   if (type === 'deposit') {
     rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
   }
-  if (type === 'referral') {
+  if (type === 'referral' || type === 'referral_commission') {
     // 0 বৈধ (ওই খাতে শর্ত নেই); অবৈধ/ফাঁকা হলে ডিফল্ট
     const pick = (raw, dflt) => { const n = Number(raw); return raw !== null && raw !== undefined && raw !== '' && Number.isFinite(n) && n >= 0 ? n : dflt; };
     rule.sports = pick(await getSetting('referral_turnover_sports'), rule.sports);

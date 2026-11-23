@@ -21,7 +21,8 @@ const DEFAULTS = {
   // বাজির ওপর ৩-ধাপ রেফারেল কমিশন সম্পূর্ণ বন্ধ (ডিফল্ট ০); অ্যাডমিন সেভ-করা মান থাকলে সেটাই চলে
   referral_commission_tier1_percent: '0',
   referral_commission_tier2_percent: '0',
-  referral_commission_tier3_percent: '0'
+  referral_commission_tier3_percent: '0',
+  referral_loss_commission_percent: '0.8'
 };
 
 async function fetchFromDb() {
