@@ -2202,6 +2202,22 @@ async function applyMigrations(pool) {
     await pool.query(`UPDATE site_settings SET value = '100' WHERE key = 'referral_min_deposit' AND value = '500'`);
     console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
 
+
+    // ==================== রেফারেল ডিপোজিট-হার (০.৮%) লস-কমিশন: শুধু নতুন nullable কলাম + UNIQUE (টেবিল ওপরের main-ব্লকেই তৈরি; কিছু মোছা হয় না)
+    // একই সাইকেলের loss_commission দ্বিগুণ ঠেকানো: নতুন nullable cycle_id + আংশিক UNIQUE (বিদ্যমান সারি অক্ষত)
+    await pool.query(`ALTER TABLE referral_commissions ADD COLUMN IF NOT EXISTS cycle_id BIGINT;`);
+    const dupCycle = await pool.query(
+      `SELECT cycle_id FROM referral_commissions WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL
+        GROUP BY cycle_id HAVING COUNT(*) > 1 LIMIT 1`);
+    if (dupCycle.rows.length) {
+      throw new Error('referral_commissions: একই cycle_id-তে loss_commission ডুপ্লিকেট আছে — UNIQUE বসানো বন্ধ; আগে ডুপ্লিকেট দেখুন');
+    }
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_refcom_loss_cycle ON referral_commissions(cycle_id) WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL;`);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES ('referral_loss_commission_percent', '0.8')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
     // legacy_paid ব্যাকফিল: পুরোনো সাইন-আপ-বোনাস পাওয়া (signup_bonus_paid=true) রেফারেল —
     // এর মধ্যে আগের pending_review বোনাসের রেফারেলও (ওগুলোতেও ওই ফ্ল্যাগ true হতো) —
     // শুধু রেকর্ড হয়। ব্যালেন্স/লেজার/bonuses কিছুই বদলায় না; নতুন পেআউট বা কাটছাঁট নেই।
