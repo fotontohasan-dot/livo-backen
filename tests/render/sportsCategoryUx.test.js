@@ -77,8 +77,10 @@ describe('হোমপেজ — ম্যাচ আর সরাসরি দ�
   });
 
   test('গেম গ্রিড ও ক্যাটাগরি ট্যাব আগের মতোই আছে (গেম দুর্গম হয়ে যায়নি)', () => {
-    expect(html).toContain('id="categoryTabs"');
-    expect(html).toContain('id="gameContainer"');
+    // ক্যাসিনো-প্রথম লেআউটে পুরনো #categoryTabs/#gameContainer (ক্লায়েন্ট-সাইড) নেই; সমতুল্য:
+    // সার্ভার-রেন্ডার করা ক্যাটাগরি সাইডবার (.cs-cats) ও "সব গেম" গ্রিড (#allGames)।
+    expect(html).toContain('class="cs-cats"');
+    expect(html).toContain('id="allGames"');
   });
 });
 

@@ -209,7 +209,7 @@ async function debit({ provider, providerTxId, roundId, userId, gameId, amount, 
     // response ব্লক না করে ব্যাকগ্রাউন্ডে: turnover, cashback, VIP,
     // referral commission, mission progress, loyalty points।
     queue.enqueue('provider_wallet_effects', {
-      kind: 'bet', userId, provider, gameId, amount: amt
+      kind: 'bet', userId, provider, gameId, amount: amt, providerTxId
     });
   }
   return result;
