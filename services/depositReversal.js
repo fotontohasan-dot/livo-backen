@@ -35,7 +35,8 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
     const balBefore = toC((await client.query('SELECT coins FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0]?.coins);
     const depC = toC(dep.amount);
 
-    // ---- ডিপোজিট বোনাস (কোডে bonuses-এ deposit-আইডি নেই; coin_transactions-এর "(#id)" বর্ণনা + সময়ের নৈকট্যে মেলানো) ----
+    // ---- ডিপোজিট বোনাস ও টার্নওভার-লক (Turnover V2: deposit_turnovers; পুরোনো `bonuses` আর্কাইভ, পড়া/লেখা হয় না) ----
+    // মেলানো: ১) deposit_id = এই ডিপোজিট (সরাসরি)। ২) পুরোনো সারি (deposit_id NULL): coin_transactions-এর \"(#id)\" বর্ণনা থেকে পরিমাণ + সময়ের নৈকট্য।
     let bonusC = 0;
     const cancelledBonusIds = [];
     const bonusTx = (await client.query(
@@ -43,30 +44,27 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
         WHERE user_id = $1 AND type = 'deposit_bonus' AND description = $2 ORDER BY id LIMIT 1`,
       [userId, `ডিপোজিট বোনাস (#${id})`]
     )).rows[0];
+    let t = (await client.query(
+      `SELECT id, status FROM deposit_turnovers WHERE user_id = $1 AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
+      [userId, id]
+    )).rows[0];
+    if (!t && bonusTx) {
+      t = (await client.query(
+        `SELECT id, status FROM deposit_turnovers
+          WHERE user_id = $1 AND source = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2
+          ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
+        [userId, Math.round(toC(bonusTx.amount) / 100), bonusTx.created_at]
+      )).rows[0];
+    }
     if (bonusTx) {
       const given = toC(bonusTx.amount);
-      // ১) নতুন সারি: deposit_id দিয়ে সরাসরি। ২) পুরোনো সারি (deposit_id NULL): পরিমাণ + সময়ের নৈকট্য।
-      let b = (await client.query(
-        `SELECT id, status FROM bonuses WHERE user_id = $1 AND bonus_type = 'deposit' AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
-        [userId, id]
-      )).rows[0];
-      if (!b) {
-        b = (await client.query(
-          `SELECT id, status FROM bonuses
-            WHERE user_id = $1 AND bonus_type = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2
-            ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
-          [userId, Math.round(given / 100), bonusTx.created_at]
-        )).rows[0];
-      }
-      if (b && b.status === 'forfeited') {
-        bonusC = 0; // আগেই বাতিল (ও তখনই কাটা) — দ্বিগুণ কাটা নয়
-      } else {
-        bonusC = given;
-        if (b && b.status === 'active') {
-          await client.query(`UPDATE bonuses SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [b.id]);
-          cancelledBonusIds.push(b.id);
-        }
-      }
+      // আগেই বাতিল (ও তখনই কাটা) হলে দ্বিগুণ কাটা নয়; নইলে আগের মতোই পুরো বোনাস
+      bonusC = t && t.status === 'forfeited' ? 0 : given;
+    }
+    // টার্নওভার-লক ছাড়া: রিভার্স হওয়া ডিপোজিটের চালু/অপেক্ষমাণ সারি forfeited (বোনাস থাকলে বাতিল-তালিকায়)।
+    if (t && (t.status === 'active' || t.status === 'pending_review')) {
+      await client.query(`UPDATE deposit_turnovers SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [t.id]);
+      if (bonusTx) cancelledBonusIds.push(t.id);
     }
 
     // ---- first_deposit ফ্রি বেট (শুধু ইউজারের প্রথম approved ডিপোজিট হলে) ----
@@ -93,12 +91,12 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
         await client.query(`UPDATE free_bets SET status = 'reversed' WHERE id = $1`, [fb.id]);
         cancelledFreeBetIds.push(fb.id);
         const fbb = (await client.query(
-          `SELECT id FROM bonuses WHERE user_id = $1 AND bonus_type = 'free_bet' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
+          `SELECT id FROM deposit_turnovers WHERE user_id = $1 AND source = 'free_bet' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
             ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
           [userId, Math.round(freeC / 100), fb.used_at]
         )).rows[0];
         if (fbb) {
-          await client.query(`UPDATE bonuses SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [fbb.id]);
+          await client.query(`UPDATE deposit_turnovers SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [fbb.id]);
           cancelledBonusIds.push(fbb.id);
         }
       }
