@@ -45,12 +45,12 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
       [userId, `ডিপোজিট বোনাস (#${id})`]
     )).rows[0];
     let t = (await client.query(
-      `SELECT id, status FROM deposit_turnovers WHERE user_id = $1 AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
+      `SELECT id, status, bonus_amount, expired_deducted FROM deposit_turnovers WHERE user_id = $1 AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
       [userId, id]
     )).rows[0];
     if (!t && bonusTx) {
       t = (await client.query(
-        `SELECT id, status FROM deposit_turnovers
+        `SELECT id, status, bonus_amount, expired_deducted FROM deposit_turnovers
           WHERE user_id = $1 AND source = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2
           ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
         [userId, Math.round(toC(bonusTx.amount) / 100), bonusTx.created_at]
@@ -58,8 +58,14 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
     }
     if (bonusTx) {
       const given = toC(bonusTx.amount);
-      // আগেই বাতিল (forfeited) বা মেয়াদ-শেষে (expired, expireDue-তে) কাটা হলে দ্বিগুণ কাটা নয়; নইলে আগের মতোই পুরো বোনাস
-      bonusC = t && (t.status === 'forfeited' || t.status === 'expired') ? 0 : given;
+      // forfeited: আগেই কাটা — দ্বিগুণ নয়। expired: expireDue-তে যতটুকু আসলে কাটা হয়েছে (expired_deducted) তা বাদ দিয়ে বাকিটা;
+      // expired_deducted NULL (পুরোনো সারি) হলে পুরো bonus_amount কাটা ধরা ⇒ বাকি ০ (আগের আচরণ)। নইলে আগের মতোই পুরো বোনাস।
+      if (t && t.status === 'forfeited') bonusC = 0;
+      else if (t && t.status === 'expired') {
+        const rowC = toC(t.bonus_amount);
+        const expC = t.expired_deducted == null ? rowC : toC(t.expired_deducted);
+        bonusC = Math.max(0, rowC - expC);
+      } else bonusC = given;
     }
     // টার্নওভার-লক ছাড়া: রিভার্স হওয়া ডিপোজিটের চালু/অপেক্ষমাণ সারি forfeited (বোনাস থাকলে বাতিল-তালিকায়)।
     if (t && (t.status === 'active' || t.status === 'pending_review')) {
