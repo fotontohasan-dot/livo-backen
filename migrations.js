@@ -2090,6 +2090,19 @@ async function applyMigrations(pool) {
     `);
     console.log("✅ Referral Contest Payout Tracking table ready");
 
+    // ==================== রেফারেল ক্লিক ফানেল (additive) ====================
+    // visitor_hash = HMAC-SHA256(সার্ভার সিক্রেট, IP+UA); কাঁচা IP নেই। click_day = Asia/Dhaka দিন।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id BIGSERIAL PRIMARY KEY,
+        referrer_user_id INTEGER NOT NULL REFERENCES users(id),
+        visitor_hash CHAR(64) NOT NULL,
+        click_day DATE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT referral_clicks_uniq UNIQUE (referrer_user_id, visitor_hash, click_day)
+      );
+    `);
+
     // ==================== Referral V2: referral_rewards ====================
     // docs/REFERRAL_V2_DESIGN.md। শুধু additive (IF NOT EXISTS) — পুরোনো referrals /
     // referral_commissions / bonuses অপরিবর্তিত। রোলব্যাক: ওই ডকের "Rollback" অংশ।

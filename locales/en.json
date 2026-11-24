@@ -3588,5 +3588,8 @@
   "ref_next_up": "If your friend deposits {need} Taka or more, you reach the next step and get {bonus} Taka.",
   "ref_next_max": "You are at the top step ({bonus} Taka).",
   "ref_share_via": "Share via",
-  "ref_share_text": "Register with my referral link!"
+  "ref_share_text": "Register with my referral link!",
+  "ref_funnel_clicks": "Link clicks",
+  "ref_funnel_signups": "Sign-ups",
+  "ref_funnel_deposits": "Deposited"
 }
