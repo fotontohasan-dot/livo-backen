@@ -4,7 +4,10 @@
 // নিয়ম:
 //  • রেফারার বোনাস পায় রেফার-করা ইউজারের প্রথম যোগ্য (approved, ≥ ন্যূনতম) ডিপোজিটে, সাইন-আপে নয়।
 //  • প্রতি রেফার-করা ইউজারে একবারই — referral_rewards.UNIQUE(referred_user_id) + রেফারার-স্তরের advisory lock।
-//  • বোনাস = রেফার-করা ইউজারের ডিপোজিটের অঙ্কের ধাপ (১০০→২০, ২০০–৪৯৯→৫০, ৫০০+→৭৫); সেটিং referral_bonus_bands।
+//  • বোনাস মোড (env REFERRAL_BONUS_MODE = slab | tier, ডিফল্ট slab):
+//      slab = Y-এর যোগ্য ডিপোজিটের পরিমাণ → ধাপ-ছক (site_settings.referral_slabs), ক্যাপ referral_bonus_cap (ডিফল্ট ১,০০০)।
+//      tier = পুরোনো ক্রমিক টিয়ার (১০০/২০০/৪০০/৮০০/১৫০০) — আগের পথ, মোছা হয়নি।
+//  • টিয়ার (tier মোড) = আগের 'paid' রেফারেল সংখ্যা + ১ (legacy_paid/pending_review/rejected/reversed গোনা নয়)।
 //  • ডিপোজিট-হার কমিশন ০.৮%: নিচে 'ডিপোজিট-হার কমিশন' অংশ (referral_deposit_cycles)।
 //  • ফোন/পেমেন্ট-অ্যাকাউন্ট/ডিভাইস মিল → pending_review (কোনো কয়েন বা লেজার নয়)। শুধু IP মিল → flag নয়,
 //    evidence-এ নোট। নিজেকে রেফার → rejected।
@@ -15,19 +18,7 @@ const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const { createBonus } = require('./turnover');
 
-const DEFAULT_MIN_DEPOSIT = 100;
-// প্রথম-ডিপোজিট বোনাস এখন রেফার-করা ইউজারের ডিপোজিটের অঙ্কের ওপর নির্ভর করে (সর্বোচ্চ যে ধাপের min ≤ অঙ্ক):
-//   ১০০–১৯৯ → ২০, ২০০–৪৯৯ → ৫০, ৫০০+ → ৭৫
-const DEFAULT_BANDS = [
-  { min: 100, amount: 20 },
-  { min: 200, amount: 50 },
-  { min: 500, amount: 75 }
-];
-// ডিপোজিট হারের কমিশন (শতাংশ): রেফার-করা ইউজারের ডিপোজিট করা টাকা সম্পূর্ণ হারলে ডিপোজিটের এই % রেফারার পায়
-const DEFAULT_LOSS_COMMISSION_PERCENT = 0.8;
-// ব্যালেন্স এর নিচে নামলে "সম্পূর্ণ হারা" ধরা হয়; আর শেষ কার্যকলাপের এতক্ষণ পর পর্যন্ত অপেক্ষা (মিনিট)
-const LOSS_BALANCE_THRESHOLD = 1;
-const LOSS_QUIET_MINUTES = 10;
+const DEFAULT_MIN_DEPOSIT = 500;
 const DEFAULT_TIERS = [
   { max: 1, amount: 100 },
   { max: 5, amount: 200 },
@@ -35,6 +26,24 @@ const DEFAULT_TIERS = [
   { max: 50, amount: 800 },
   { max: null, amount: 1500 }
 ];
+
+// slab: [{ min, amount }] — একটি ধাপ min থেকে পরের ধাপের min-এর আগ পর্যন্ত (শেষটি অসীম)।
+// ৫০০–৯৯৯ = ৭৫; ১,০০০–১,৯৯৯ = ১০০; ২,০০০–৪,৯৯৯ = ২০০; ৫,০০০–৯,৯৯৯ = ৩০০; ১০,০০০–২৯,৯৯৯ = ৫০০; ৩০,০০০+ = ১,০০০
+const DEFAULT_SLABS = [
+  { min: 500, amount: 75 },
+  { min: 1000, amount: 100 },
+  { min: 2000, amount: 200 },
+  { min: 5000, amount: 300 },
+  { min: 10000, amount: 500 },
+  { min: 30000, amount: 1000 }
+];
+const DEFAULT_BONUS_CAP = 1000;
+const DEFAULT_TURNOVER = { sports: 5, casino: 5 };
+// ডিপোজিট-হার কমিশন (শতাংশ): রেফার-করা ইউজারের ডিপোজিট করা টাকা সম্পূর্ণ হারলে ডিপোজিটের এই % রেফারার পায় (আজীবন)
+const DEFAULT_LOSS_COMMISSION_PERCENT = 0.8;
+// ব্যালেন্স এর নিচে নামলে "সম্পূর্ণ হারা" ধরা হয়; আর শেষ কার্যকলাপের এতক্ষণ পর পর্যন্ত অপেক্ষা (মিনিট)
+const LOSS_BALANCE_THRESHOLD = 1;
+const LOSS_QUIET_MINUTES = 10;
 
 function advisoryKey(referrerId) {
   return `referral_rewards:${referrerId}`;
@@ -65,6 +74,51 @@ function parseTiers(raw) {
   }
 }
 
+// ---------------------------------------------------------------- slab কনফিগ
+function getBonusMode(env = process.env) {
+  return String(env.REFERRAL_BONUS_MODE || '').toLowerCase() === 'tier' ? 'tier' : 'slab';
+}
+
+// বৈধ হলে [{min, amount}] (min কঠোরভাবে ক্রমবর্ধমান, amount ≥ ০), নইলে null।
+function parseSlabs(raw) {
+  try {
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    let prev = -1;
+    const out = [];
+    for (const t of arr) {
+      const min = Number(t && t.min);
+      const amount = Number(t && t.amount);
+      if (!Number.isFinite(min) || min <= 0 || min <= prev) return null;
+      if (!Number.isFinite(amount) || amount < 0) return null;
+      prev = min;
+      out.push({ min, amount });
+    }
+    return out;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getSlabs() {
+  return parseSlabs(await getSetting('referral_slabs')) || DEFAULT_SLABS;
+}
+
+async function getBonusCap() {
+  const n = Number(await getSetting('referral_bonus_cap'));
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_BONUS_CAP;
+}
+
+// ডিপোজিটের পরিমাণ → { slab (১-ভিত্তিক), amount (ক্যাপসহ) }; প্রথম ধাপের নিচে হলে null।
+function slabFor(depositAmount, slabs = DEFAULT_SLABS, cap = DEFAULT_BONUS_CAP) {
+  const a = Number(depositAmount);
+  if (!Number.isFinite(a)) return null;
+  let idx = -1;
+  for (let i = 0; i < slabs.length; i++) { if (a >= slabs[i].min) idx = i; else break; }
+  if (idx < 0) return null;
+  return { slab: idx + 1, amount: Math.min(slabs[idx].amount, cap) };
+}
+
 async function getTiers() {
   return parseTiers(await getSetting('referral_tiers')) || DEFAULT_TIERS;
 }
@@ -87,38 +141,6 @@ function tierFor(ordinal, tiers = DEFAULT_TIERS) {
   return { tier: tiers.length, amount: last.amount };
 }
 
-
-// ---------------------------------------------------------------- ডিপোজিট-অঙ্ক ভিত্তিক বোনাস ধাপ
-function parseBands(raw) {
-  try {
-    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    let prev = -1;
-    const out = [];
-    for (const b of arr) {
-      const min = Number(b && b.min), amt = Number(b && b.amount);
-      if (!Number.isFinite(min) || min <= 0 || !Number.isFinite(amt) || amt < 0 || min <= prev) return null;
-      prev = min;
-      out.push({ min, amount: amt });
-    }
-    return out;
-  } catch (_) { return null; }
-}
-
-async function getBands() {
-  return parseBands(await getSetting('referral_bonus_bands')) || DEFAULT_BANDS;
-}
-
-// ডিপোজিট অঙ্কের জন্য বোনাস; কোনো ধাপের নিচে হলে { tier: 0, amount: 0 }
-function bonusForDeposit(depositAmount, bands = DEFAULT_BANDS) {
-  const d = Number(depositAmount);
-  let hit = { tier: 0, amount: 0 };
-  if (!Number.isFinite(d)) return hit;
-  for (let i = 0; i < bands.length; i++) {
-    if (d >= bands[i].min) hit = { tier: i + 1, amount: bands[i].amount };
-  }
-  return hit;
-}
 
 async function getLossCommissionPercent() {
   const n = parseFloat(await getSetting('referral_loss_commission_percent'));
@@ -211,7 +233,9 @@ async function processReferralReward(referredUserId, depositId) {
   // কনফিগ আগে পড়া — client ধরে রেখে আরেকটা pool connection চাওয়া (settings ক্যাশ-মিস) pool আটকাতে পারে
   let cfg;
   try {
-    cfg = { minDeposit: await getMinDeposit(), tiers: await getTiers(), bands: await getBands() };
+    const mode = getBonusMode();
+    cfg = { mode, minDeposit: await getMinDeposit(), tiers: await getTiers() };
+    if (mode === 'slab') { cfg.slabs = await getSlabs(); cfg.cap = await getBonusCap(); }
   } catch (e) {
     console.error('referral reward config error (retry_pending):', e.message);
     await markRetryPending(referredUserId, depositId).catch(() => {});
@@ -284,9 +308,23 @@ async function runInTx(client, referredUserId, depositId, cfg) {
     return { outcome: 'pending_review', reasons };
   }
 
-  // বোনাস = রেফার-করা ইউজারের যোগ্য (প্রথম) ডিপোজিটের অঙ্ক অনুযায়ী ধাপ (রেফারারের আগের রেফার সংখ্যার ওপর নির্ভর করে না)
-  const { tier, amount } = bonusForDeposit(dep.amount, cfg.bands);
-  if (!(amount > 0)) return { outcome: 'below_min' };
+  let tier; let amount;
+  if (cfg.mode === 'slab') {
+    // ধাপ-ভিত্তিক: Y-এর যোগ্য ডিপোজিটের পরিমাণ → বোনাস (ক্যাপসহ)
+    const hit = slabFor(dep.amount, cfg.slabs, cfg.cap);
+    if (!hit) return { outcome: 'below_min' }; // কনফিগে প্রথম ধাপ ন্যূনতমের ওপরে হলে — পরে বড় ডিপোজিটে ট্রিগার
+    tier = hit.slab; amount = hit.amount;
+    evidence.mode = 'slab';
+    evidence.qualifying_amount = Number(dep.amount);
+  } else {
+    // পুরোনো টিয়ার: আগের paid সংখ্যা (legacy_paid ও অন্য স্ট্যাটাস গোনা নয়)
+    const cnt = await client.query(
+      `SELECT COUNT(*)::int AS n FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
+      [referrerId]
+    );
+    ({ tier, amount } = tierFor(cnt.rows[0].n + 1, cfg.tiers));
+    evidence.mode = 'tier';
+  }
 
   const row = await upsertFinal(client, existing, {
     referredUserId, referrerId, status: 'paid', tier, amount,
@@ -546,7 +584,7 @@ async function payoutApprovedHeld(client, reward, amount) {
 module.exports = {
   processReferralReward, payoutApprovedHeld, afterDepositCommit, retryPending, collectEvidence,
   tierFor, parseTiers, getTiers, getMinDeposit, phoneKey,
-  parseBands, getBands, bonusForDeposit, getLossCommissionPercent,
-  recordCycleDeposit, settleOneCycle, settleLossCycles,
-  DEFAULT_TIERS, DEFAULT_BANDS, DEFAULT_MIN_DEPOSIT, DEFAULT_LOSS_COMMISSION_PERCENT
+  getBonusMode, parseSlabs, getSlabs, getBonusCap, slabFor,
+  getLossCommissionPercent, recordCycleDeposit, settleOneCycle, settleLossCycles,
+  DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT, DEFAULT_SLABS, DEFAULT_BONUS_CAP, DEFAULT_TURNOVER, DEFAULT_LOSS_COMMISSION_PERCENT
 };

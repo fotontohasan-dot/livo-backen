@@ -2195,6 +2195,16 @@ async function applyMigrations(pool) {
       ('referral_tiers', '[{"max":1,"amount":100},{"max":5,"amount":200},{"max":15,"amount":400},{"max":50,"amount":800},{"max":null,"amount":1500}]')
       ON CONFLICT (key) DO NOTHING;
     `);
+    // ধাপ-ভিত্তিক (slab) বোনাস কনফিগ — services/referralRewards.js; অ্যাডমিন /admin/settings থেকে সম্পাদনাযোগ্য।
+    // বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING। referral_min_deposit ওপরেই ('500') বসানো।
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_slabs', '[{"min":500,"amount":75},{"min":1000,"amount":100},{"min":2000,"amount":200},{"min":5000,"amount":300},{"min":10000,"amount":500},{"min":30000,"amount":1000}]'),
+      ('referral_bonus_cap', '1000'),
+      ('referral_turnover_sports', '5'),
+      ('referral_turnover_casino', '5')
+      ON CONFLICT (key) DO NOTHING;
+    `);
 
 
     // ==================== রেফারেল নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস + ০.৮% ডিপোজিট-হার কমিশন ====================
@@ -2222,8 +2232,6 @@ async function applyMigrations(pool) {
       ('referral_bet_commission_enabled', 'false')
       ON CONFLICT (key) DO NOTHING;
     `);
-    // পুরোনো ডিফল্ট ন্যূনতম (৫০০) থাকলে নতুন নিয়মের ১০০-তে নামানো; অ্যাডমিনের নিজের সেট করা মান অপরিবর্তিত।
-    await pool.query(`UPDATE site_settings SET value = '100' WHERE key = 'referral_min_deposit' AND value = '500'`);
     console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
 
 
@@ -2252,8 +2260,6 @@ async function applyMigrations(pool) {
       ('referral_bet_commission_enabled', 'false')
       ON CONFLICT (key) DO NOTHING;
     `);
-    // পুরোনো ডিফল্ট ন্যূনতম (৫০০) থাকলে নতুন নিয়মের ১০০-তে নামানো; অ্যাডমিনের নিজের সেট করা মান অপরিবর্তিত।
-    await pool.query(`UPDATE site_settings SET value = '100' WHERE key = 'referral_min_deposit' AND value = '500'`);
     console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
 
 
