@@ -4,6 +4,7 @@
 
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
+const { getSetting } = require('./settings');
 const { t } = require('../utils/i18n');
 
 // প্রথম-ডিপোজিট ফ্রি বেট (reason = 'first_deposit')
@@ -134,7 +135,12 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
     // টাকা যোগ + টার্নওভার বোনাস তৈরি
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [fb.amount, userId]);
     // শুধু first_deposit সারিতে free_bet_turnover_multiplier (ডিফল্ট ৩x); বাকি ফ্রি বেট আগের নিয়মে ('deposit')
-    await createBonus(client, userId, fb.reason === FIRST_DEPOSIT_REASON ? 'free_bet' : 'deposit', fb.amount);
+    if (fb.reason === FIRST_DEPOSIT_REASON) {
+      const m = Number(await getSetting('free_bet_turnover_multiplier'));
+      await createBonus(client, userId, 'free_bet', fb.amount, { multiplier: Number.isFinite(m) && m > 0 ? m : 3 });
+    } else {
+      await createBonus(client, userId, 'deposit', fb.amount);
+    }
 
     await client.query(
       `UPDATE free_bets SET status = 'used', used_at = NOW() WHERE id = $1 AND status = 'active'`,

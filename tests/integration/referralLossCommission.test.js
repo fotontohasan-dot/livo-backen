@@ -12,7 +12,7 @@ const { makeUser, link, makeDeposit, coins, cleanup } = require('../helpers/refe
 
 jest.setTimeout(120000);
 
-const KEYS = ['referral_loss_commission_percent', 'referral_turnover_sports', 'referral_turnover_casino'];
+const KEYS = ['referral_loss_commission_percent', 'turnover_multiplier'];
 let saved = [];
 const created = [];
 async function setSetting(key, value) {
@@ -23,8 +23,7 @@ async function setSetting(key, value) {
 beforeAll(async () => {
   saved = (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [KEYS])).rows;
   await setSetting('referral_loss_commission_percent', '0.8');
-  await setSetting('referral_turnover_sports', '5');
-  await setSetting('referral_turnover_casino', '5');
+  await setSetting('turnover_multiplier', '5');
   await settings.invalidateSettingsCache();
 });
 afterAll(async () => {
@@ -49,12 +48,13 @@ async function goBroke(userId) {
   await pool.query(`UPDATE users SET coins = 0 WHERE id = $1`, [userId]);
   await pool.query(`UPDATE coin_transactions SET created_at = NOW() - INTERVAL '1 hour' WHERE user_id = $1`, [userId]);
 }
+// Turnover V2: লক বসে deposit_turnovers-এ (বোনাস-অনলি এন্ট্রি, source='referral_commission'), required = বোনাস × turnover_multiplier
 const locks = async (uid) => (await pool.query(
-  `SELECT * FROM bonuses WHERE user_id=$1 AND bonus_type='referral_commission'`, [uid])).rows;
+  `SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral_commission'`, [uid])).rows;
 const count = async (sql, p) => Number((await pool.query(sql, p)).rows[0].count);
 
 describe('লস-কমিশন ০.৮% + টার্নওভার-লক', () => {
-  test('হারলে ০.৮% যায়, ৫x/৫x টার্নওভার-লক বসে, কমিশন-সারি ও coin_transactions সহ; দ্বিগুণ settle-এ একবারই', async () => {
+  test('হারলে ০.৮% যায়, ৫x টার্নওভার-লক বসে, কমিশন-সারি ও coin_transactions সহ; দ্বিগুণ settle-এ একবারই', async () => {
     const { referrer, referred } = await pair();
     await depositAndApprove(referred, 500);
     const cyc = (await pool.query(`SELECT * FROM referral_deposit_cycles WHERE referred_user_id=$1`, [referred])).rows;
@@ -70,8 +70,8 @@ describe('লস-কমিশন ০.৮% + টার্নওভার-লক',
     const l = await locks(referrer);
     expect(l).toHaveLength(1);
     expect(Number(l[0].bonus_amount)).toBe(4);
-    expect(Number(l[0].sports_required)).toBe(20); // ৪ × ৫
-    expect(Number(l[0].casino_required)).toBe(20);
+    expect(Number(l[0].multiplier)).toBe(5);
+    expect(Number(l[0].required)).toBe(20); // ৪ × ৫
     expect(l[0].status).toBe('active');
     expect(await count(`SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1 AND reason='loss_commission' AND cycle_id=$2`, [referrer, cyc[0].id])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_commission'`, [referrer])).toBe(1);
@@ -91,7 +91,7 @@ describe('লস-কমিশন ০.৮% + টার্নওভার-লক',
     await goBroke(referred);
     await engine.settleLossCycles();
     expect(await coins(referrer)).toBe(before + 10); // ১২৫০ × ০.৮% = ১০
-    expect(Number((await locks(referrer))[0].sports_required)).toBe(50);
+    expect(Number((await locks(referrer))[0].required)).toBe(50);
   });
 
   test('জিতলে (ব্যালেন্স থাকলে) কমিশন ও লক নেই', async () => {

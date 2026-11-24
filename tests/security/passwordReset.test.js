@@ -119,8 +119,8 @@ describe('Password recovery — forgot-password form', () => {
       });
     expect(res.status).toBe(200);
 
-    const row = await pool.query('SELECT reset_token FROM users WHERE email = $1', [email]);
-    expect(row.rows[0].reset_token).toBeTruthy();
+    // টোকেন ইস্যু fire-and-forget (routes/auth.js) — ফাইলের বাকি টেস্টের মতো একই poll-সহায়ক ব্যবহার।
+    expect(await latestResetTokenFromEmail(email)).toBeTruthy();
   });
 
   test('অস্তিত্বহীন ইমেইলেও একই সফল রেসপন্স আসে (user enumeration protection)', async () => {
