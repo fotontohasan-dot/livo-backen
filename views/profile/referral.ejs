@@ -171,7 +171,7 @@
             <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(numLoc) %></div>
           </div>
           <div>
-            <% if (member.signup_bonus_paid) { %>
+            <% if (member.signup_bonus_paid && !member.bonus_held) { %>
               <span class="dz76-25"><%= t('ref_status_bonus_received') %></span>
             <% } else { %>
               <span class="dz76-27"><%= t('ref_status_pending') %></span>
@@ -192,7 +192,7 @@
         <div class="dz76-30">
           <div>
             <div class="dz76-31">
-              <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
+              <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : (h.reason === 'loss_commission' ? '💸 ডিপোজিট-হার কমিশন' : '💸 ' + t('ref_commission').replace('{level}', h.level)) %>
             </div>
             <div class="dz76-24">
               <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(numLoc) %>

@@ -150,6 +150,13 @@
       });
   }
 
+  function goBack(e) {
+    if (window.history.length > 1) {
+      e.preventDefault();
+      window.history.back();
+    }
+  }
+
   function init() {
     config = readConfig();
 
@@ -162,6 +169,10 @@
       'share-profile-url': shareProfileUrl,
       'refresh-balance': refreshBalance
     };
+
+    document.querySelectorAll('[data-pf-back]').forEach(function (el) {
+      el.addEventListener('click', goBack);
+    });
 
     document.querySelectorAll('[data-profile-action]').forEach(function (el) {
       var fn = actions[el.getAttribute('data-profile-action')];

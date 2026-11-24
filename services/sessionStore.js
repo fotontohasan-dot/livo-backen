@@ -5,7 +5,20 @@
 // (set(key, val, { expiration: { type:'EX', value } }), del([keys]), mGet, scanIterator)।
 // ioredis সেই অবজেক্ট-আর্গুমেন্ট সরাসরি Redis কমান্ডে পাঠায় → "ERR syntax error"।
 // অ্যাডাপ্টার শুধু কল অনুবাদ করে; স্টোর করা ফরম্যাট (JSON, key prefix, EX TTL) অপরিবর্তিত।
-const { RedisStore } = require('connect-redis');
+// connect-redis ১১ শুধু ESM ও exports-এ কেবল "import" কন্ডিশন আছে, তাই `require('connect-redis')`
+// ERR_PACKAGE_PATH_NOT_EXPORTED দেয়। Node >=22.12-এ require(esm) ফাইল-পাথে কাজ করে, তাই
+// আগে সাধারণ require (v10 ও CJS-সামঞ্জস্য), না হলে প্যাকেজের dist ফাইল সরাসরি লোড করা হয়।
+function loadRedisStore() {
+  try {
+    return require('connect-redis').RedisStore;
+  } catch (err) {
+    if (err && err.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw err;
+    const path = require('path');
+    const pkgDir = path.join(__dirname, '..', 'node_modules', 'connect-redis');
+    return require(path.join(pkgDir, 'dist', 'connect-redis.js')).RedisStore;
+  }
+}
+const RedisStore = loadRedisStore();
 const Redis = require('ioredis');
 
 // rolling:true হলে express-session প্রতি রিকোয়েস্টে store.touch() ডাকে → connect-redis প্রতিবার EXPIRE পাঠায়।

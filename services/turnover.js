@@ -1,216 +1,317 @@
 // services/turnover.js
-// টার্নওভার (Wagering) সিস্টেমের সব লজিক এক জায়গায়।
-// অন্য ফাইল থেকে শুধু এই ফাংশনগুলো ডাকলেই হবে।
+// Turnover System V2 — একমাত্র সক্রিয় টার্নওভার সিস্টেম।
+//
+// নিয়ম:
+//   • বোনাস নিলে   : required = (Deposit + Bonus) × multiplier   (admin: turnover_multiplier)
+//   • বোনাস না নিলে : required = Deposit × 1                      (admin: turnover_no_bonus_multiplier)
+//   • প্রতিটি Deposit-এর টার্নওভার আলাদা সারিতে (deposit_turnovers), পুরোনোটা আগে পূরণ হয় (FIFO)।
+//   • যোগ্য Casino/Sports বেটের অঙ্ক জিতুক-হারুক গোনা হয় (Sports: সেটেলমেন্টের পর)।
+//   • Void/Cancelled/Refund এবং (ডিফল্টে) Cash-out গোনা হয় না; Sports-এ min odds প্রযোজ্য।
+//   • টার্নওভার ১০০% হলে ওই Deposit-এর লক নিজে থেকে খোলে (status = 'completed')।
+//   • পুরোনো `bonuses` টেবিল শুধু আর্কাইভ — এই ফাইল সেটা আর পড়ে/লেখে না।
+//   • একই বেট দুবার গোনা ঠেকাতে turnover_events(user_id, ref) UNIQUE।
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
 
-// ==================== বোনাসের গুণ (multiplier) নিয়ম ====================
-// deposit.sports এখন অ্যাডমিন প্যানেলের 'turnover_multiplier' সেটিং থেকে আসে (ডিফল্ট ৫x)
-const RULES = {
-  deposit:  { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x (ডিফল্ট), ক্যাসিনো ৩৫x
-  daily:    { sports: 3, casino: 0 },   // দৈনিক রিওয়ার্ড: স্পোর্টস ৩x, ক্যাসিনো প্রযোজ্য নয়
-  // রেফারেল বোনাস আগে সরাসরি ব্যালেন্সে যেত, `bonuses` টেবিলে কোনো সারি হতো না,
-  // তাই canWithdraw() কিছুই আটকাত না — ভুয়া অ্যাকাউন্ট বানিয়ে ন্যূনতম ডিপোজিট
-  // করেই বোনাস তুলে নেওয়া যেত। এখন এটাও টার্নওভার-লকড।
-  // রেফারেল বোনাস: স্পোর্টস ৫x ও ক্যাসিনো ৫x (ডিফল্ট) — site_settings referral_turnover_sports / referral_turnover_casino থেকে কনফিগযোগ্য।
-  referral: { sports: 5, casino: 5 },
-  // ডিপোজিট-হার (০.৮%) লস-কমিশন: এটাও টার্নওভার-লকড, ডিফল্ট ৫x (referral_turnover_sports/casino সেটিং)
-  referral_commission: { sports: 5, casino: 5 },
-  // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইম: সেটিং free_bet_turnover_multiplier (ডিফল্ট ৩x) — স্পোর্টস ও ক্যাসিনো দুটোতেই
-  free_bet: { sports: 3, casino: 3 }
+const DEFAULTS = {
+  multiplier: 5,        // বোনাস সহ — admin: turnover_multiplier
+  noBonusMultiplier: 1, // বোনাস ছাড়া — admin: turnover_no_bonus_multiplier
+  minOdds: 1.5,         // Sports ন্যূনতম odds — admin: turnover_min_odds (0 = বন্ধ)
+  expiryHours: 0,       // 0 = মেয়াদ নেই — admin: turnover_expiry_hours
+  cashoutCounts: false  // admin: turnover_cashout_counts ('1' হলে Cash-out গোনা হবে)
 };
 
-// ==================== ১. বোনাস তৈরি ====================
-// ডিপোজিট বোনাস বা দৈনিক রিওয়ার্ড দেওয়ার সময় এটা ডাকা হবে।
-// type = 'deposit' বা 'daily'
-async function createBonus(client, userId, type, bonusAmount, options = {}) {
-  if (!RULES[type]) return;
-  const rule = { ...RULES[type] };
-  if (bonusAmount <= 0) return;
+function num(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
-  if (type === 'deposit') {
-    rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
-  }
-  if (type === 'free_bet') {
-    const m = Number(await getSetting('free_bet_turnover_multiplier'));
-    if (Number.isFinite(m) && m > 0) { rule.sports = m; rule.casino = m; }
-  }
-  if (type === 'referral' || type === 'referral_commission') {
-    // 0 বৈধ (ওই খাতে শর্ত নেই); অবৈধ/ফাঁকা হলে ডিফল্ট
-    const pick = (raw, dflt) => { const n = Number(raw); return raw !== null && raw !== undefined && raw !== '' && Number.isFinite(n) && n >= 0 ? n : dflt; };
-    rule.sports = pick(await getSetting('referral_turnover_sports'), rule.sports);
-    rule.casino = pick(await getSetting('referral_turnover_casino'), rule.casino);
-  }
+const CONFIG_KEYS = ['turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts'];
 
-  const sportsReq = bonusAmount * rule.sports;
-  const casinoReq = bonusAmount * rule.casino;
+// db = কলারের খোলা transaction client (থাকলে)। কলার আগে থেকেই একটা pool কানেকশন ধরে রেখেছে; এই অবস্থায়
+// getSetting() ক্যাশ-মিসে pool থেকে আরেকটা কানেকশন চায়। একসাথে অনেক settlement চললে সব কানেকশন
+// ধরা থাকে, settings-এর কানেকশন আর পাওয়া যায় না → পরস্পরের অপেক্ষায় আটকে (timeout)। তাই client থাকলে
+// সেটা দিয়েই পড়ি; কোনো কী না পেলে (বা client না থাকলে) আগের মতো getSetting()।
+async function readConfigValues(db) {
+  const values = {};
+  if (db && typeof db.query === 'function') {
+    try {
+      const r = await db.query('SELECT key, value FROM site_settings WHERE key = ANY($1::text[])', [CONFIG_KEYS]);
+      for (const row of (r && r.rows) || []) values[row.key] = row.value;
+    } catch (_) { /* নিচে getSetting() ফলব্যাক */ }
+  }
+  const missing = CONFIG_KEYS.filter((k) => values[k] === undefined);
+  const fetched = await Promise.all(missing.map((k) => getSetting(k)));
+  missing.forEach((k, i) => { values[k] = fetched[i]; });
+  return CONFIG_KEYS.map((k) => values[k]);
+}
 
-  // client থাকলে (transaction-এর ভেতর) সেটা ব্যবহার করি, নাহলে সরাসরি pool
+async function loadConfig(db) {
+  const [m, nb, mo, ex, co] = await readConfigValues(db);
+  const multiplier = num(m, DEFAULTS.multiplier);
+  const noBonusMultiplier = num(nb, DEFAULTS.noBonusMultiplier);
+  return {
+    multiplier: multiplier > 0 ? multiplier : DEFAULTS.multiplier,
+    noBonusMultiplier: noBonusMultiplier > 0 ? noBonusMultiplier : DEFAULTS.noBonusMultiplier,
+    minOdds: num(mo, DEFAULTS.minOdds),
+    expiryHours: num(ex, DEFAULTS.expiryHours),
+    cashoutCounts: String(co) === '1'
+  };
+}
+
+// ==================== ১. Deposit-এর টার্নওভার তৈরি ====================
+// Deposit approve হলে (routes/payment.js creditApprovedDeposit) প্রতিবার ডাকা হয়।
+// bonusAmount > 0 হলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
+async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit', multiplierOverride = null, status: reqStatus = 'active' }) {
+  const pendingReview = reqStatus === 'pending_review';
+  const deposit = Math.max(0, Math.round(Number(depositAmount) || 0));
+  const bonus = Math.max(0, Math.round(Number(bonusAmount) || 0));
+  if (deposit + bonus <= 0) return null;
+
+  const cfg = await loadConfig(client);
+  const ov = Number(multiplierOverride);
+  // multiplierOverride: নির্দিষ্ট উৎসের (যেমন প্রথম-ডিপোজিট ফ্রি বেট) আলাদা গুণক; না দিলে আগের নিয়ম
+  const multiplier = Number.isFinite(ov) && ov > 0 ? ov : (bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier);
+  const required = (deposit + bonus) * multiplier;
+  const expiresAt = !pendingReview && cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
+
   const db = client || pool;
-  // status = 'pending_review' হলে বোনাস তৈরি হয় কিন্তু ওয়েজারিং শুরু হয় না এবং
-  // canWithdraw()-ও এটাকে গোনে না — অ্যাডমিন ছাড় দিলে তবেই 'active' হবে।
-  const status = options.status === 'pending_review' ? 'pending_review' : 'active';
-  await db.query(
-    `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status, deposit_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [userId, type, bonusAmount, sportsReq, casinoReq, status, Number.isInteger(options.depositId) ? options.depositId : null]
+  // status = 'pending_review' হলে এন্ট্রি তৈরি হয় কিন্তু ওয়েজারিং শুরু হয় না: addTurnover / getTurnoverStatus /
+  // canWithdraw / forfeitBonuses / expireDue সবাই status = 'active' ফিল্টার করে, তাই এটা গোনাও হয় না, লকও করে না —
+  // অ্যাডমিন ছাড় দিলে (releaseDepositTurnover) তবেই 'active' হয়।
+  const status = pendingReview ? 'pending_review' : 'active';
+  const r = await db.query(
+    `INSERT INTO deposit_turnovers
+       (user_id, deposit_id, source, deposit_amount, bonus_amount, multiplier, required, status, expires_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (deposit_id) WHERE deposit_id IS NOT NULL DO NOTHING
+     RETURNING id`,
+    [userId, depositId, source, deposit, bonus, multiplier, required, status, expiresAt]
   );
+  return r.rows[0] ? r.rows[0].id : null;
 }
 
-// ==================== ২. বেট ধরলে টার্নওভার আপডেট ====================
-// category = 'sports' বা 'casino'
-// stake = বেটের পরিমাণ
-// প্রতিটা active বোনাসের done বাড়ানো হবে; required পূরণ হলে completed।
-// আগে এটা সবসময় pool ব্যবহার করত এবং কলাররা COMMIT-এর পরে fire-and-forget
-// করে ডাকত — ব্যর্থ হলে টাকা কাটা গেছে অথচ ওয়েজারিং এগোয়নি, শুধু একটা
-// console.error থাকত। এখন createBonus-এর মতো ঐচ্ছিক `client` নেওয়া যায়, তাই
-// একই ট্রানজেকশনে COMMIT-এর আগে চালানো যায় — বেট আর টার্নওভার হয় একসাথে
-// টেকে, নয় একসাথে রোলব্যাক হয়।
-// পুরনো signature addTurnover(userId, category, stake) কাজ করে যাবে।
-async function addTurnover(clientOrUserId, categoryOrUserId, stakeOrCategory, maybeStake) {
-  const hasClient = !!(clientOrUserId && typeof clientOrUserId.query === 'function');
-  const client = hasClient ? clientOrUserId : null;
-  const userId = hasClient ? categoryOrUserId : clientOrUserId;
-  const category = hasClient ? stakeOrCategory : categoryOrUserId;
-  const stake = hasClient ? maybeStake : stakeOrCategory;
-
-  if (!['sports', 'casino'].includes(category)) return;
-  if (!stake || stake <= 0) return;
-
-  const db = client || pool;
-  try {
-    // এই ইউজারের সব active বোনাস
-    const res = await db.query(
-      `SELECT * FROM bonuses WHERE user_id = $1 AND status = 'active' ORDER BY created_at ASC`,
-      [userId]
-    );
-
-    for (const b of res.rows) {
-      // অ্যাটমিক ইনক্রিমেন্ট — আগে done মানটা আগে SELECT করে, JS-এ যোগ করে, তারপর
-      // সেই ফলাফল লেখা হতো। একই ইউজারের দুটো বাজি প্রায় একসাথে সেটেল হলে দুটোই
-      // একই পুরোনো মান পড়ত এবং একটার হিসাব হারিয়ে যেত (lost update), ফলে
-      // টার্নওভার প্রগ্রেস বাস্তবের চেয়ে কম দেখাত। column = column + $1 করলে
-      // যোগটা DB-তেই হয়, তাই সমান্তরাল আপডেটেও কোনো স্টেক হারায় না।
-      if (category === 'sports') {
-        await db.query(
-          `UPDATE bonuses SET sports_done = sports_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
-          [Number(stake), b.id]
-        );
-      } else if (Number(b.casino_required) > 0) {
-        // casino_required 0 হলে (daily reward) ক্যাসিনো গণনা হবে না
-        await db.query(
-          `UPDATE bonuses SET casino_done = casino_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
-          [Number(stake), b.id]
-        );
-      }
-
-      // শর্ত পূরণ হয়েছে কিনা চেক করে completed করা
-      await checkAndComplete(b.id, db);
-    }
-  } catch (err) {
-    console.error('addTurnover error:', err.message);
-    // ট্রানজেকশনের ভেতরে চললে কলার যেন রোলব্যাক করতে পারে — নীরবে গিলে ফেলা হয় না।
-    if (client) throw err;
-  }
+// পুরোনো কলারদের জন্য শিম (referral, freebet, redpacket…): বোনাস-অনলি এন্ট্রি,
+// Deposit = 0, তাই required = Bonus × multiplier — একই নিয়ম, একই সিস্টেম।
+async function createBonus(client, userId, type, bonusAmount, options = {}) {
+  // pending_review: এন্ট্রি তৈরি হয় (deposit_turnovers.status = 'pending_review') কিন্তু গোনা/লক হয় না, অ্যাডমিন ছাড় না দেওয়া পর্যন্ত।
+  const depositId = Number.isInteger(options.depositId) ? options.depositId : null;
+  return createDepositTurnover(client, {
+    userId, depositId, depositAmount: 0, bonusAmount, source: type,
+    multiplierOverride: options.multiplier,
+    status: options.status === 'pending_review' ? 'pending_review' : 'active'
+  });
 }
 
-// একটা বোনাসের শর্ত পূরণ হয়েছে কিনা দেখে status আপডেট
-async function checkAndComplete(bonusId, db = pool) {
-  const r = await db.query(`SELECT * FROM bonuses WHERE id = $1`, [bonusId]);
-  const b = r.rows[0];
-  if (!b || b.status !== 'active') return;
-
-  // ডিপোজিট বোনাস: স্পোর্টস বা ক্যাসিনো — যেকোনো একটা পূরণ হলেই completed
-  // দৈনিক রিওয়ার্ড: শুধু স্পোর্টস পূরণ হলে completed
-  let done = false;
-  if (b.bonus_type === 'deposit') {
-    const sportsOk = Number(b.sports_required) > 0 && Number(b.sports_done) >= Number(b.sports_required);
-    const casinoOk = Number(b.casino_required) > 0 && Number(b.casino_done) >= Number(b.casino_required);
-    done = sportsOk || casinoOk;
-  } else if (b.bonus_type === 'referral') {
-    // রেফারেল বোনাস: যে খাতে শর্ত > ০ (স্পোর্টস ও ক্যাসিনো) সব কটিই পূরণ হতে হবে — নইলে ক্যাসিনো ৫x বাকি থাকতেও লক খুলত
-    const sportsOk = Number(b.sports_required) <= 0 || Number(b.sports_done) >= Number(b.sports_required);
-    const casinoOk = Number(b.casino_required) <= 0 || Number(b.casino_done) >= Number(b.casino_required);
-    done = sportsOk && casinoOk;
-  } else {
-    done = Number(b.sports_done) >= Number(b.sports_required);
-  }
-
-  if (done) {
-    await db.query(`UPDATE bonuses SET status = 'completed', updated_at = NOW() WHERE id = $1`, [bonusId]);
-  }
+// ==================== ২ক. pending_review ছাড় (অ্যাডমিন অনুমোদন) ====================
+// pending_review এন্ট্রি 'active' করে; মেয়াদ (থাকলে) এখান থেকে শুরু। শুধু pending_review সারিতেই কাজ করে।
+async function releaseDepositTurnover(client, id) {
+  const cfg = await loadConfig(client);
+  const expiresAt = cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
+  const r = await (client || pool).query(
+    `UPDATE deposit_turnovers SET status = 'active', expires_at = $2, updated_at = NOW()
+      WHERE id = $1 AND status = 'pending_review' RETURNING id`,
+    [id, expiresAt]
+  );
+  return r.rows[0] ? r.rows[0].id : null;
 }
 
-// ==================== ৩. উইথড্রর আগে চেক ====================
-// কোনো active বোনাস থাকলে — উইথড্র আটকাবে।
-// ফেরত দেয়: { allowed: true/false, pending: [...বাকি টার্নওভার...] }
-async function canWithdraw(userId) {
-  const res = await pool.query(
-    `SELECT * FROM bonuses WHERE user_id = $1 AND status = 'active'`,
+// ==================== ২. মেয়াদ শেষ হওয়া এন্ট্রি ====================
+// মেয়াদ পার হলে: বোনাস অংশ (ব্যালেন্সে যতটুকু আছে) কাটা, লক খোলা। একই transaction-এ।
+async function expireDue(client, userId) {
+  const due = await client.query(
+    `SELECT id, bonus_amount FROM deposit_turnovers
+      WHERE user_id = $1 AND status = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW()
+      FOR UPDATE`,
     [userId]
   );
-
-  if (res.rows.length === 0) {
-    return { allowed: true, pending: [] };
-  }
-
-  // বাকি টার্নওভার হিসাব
-  const pending = res.rows.map(b => ({
-    type: b.bonus_type,
-    sportsLeft: Math.max(0, Number(b.sports_required) - Number(b.sports_done)),
-    casinoLeft: Number(b.casino_required) > 0 ? Math.max(0, Number(b.casino_required) - Number(b.casino_done)) : 0,
-    // পপআপে প্রগ্রেস বার দেখানোর জন্য (শুধু যোগ হয়েছে — আগের ফিল্ড অপরিবর্তিত)
-    sportsRequired: Number(b.sports_required) || 0,
-    sportsDone: Number(b.sports_done) || 0,
-    casinoRequired: Number(b.casino_required) || 0,
-    casinoDone: Number(b.casino_done) || 0
-  }));
-
-  return { allowed: false, pending };
-}
-
-// ==================== ৪. বোনাস বাতিল (forfeit) ====================
-// একটাও active বোনাস থাকলে পুরো উইথড্র বন্ধ — এমনকি ইউজারের নিজের আমানতও।
-// আগে বেরোনোর কোনো পথ ছিল না। এখন ইউজার বোনাস টাকা ফিরিয়ে দিয়ে লক খুলতে পারে।
-async function forfeitBonuses(userId) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    // ইউজার সারি লক — একই সময়ে দুটো forfeit বা forfeit+withdraw রেস আটকাতে
+  if (due.rows.length === 0) return 0;
+  const totalBonus = due.rows.reduce((s, b) => s + (Number(b.bonus_amount) || 0), 0);
+  if (totalBonus > 0) {
     await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
-
-    const res = await client.query(
-      `SELECT id, bonus_amount FROM bonuses WHERE user_id = $1 AND status = 'active' FOR UPDATE`,
-      [userId]
-    );
-    if (res.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return { forfeited: 0, deducted: 0 };
-    }
-
-    const totalBonus = res.rows.reduce((sum, b) => sum + Math.round(Number(b.bonus_amount) || 0), 0);
-
-    // ব্যালেন্স ঋণাত্মক হতে দেওয়া যাবে না — বোনাস ইতিমধ্যে খেলে ফেললে যতটুকু আছে ততটুকুই কাটে
-    const balRes = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
-    const balance = Math.round(Number(balRes.rows[0]?.coins) || 0);
-    const deducted = Math.max(0, Math.min(totalBonus, balance));
-
+    const bal = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
+    const deducted = Math.max(0, Math.min(totalBonus, Math.round(Number(bal.rows[0]?.coins) || 0)));
     if (deducted > 0) {
       await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [deducted, userId]);
       await client.query(
         `INSERT INTO coin_transactions (user_id, amount, type, description)
-         VALUES ($1, $2, 'bonus_forfeit', 'বোনাস বাতিল করে উইথড্র আনলক')`,
+         VALUES ($1,$2,'bonus_forfeit','টার্নওভারের মেয়াদ শেষ — বোনাস বাতিল')`,
         [userId, -deducted]
       );
     }
+  }
+  await client.query(
+    `UPDATE deposit_turnovers SET status = 'expired', updated_at = NOW()
+      WHERE id = ANY($1::int[]) AND status = 'active'`,
+    [due.rows.map((r) => r.id)]
+  );
+  return due.rows.length;
+}
 
-    await client.query(
-      `UPDATE bonuses SET status = 'forfeited', updated_at = NOW()
-       WHERE user_id = $1 AND status = 'active'`,
+// ==================== ৩. যোগ্য বেট সেটেল/প্লেস হলে টার্নওভার ====================
+// addTurnover(client, userId, category, stake, opts)  — অথবা পুরোনো addTurnover(userId, category, stake)
+// opts: { ref, odds, kind: 'bet'|'cashout'|'void'|'cancelled'|'refund' }
+//   ref   — একই বেট দুবার গোনা ঠেকায় (যেমন "bet:123", "casino:<txId>")
+//   odds  — Sports-এ min odds যাচাই
+async function addTurnover(a, b, c, d, e) {
+  const hasClient = !!(a && typeof a.query === 'function');
+  const client = hasClient ? a : null;
+  const userId = hasClient ? b : a;
+  const category = hasClient ? c : b;
+  const stake = Number(hasClient ? d : c);
+  const opts = (hasClient ? e : d) || {};
+
+  if (!['sports', 'casino'].includes(category)) return { counted: 0 };
+  if (!Number.isFinite(stake) || stake <= 0) return { counted: 0 };
+
+  const kind = opts.kind || 'bet';
+  if (['void', 'cancelled', 'canceled', 'refund', 'refunded'].includes(kind)) return { counted: 0, reason: kind };
+
+  const cfg = await loadConfig(client);
+  if (kind === 'cashout' && !cfg.cashoutCounts) return { counted: 0, reason: 'cashout' };
+  if (category === 'sports' && cfg.minOdds > 0) {
+    const odds = Number(opts.odds);
+    // odds অজানা হলে গোনা হয় না (fail-closed): ভুল হিসাবে লক খোলার চেয়ে নিরাপদ।
+    if (!Number.isFinite(odds) || odds < cfg.minOdds) return { counted: 0, reason: 'min_odds' };
+  }
+
+  const own = !client;
+  const db = client || (await pool.connect());
+  try {
+    if (own) await db.query('BEGIN');
+
+    if (opts.ref) {
+      const ev = await db.query(
+        `INSERT INTO turnover_events (user_id, ref, category, amount) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (user_id, ref) DO NOTHING RETURNING id`,
+        [userId, String(opts.ref), category, stake]
+      );
+      if (ev.rowCount === 0) { if (own) await db.query('ROLLBACK'); return { counted: 0, reason: 'duplicate' }; }
+    }
+
+    await expireDue(db, userId);
+
+    const rows = (await db.query(
+      `SELECT id, required, sports_done, casino_done FROM deposit_turnovers
+        WHERE user_id = $1 AND status = 'active'
+        ORDER BY created_at ASC, id ASC FOR UPDATE`,
+      [userId]
+    )).rows;
+
+    let remaining = stake;
+    let counted = 0;
+    const col = category === 'sports' ? 'sports_done' : 'casino_done';
+    for (const row of rows) {
+      if (remaining <= 0) break;
+      const left = Number(row.required) - Number(row.sports_done) - Number(row.casino_done);
+      if (left <= 0) {
+        await db.query(`UPDATE deposit_turnovers SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE id=$1 AND status='active'`, [row.id]);
+        continue;
+      }
+      const apply = Math.min(remaining, left);
+      // অ্যাটমিক ইনক্রিমেন্ট (lost-update নেই); পূর্ণ হলে একই স্টেটমেন্টে completed → লক খোলে।
+      await db.query(
+        `UPDATE deposit_turnovers
+            SET ${col} = ${col} + $1,
+                status = CASE WHEN sports_done + casino_done + $1 >= required THEN 'completed' ELSE status END,
+                completed_at = CASE WHEN sports_done + casino_done + $1 >= required THEN NOW() ELSE completed_at END,
+                updated_at = NOW()
+          WHERE id = $2 AND status = 'active'`,
+        [apply, row.id]
+      );
+      remaining -= apply;
+      counted += apply;
+    }
+
+    if (own) await db.query('COMMIT');
+    return { counted };
+  } catch (err) {
+    if (own) await db.query('ROLLBACK').catch(() => {});
+    console.error('addTurnover error:', err.message);
+    throw err; // নীরবে গেলা হয় না — কলার/কিউ রিট্রাই করতে পারবে
+  } finally {
+    if (own) db.release();
+  }
+}
+
+// ==================== ৪. স্ট্যাটাস / ড্যাশবোর্ড ====================
+function shape(b) {
+  const required = Number(b.required) || 0;
+  const sportsDone = Number(b.sports_done) || 0;
+  const casinoDone = Number(b.casino_done) || 0;
+  const completed = sportsDone + casinoDone;
+  const remaining = Math.max(0, required - completed);
+  const percent = required > 0 ? Math.min(100, Math.floor((completed / required) * 100)) : 100;
+  return {
+    id: b.id, depositId: b.deposit_id, type: b.source,
+    depositAmount: Number(b.deposit_amount) || 0, bonusAmount: Number(b.bonus_amount) || 0,
+    multiplier: Number(b.multiplier) || 0, expiresAt: b.expires_at || null,
+    required, completed, remaining, percent, sportsDone, casinoDone,
+    // withdraw popup-এর ফিল্টার/পুরোনো কনসিউমারের জন্য
+    sportsLeft: remaining, casinoLeft: 0
+  };
+}
+
+async function getTurnoverStatus(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await expireDue(client, userId);
+    const res = await client.query(
+      `SELECT * FROM deposit_turnovers WHERE user_id = $1 AND status = 'active' ORDER BY created_at ASC, id ASC`,
       [userId]
     );
+    await client.query('COMMIT');
+    const items = res.rows.map(shape);
+    const required = items.reduce((s, i) => s + i.required, 0);
+    const completed = items.reduce((s, i) => s + i.completed, 0);
+    return {
+      items, required, completed,
+      remaining: Math.max(0, required - completed),
+      percent: required > 0 ? Math.min(100, Math.floor((completed / required) * 100)) : 100,
+      sportsDone: items.reduce((s, i) => s + i.sportsDone, 0),
+      casinoDone: items.reduce((s, i) => s + i.casinoDone, 0)
+    };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
+// ==================== ৫. উইথড্র গেট ====================
+// কোনো active Deposit-টার্নওভার বাকি থাকলে উইথড্র লক। ১০০% হলেই স্বয়ংক্রিয় আনলক।
+async function canWithdraw(userId) {
+  const st = await getTurnoverStatus(userId);
+  if (st.items.length === 0) return { allowed: true, pending: [], summary: st };
+  return { allowed: false, pending: st.items, summary: st };
+}
+
+// ==================== ৬. বোনাস বাতিল করে লক খোলা (আগের ফিচার অপরিবর্তিত) ====================
+async function forfeitBonuses(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    const res = await client.query(
+      `SELECT id, bonus_amount FROM deposit_turnovers WHERE user_id = $1 AND status = 'active' FOR UPDATE`,
+      [userId]
+    );
+    if (res.rows.length === 0) { await client.query('ROLLBACK'); return { forfeited: 0, deducted: 0 }; }
+    const totalBonus = res.rows.reduce((s, b) => s + Math.round(Number(b.bonus_amount) || 0), 0);
+    const bal = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
+    const deducted = Math.max(0, Math.min(totalBonus, Math.round(Number(bal.rows[0]?.coins) || 0)));
+    if (deducted > 0) {
+      await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [deducted, userId]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description)
+         VALUES ($1,$2,'bonus_forfeit','বোনাস বাতিল করে উইথড্র আনলক')`,
+        [userId, -deducted]
+      );
+    }
+    await client.query(`UPDATE deposit_turnovers SET status='forfeited', updated_at=NOW() WHERE user_id=$1 AND status='active'`, [userId]);
     await client.query('COMMIT');
     return { forfeited: res.rows.length, deducted };
   } catch (err) {
@@ -221,4 +322,4 @@ async function forfeitBonuses(userId) {
   }
 }
 
-module.exports = { createBonus, addTurnover, canWithdraw, forfeitBonuses, RULES };
+module.exports = { createDepositTurnover, createBonus, releaseDepositTurnover, addTurnover, canWithdraw, getTurnoverStatus, forfeitBonuses, expireDue, loadConfig, DEFAULTS };
