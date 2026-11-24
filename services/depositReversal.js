@@ -58,8 +58,8 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
     }
     if (bonusTx) {
       const given = toC(bonusTx.amount);
-      // আগেই বাতিল (ও তখনই কাটা) হলে দ্বিগুণ কাটা নয়; নইলে আগের মতোই পুরো বোনাস
-      bonusC = t && t.status === 'forfeited' ? 0 : given;
+      // আগেই বাতিল (forfeited) বা মেয়াদ-শেষে (expired, expireDue-তে) কাটা হলে দ্বিগুণ কাটা নয়; নইলে আগের মতোই পুরো বোনাস
+      bonusC = t && (t.status === 'forfeited' || t.status === 'expired') ? 0 : given;
     }
     // টার্নওভার-লক ছাড়া: রিভার্স হওয়া ডিপোজিটের চালু/অপেক্ষমাণ সারি forfeited (বোনাস থাকলে বাতিল-তালিকায়)।
     if (t && (t.status === 'active' || t.status === 'pending_review')) {
