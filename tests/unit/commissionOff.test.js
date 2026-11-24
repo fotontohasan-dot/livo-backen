@@ -6,6 +6,8 @@ const settings = require('../../services/settings');
 const referral = require('../../services/referral');
 
 const KEYS = ['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'];
+const SWITCH = 'referral_bet_commission_enabled'; // main-এর মাস্টার সুইচ: 'true' না হলে বাজির কমিশন বন্ধ
+const ALL = [...KEYS, SWITCH, 'turnover_multiplier'];
 let seq = 0;
 const mk = async (tag) => {
   const u = `co${Date.now()}${++seq}${tag}`;
@@ -21,10 +23,10 @@ const snap = async (ids) => {
 };
 let saved;
 beforeAll(async () => {
-  saved = (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [[...KEYS, 'turnover_multiplier']])).rows;
+  saved = (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [ALL])).rows;
 });
 afterAll(async () => {
-  await pool.query('DELETE FROM site_settings WHERE key = ANY($1)', [[...KEYS, 'turnover_multiplier']]);
+  await pool.query('DELETE FROM site_settings WHERE key = ANY($1)', [ALL]);
   for (const r of saved) await pool.query('INSERT INTO site_settings (key, value) VALUES ($1,$2)', [r.key, r.value]);
   await settings.invalidateSettingsCache();
 });
@@ -37,7 +39,7 @@ describe('৩-ধাপ কমিশন বন্ধ', () => {
   });
 
   test('ডিফল্ট (সারি নেই): বাজি ধরলে কারও ব্যালেন্স/কমিশন-সারি বদলায় না, ট্রানজ্যাকশনও খোলে না', async () => {
-    await pool.query('DELETE FROM site_settings WHERE key = ANY($1)', [KEYS]);
+    await pool.query('DELETE FROM site_settings WHERE key = ANY($1)', [[...KEYS, SWITCH]]);
     await settings.invalidateSettingsCache();
     expect(await referral.getCommissionRates()).toEqual([0, 0, 0]); // সেটিং ক্যাশে গরম
     const before = await snap([a, b, c, d]);
@@ -50,7 +52,7 @@ describe('৩-ধাপ কমিশন বন্ধ', () => {
   });
 
   test('নিয়ন্ত্রণ: হার দিলে কমিশন যায় (২.৫/১.৫/০.৮%)', async () => {
-    for (const [k, v] of [[KEYS[0], '2.5'], [KEYS[1], '1.5'], [KEYS[2], '0.8']]) {
+    for (const [k, v] of [[SWITCH, 'true'], [KEYS[0], '2.5'], [KEYS[1], '1.5'], [KEYS[2], '0.8']]) {
       await pool.query(`INSERT INTO site_settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`, [k, v]);
     }
     await settings.invalidateSettingsCache();

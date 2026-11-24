@@ -160,7 +160,7 @@ describe('ক্লেইম — টার্নওভার free_bet_turnover_m
   afterAll(async () => { await setRaw('free_bet_turnover_multiplier', saved); });
 
   const bonusRow = async (u, type) => (await pool.query(
-    `SELECT * FROM bonuses WHERE user_id = $1 AND bonus_type = $2 ORDER BY id DESC LIMIT 1`, [u, type])).rows[0];
+    `SELECT * FROM deposit_turnovers WHERE user_id = $1 AND source = $2 ORDER BY id DESC LIMIT 1`, [u, type])).rows[0];
 
   test('ক্লেইমে ৩x (সেটিং-এর মান); ব্যালেন্স +৩০', async () => {
     await setRaw('free_bet_turnover_multiplier', '3');
@@ -172,9 +172,8 @@ describe('ক্লেইম — টার্নওভার free_bet_turnover_m
     expect(await coins(u)).toBe(530);
     const b = await bonusRow(u, 'free_bet');
     expect(Number(b.bonus_amount)).toBe(30);
-    expect(Number(b.sports_required)).toBe(90);
-    expect(Number(b.casino_required)).toBe(90);
-    expect(b.status).toBe('active');
+    expect(Number(b.multiplier)).toBe(3);
+    expect(Number(b.required)).toBe(90);
   });
 
   test('সেটিং বদলালে নতুন গুণক (৪x); সারি না থাকলে ডিফল্ট ৩x', async () => {
@@ -182,13 +181,13 @@ describe('ক্লেইম — টার্নওভার free_bet_turnover_m
     const u1 = await mk();
     await approve(await makeDeposit(u1, 500));
     await freebet.claimFreeBet(u1, (await rows(u1))[0].id);
-    expect(Number((await bonusRow(u1, 'free_bet')).sports_required)).toBe(120);
+    expect(Number((await bonusRow(u1, 'free_bet')).required)).toBe(120);
 
     await setRaw('free_bet_turnover_multiplier', null);
     const u2 = await mk();
     await approve(await makeDeposit(u2, 500));
     await freebet.claimFreeBet(u2, (await rows(u2))[0].id);
-    expect(Number((await bonusRow(u2, 'free_bet')).sports_required)).toBe(90);
+    expect(Number((await bonusRow(u2, 'free_bet')).required)).toBe(90);
   });
 
   test('অন্য ফ্রি বেট (first_deposit নয়) আগের নিয়মে — free_bet টাইপ নয়', async () => {

@@ -5,6 +5,19 @@ process.env.TZ = 'UTC';
 
 module.exports = {
   testEnvironment: 'node',
+  // connect-redis ১১ শুধু ESM (exports-এ কেবল "import")। Jest-এর CJS রানটাইম native ESM require করতে
+  // পারে না, তাই ওই একটি প্যাকেজ ফাইল-পাথে ম্যাপ করে babel দিয়ে CJS-এ ট্রান্সফর্ম করা হয়।
+  // (প্রোডাকশনে Node নিজেই require(esm) চালায় — services/sessionStore.js দ্রষ্টব্য)
+  moduleNameMapper: {
+    '^connect-redis$': '<rootDir>/node_modules/connect-redis/dist/connect-redis.js'
+  },
+  transform: {
+    '[\\/]node_modules[\\/]connect-redis[\\/].+\\.js$': ['babel-jest', {
+      babelrc: false, configFile: false,
+      plugins: ['@babel/plugin-transform-modules-commonjs']
+    }]
+  },
+  transformIgnorePatterns: ['[\\/]node_modules[\\/](?!connect-redis[\\/])'],
   rootDir: '.',
   testMatch: ['**/tests/**/*.test.js'],
   setupFiles: ['<rootDir>/tests/setup.js'],

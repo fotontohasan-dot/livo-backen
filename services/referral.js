@@ -2,7 +2,7 @@
 // রেফারেল: রেকর্ড তৈরি, মাল্টি-লেভেল কমিশন, ইউজারের পরিসংখ্যান।
 //
 // রেফারেল বোনাস (রেফারারকে) এখন শুধু V2 ইঞ্জিনে — services/referralRewards.js:
-//   রেফার-করা ইউজারের প্রথম যোগ্য ডিপোজিটে (approved, ≥ ন্যূনতম) ধাপ-ভিত্তিক (slab) বোনাস, ঠিক একবার।
+//   রেফার-করা ইউজারের প্রথম যোগ্য ডিপোজিটে (approved, ≥ ন্যূনতম) ডিপোজিট-অঙ্ক-ভিত্তিক ধাপে বোনাস, ঠিক একবার।
 //   সাইন-আপে কোনো বোনাস নেই; রেফার-করা ইউজার কোনো রেফারেল বোনাস পায় না।
 //   পুরোনো signup-বোনাস / bonus_held হোল্ড-মডেল বন্ধ (কলাম DB-তে থাকে, ব্যবহার নেই)।
 //
@@ -13,7 +13,9 @@
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
-const rewards = require('./referralRewards');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
+const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
@@ -64,6 +66,10 @@ async function createReferral(client, referrerId, referredId) {
 // নিজে আলাদা transaction ব্যবহার করে (pool থেকে), যাতে মূল বেট আটকে না যায়।
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
+  // নতুন নিয়ম: বাজি ধরলে কোনো কমিশন নেই — কমিশন শুধু ডিপোজিট সম্পূর্ণ হারলে ০.৮%
+  // (services/referralRewards.js settleLossCycles)। পুরোনো প্রতি-বাজি ৩-লেভেল কমিশন ডিফল্টে বন্ধ;
+  // site_settings referral_bet_commission_enabled = 'true' দিলে আবার চালু হয়।
+  if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
   // তিন হারই ০ হলে কিছুই লেখা হয় না — ট্রানজ্যাকশনও খোলা হয় না
@@ -169,69 +175,17 @@ async function getReferralStats(userId) {
   );
 
   const successCount = parseInt(successRes.rows[0].count);
-  const totalCount = parseInt(totalRes.rows[0].count);
-  const info = await getReferralProgramInfo();
   return {
     totalReferrals: totalCount,
     successfulReferrals: successCount,
     pendingReferrals: Math.max(0, totalCount - successCount),
     nextStep: info.mode === 'slab' ? computeNextStep(Number(maxDepRes.rows[0].max_deposit), info.slabs) : null,
     totalEarnings: Number(earnRes.rows[0].total),
-    // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
-    nextBonus: info.mode === 'tier' ? rewards.tierFor(successCount + 1, info.tiers).amount : null,
-    program: info,
+    nextBonus: rewards.tierFor(successCount + 1, await rewards.getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
+    bonusBands: await rewards.getBands(),
+    lossCommissionPercent: await rewards.getLossCommissionPercent(),
     history: historyRes.rows,
     team: teamRes.rows
-  };
-}
-
-// ইউজার-পাতা/popup-এর জন্য চলতি কনফিগ: ধাপ-ছক (পরিসরসহ), ক্যাপ, ন্যূনতম, টার্নওভার, মোড।
-async function getReferralProgramInfo() {
-  const mode = rewards.getBonusMode();
-  const minDeposit = await rewards.getMinDeposit();
-  const cap = await rewards.getBonusCap();
-  const raw = await rewards.getSlabs();
-  const slabs = raw.map((sl, i) => ({
-    min: sl.min,
-    max: i < raw.length - 1 ? raw[i + 1].min - 1 : null,
-    amount: Math.min(sl.amount, cap)
-  }));
-  const num = (v, d) => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 0 ? n : d; };
-  return {
-    mode, minDeposit, cap, slabs,
-    tiers: await rewards.getTiers(),
-    turnover: {
-      sports: num(await getSetting('referral_turnover_sports'), rewards.DEFAULT_TURNOVER.sports),
-      casino: num(await getSetting('referral_turnover_casino'), rewards.DEFAULT_TURNOVER.casino)
-    }
-  };
-}
-
-// "পরের ধাপ": বন্ধুর সর্বোচ্চ যোগ্য ডিপোজিট থেকে পরের slab।
-//   first = এখনো কোনো slab ছোঁয়নি (প্রথম slab-ই লক্ষ্য), up = উপরের slab বাকি, max = সর্বোচ্চ slab-এ আছে।
-function computeNextStep(maxDeposit, slabs) {
-  if (!Array.isArray(slabs) || slabs.length === 0) return null;
-  const dep = Number(maxDeposit);
-  let idx = -1;
-  if (Number.isFinite(dep)) { for (let i = 0; i < slabs.length; i++) { if (dep >= slabs[i].min) idx = i; else break; } }
-  if (idx < 0) return { state: 'first', needDeposit: slabs[0].min, bonus: slabs[0].amount };
-  if (idx === slabs.length - 1) return { state: 'max', needDeposit: null, bonus: slabs[idx].amount };
-  return { state: 'up', needDeposit: slabs[idx + 1].min, bonus: slabs[idx + 1].amount };
-}
-
-// শেয়ার-লিংক: স্কিম/হোস্ট স্থির, সব ডাইনামিক মান percent-encode (javascript: বা অন্য স্কিম ঢোকার পথ নেই)।
-function buildShareLinks(baseUrl, referralCode, shareText) {
-  if (!referralCode) return null;
-  const link = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
-  const u = encodeURIComponent(link);
-  const t = encodeURIComponent(String(shareText || ''));
-  const tu = encodeURIComponent(`${shareText || ''} ${link}`.trim());
-  return {
-    link,
-    whatsapp: `https://wa.me/?text=${tu}`,
-    telegram: `https://t.me/share/url?url=${u}&text=${t}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
-    messenger: `fb-messenger://share/?link=${u}`
   };
 }
 
@@ -241,7 +195,6 @@ module.exports = {
   createReferral,
   distributeCommission,
   getReferralStats,
-  getReferralProgramInfo,
   getCommissionRates,
   DEFAULT_COMMISSION_RATES
 };

@@ -52,7 +52,7 @@ describe('Stored XSS sweep (PHASE 9)', () => {
 
     test('ক্যাটাগরি/প্রোভাইডার চিপ ও অক্ষর লিংক escape হয় (<%= ব্যবহার)', () => {
       expect(INDEX_EJS).toMatch(/<%= p\.name %>/);
-      expect(INDEX_EJS).toMatch(/<%= catLabel\(c\.name\) %>/);
+      expect(INDEX_EJS).toMatch(/<%= catLabel\(row\) %>/);
       expect(INDEX_EJS).not.toMatch(/<%-\s*(p|c)\.name/);
     });
 
