@@ -117,6 +117,30 @@
   </div>
   <% } %>
 
+  <%# বোনাস তথ্য: ধাপ-ছক (slab) বা পুরোনো ক্রমিক টিয়ার %>
+  <% const prog = stats.program || null; %>
+  <div class="dz76-12" id="ref-program">
+    <% if (prog && prog.mode === 'slab') { %>
+      <div class="dz76-13"><%= t('ref_slab_title') %></div>
+      <% prog.slabs.forEach(sl => { %>
+        <div class="dz76-23">
+          <div class="dz76-9"><%= sl.max === null ? t('ref_slab_plus').replace('{from}', fmtN(sl.min)) : t('ref_slab_range').replace('{from}', fmtN(sl.min)).replace('{to}', fmtN(sl.max)) %></div>
+          <div class="dz76-14"><%= fmtN(sl.amount) %> <%= t('ref_taka') %></div>
+        </div>
+      <% }) %>
+      <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
+      <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
+    <% } else { %>
+      <div class="dz76-13"><%= t.next_referral_reward %></div>
+      <div class="dz76-14"><%= stats.nextBonus === null || stats.nextBonus === undefined ? '' : fmtN(stats.nextBonus) + ' ' + t('ref_taka') %></div>
+      <% if (prog) { %>
+        <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
+        <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
+      <% } %>
+    <% } %>
+    <div class="dz76-9"><%= t('ref_first_deposit_info') %></div>
+  </div>
+
   <!-- রেফারেল লিংক -->
   <div class="dz76-19">
     <div class="dz76-16"><%= t.your_referral_link %></div>
