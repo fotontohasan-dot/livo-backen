@@ -123,6 +123,7 @@ async function expireDue(client, userId) {
   const due = await client.query(
     `SELECT id, bonus_amount FROM deposit_turnovers
       WHERE user_id = $1 AND status = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW()
+      ORDER BY id
       FOR UPDATE`,
     [userId]
   );
