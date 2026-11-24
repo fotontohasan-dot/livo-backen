@@ -1,5 +1,5 @@
 // ==================== ডিপোজিট রিভার্সাল হার্ডেনিং (আসল Postgres) ====================
-// ক) রিভার্সের পরে "প্রথম" ১০০% বোনাস দ্বিতীয়বার নয়; খ) first_deposit ফ্রি বেট ইউনিক; গ) bonuses.deposit_id।
+// ক) রিভার্সের পরে "প্রথম" ১০০% বোনাস দ্বিতীয়বার নয়; খ) first_deposit ফ্রি বেট ইউনিক; গ) deposit_turnovers.deposit_id (Turnover V2)।
 const { pool } = require('../../db');
 const { approvePaymentRequestById } = require('../../routes/payment');
 const { grantFreeBet } = require('../../services/freebet');
@@ -64,7 +64,7 @@ describe('রিভার্সাল হার্ডেনিং', () => {
   test('নতুন ডিপোজিট বোনাসে deposit_id লেখা হয়', async () => {
     const uid = await mk('revdid');
     const d1 = await approve(uid, 800);
-    const b = await pool.query(`SELECT deposit_id FROM bonuses WHERE user_id=$1 AND bonus_type='deposit'`, [uid]);
+    const b = await pool.query(`SELECT deposit_id FROM deposit_turnovers WHERE user_id=$1 AND source='deposit'`, [uid]);
     expect(b.rows.map((x) => x.deposit_id)).toEqual([d1]);
   });
 
@@ -72,23 +72,23 @@ describe('রিভার্সাল হার্ডেনিং', () => {
     const uid = await mk('revmatch');
     const d1 = await approve(uid, 1000);          // বোনাস ১০০০ (১০০%)
     const d2 = await approve(uid, 2000);          // বোনাস ১০০০ (৫০%) বা ১৬০০ — তাই পরিমাণ একই রাখতে নিচে সরাসরি সারি বসাই
-    await pool.query(`UPDATE bonuses SET bonus_amount = 1000 WHERE user_id=$1 AND deposit_id=$2`, [uid, d2]);
+    await pool.query(`UPDATE deposit_turnovers SET bonus_amount = 1000 WHERE user_id=$1 AND deposit_id=$2`, [uid, d2]);
     await pool.query(`UPDATE coin_transactions SET amount = 1000 WHERE user_id=$1 AND type='deposit_bonus' AND description = $2`, [uid, `ডিপোজিট বোনাস (#${d2})`]);
     // সময় ইচ্ছাকৃত উল্টো — d1-এর বোনাস-সারি d2-এর tx-এর কাছাকাছি, যাতে শুধু সময়-মিল ভুল সারি ধরত
-    await pool.query(`UPDATE bonuses SET created_at = NOW() + interval '1 hour' WHERE user_id=$1 AND deposit_id=$2`, [uid, d1]);
+    await pool.query(`UPDATE deposit_turnovers SET created_at = NOW() + interval '1 hour' WHERE user_id=$1 AND deposit_id=$2`, [uid, d1]);
     const res = await reverseDeposit({ depositId: d2, adminId, reason: 'আইডি-মিল' });
     expect(res.result).toBe('reversed');
-    const rows = (await pool.query(`SELECT deposit_id, status FROM bonuses WHERE user_id=$1 ORDER BY deposit_id`, [uid])).rows;
+    const rows = (await pool.query(`SELECT deposit_id, status FROM deposit_turnovers WHERE user_id=$1 ORDER BY deposit_id`, [uid])).rows;
     expect(rows).toEqual([{ deposit_id: d1, status: 'active' }, { deposit_id: d2, status: 'forfeited' }]);
   });
 
   test('পুরোনো সারি (deposit_id NULL): বর্ণনা/সময় মিলিয়ে ফলব্যাক কাজ করে', async () => {
     const uid = await mk('revlegacy');
     const d1 = await approve(uid, 1000);
-    await pool.query(`UPDATE bonuses SET deposit_id = NULL WHERE user_id=$1`, [uid]);
+    await pool.query(`UPDATE deposit_turnovers SET deposit_id = NULL WHERE user_id=$1`, [uid]);
     const res = await reverseDeposit({ depositId: d1, adminId, reason: 'পুরোনো সারি' });
     expect(res.result).toBe('reversed');
-    expect((await pool.query(`SELECT status FROM bonuses WHERE user_id=$1`, [uid])).rows.map((x) => x.status)).toEqual(['forfeited']);
+    expect((await pool.query(`SELECT status FROM deposit_turnovers WHERE user_id=$1`, [uid])).rows.map((x) => x.status)).toEqual(['forfeited']);
     expect(await coins(uid)).toBe(0);
   });
 });
