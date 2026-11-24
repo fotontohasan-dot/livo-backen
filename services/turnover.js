@@ -123,12 +123,13 @@ async function expireDue(client, userId) {
   const due = await client.query(
     `SELECT id, bonus_amount FROM deposit_turnovers
       WHERE user_id = $1 AND status = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW()
+      ORDER BY id
       FOR UPDATE`,
     [userId]
   );
   if (due.rows.length === 0) return 0;
   const totalBonus = due.rows.reduce((s, b) => s + (Number(b.bonus_amount) || 0), 0);
-  let deducted = 0; // মোট কাটা (হিসাব অপরিবর্তিত) — নিচে প্রতিটি সারির expired_deducted-এ ভাগ হয়
+  let deducted = 0;
   if (totalBonus > 0) {
     await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
     const bal = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
@@ -142,36 +143,33 @@ async function expireDue(client, userId) {
       );
     }
   }
-  // প্রতিটি সারির নিজস্ব কাটা-ভাগ (সেন্ট-পূর্ণসংখ্যায়, ভাসমান ভুল এড়াতে); ভাগের যোগফল = কাটা মোট।
-  const shares = splitExpiredDeduction(due.rows.map((r) => r.bonus_amount), deducted);
+  // প্রতি সারির ভাগ (সেন্ট-পূর্ণসংখ্যায়, যোগফল ঠিক `deducted`): যথেষ্ট ব্যালেন্সে পুরো bonus_amount;
+  // কম হলে bonus_amount-এর অনুপাতে (নিচের দিকে), শেষ সারি বাকিটা নেয়; শেষ সারির বোনাস ছাড়িয়ে গেলে বাড়তিটা আগের সারিতে।
+  const toC = (v) => Math.round((Number(v) || 0) * 100);
+  const bonusC = due.rows.map((r) => toC(r.bonus_amount));
+  const totalC = bonusC.reduce((s, c) => s + c, 0);
+  const dedC = Math.min(toC(deducted), totalC);
+  let shareC;
+  if (dedC >= totalC) {
+    shareC = bonusC.slice();
+  } else {
+    shareC = bonusC.map((c) => Math.floor((dedC * c) / totalC));
+    const last = shareC.length - 1;
+    shareC[last] = dedC - shareC.slice(0, last).reduce((s, c) => s + c, 0);
+    let excess = Math.max(0, shareC[last] - bonusC[last]);
+    shareC[last] -= excess;
+    for (let i = 0; i < last && excess > 0; i++) {
+      const add = Math.min(excess, bonusC[i] - shareC[i]);
+      shareC[i] += add; excess -= add;
+    }
+  }
   await client.query(
-    `UPDATE deposit_turnovers d SET status = 'expired', expired_deducted = v.ded, updated_at = NOW()
-       FROM unnest($1::int[], $2::numeric[]) AS v(id, ded)
-      WHERE d.id = v.id AND d.status = 'active'`,
-    [due.rows.map((r) => r.id), shares.map((c) => (c / 100).toFixed(2))]
+    `UPDATE deposit_turnovers d SET status = 'expired', updated_at = NOW(), expired_deducted = x.share
+       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::numeric[]) AS share) x
+      WHERE d.id = x.id AND d.status = 'active'`,
+    [due.rows.map((r) => r.id), shareC.map((c) => c / 100)]
   );
   return due.rows.length;
-}
-
-// কাটা মোট (deducted, টাকায়) সারিগুলোর bonus_amount-এর মধ্যে ভাগ করে; সেন্ট-পূর্ণসংখ্যার অ্যারে ফেরত দেয়।
-// • ব্যালেন্স যথেষ্ট (কাটা ≥ মোট বোনাস): প্রতিটি সারি তার পুরো bonus_amount।
-// • কম হলে: bonus_amount-এর অনুপাতে (নিচের দিকে গোল); বাকি সেন্ট শেষ বোনাস-সারি নেয়,
-//   সারির bonus_amount ছাড়ালে বাকিটা তার আগের সারিতে যায়।
-// যোগফল সবসময় ঠিক কাটা মোটের সমান; কোনো সারি নিজের bonus_amount-এর বেশি পায় না।
-function splitExpiredDeduction(bonusAmounts, deducted) {
-  const bonusC = bonusAmounts.map((v) => Math.max(0, Math.round((Number(v) || 0) * 100)));
-  const totalC = bonusC.reduce((s, c) => s + c, 0);
-  const dedC = Math.max(0, Math.min(Math.round((Number(deducted) || 0) * 100), totalC));
-  if (dedC >= totalC) return bonusC.slice();
-  const shares = bonusC.map((c) => Math.floor((dedC * c) / totalC));
-  let rest = dedC - shares.reduce((s, c) => s + c, 0);
-  for (let i = bonusC.length - 1; i >= 0 && rest > 0; i--) {
-    if (bonusC[i] <= 0) continue;
-    const take = Math.min(rest, bonusC[i] - shares[i]);
-    shares[i] += take;
-    rest -= take;
-  }
-  return shares;
 }
 
 // ==================== ৩. যোগ্য বেট সেটেল/প্লেস হলে টার্নওভার ====================

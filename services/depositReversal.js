@@ -58,13 +58,13 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
     }
     if (bonusTx) {
       const given = toC(bonusTx.amount);
-      // forfeited: আগেই কাটা — দ্বিগুণ নয়। expired: expireDue-তে যতটুকু আসলে কাটা হয়েছে (expired_deducted) তা বাদ দিয়ে বাকিটা;
-      // expired_deducted NULL (পুরোনো সারি) হলে পুরো bonus_amount কাটা ধরা ⇒ বাকি ০ (আগের আচরণ)। নইলে আগের মতোই পুরো বোনাস।
+      // forfeited: আগেই কাটা, দ্বিগুণ নয়। expired: expireDue যা আসলে কেটেছে (expired_deducted) তা বাদ, বাকিটা স্বাভাবিক নিয়মে (কাটা/বকেয়া);
+      // expired_deducted NULL (পুরোনো সারি) = পুরো কাটা ধরা। নইলে আগের মতোই পুরো বোনাস।
       if (t && t.status === 'forfeited') bonusC = 0;
       else if (t && t.status === 'expired') {
-        const rowC = toC(t.bonus_amount);
-        const expC = t.expired_deducted == null ? rowC : toC(t.expired_deducted);
-        bonusC = Math.max(0, rowC - expC);
+        const bonusAmtC = toC(t.bonus_amount);
+        const doneC = t.expired_deducted == null ? bonusAmtC : toC(t.expired_deducted);
+        bonusC = Math.max(0, bonusAmtC - doneC);
       } else bonusC = given;
     }
     // টার্নওভার-লক ছাড়া: রিভার্স হওয়া ডিপোজিটের চালু/অপেক্ষমাণ সারি forfeited (বোনাস থাকলে বাতিল-তালিকায়)।
