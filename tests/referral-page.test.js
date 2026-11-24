@@ -8,6 +8,19 @@ const { computeNextStep, buildShareLinks } = require('../services/referral');
 const PASSWORD = 'ReferralPass123';
 const created = [];
 
+// এই ফাইলের প্রত্যাশা ধাপ ৫০০/১০০০/৩০০০০-এর জন্য লেখা; main-এর ডিফল্ট bands আলাদা (১০০/২০০/৫০০) —
+// তাই টেস্ট নিজের ধাপ সেট করে ও শেষে আগের মান ফেরত দেয়। কোনো assertion বদলানো হয়নি।
+const { invalidateSettingsCache } = require('../services/settings');
+const TEST_BANDS = JSON.stringify([{ min: 500, amount: 75 }, { min: 1000, amount: 100 }, { min: 30000, amount: 1000 }]);
+let prevBands;
+beforeAll(async () => {
+  prevBands = (await pool.query(`SELECT value FROM site_settings WHERE key = 'referral_bonus_bands'`)).rows[0];
+  await pool.query(
+    `INSERT INTO site_settings (key, value) VALUES ('referral_bonus_bands', $1)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [TEST_BANDS]);
+  await invalidateSettingsCache();
+});
+
 async function signup() {
   const { agent, token } = await getCsrfAgent('/register');
   const username = uniqueUsername('rf');
@@ -34,7 +47,12 @@ async function friend(referrerId, deposit) {
 
 const stepOf = (html) => (/id="ref-next-step" data-state="(\w+)"/.exec(html) || [])[1];
 
-afterAll(async () => { await cleanup(created); });
+afterAll(async () => {
+  await cleanup(created);
+  if (prevBands) await pool.query(`UPDATE site_settings SET value = $1 WHERE key = 'referral_bonus_bands'`, [prevBands.value]);
+  else await pool.query(`DELETE FROM site_settings WHERE key = 'referral_bonus_bands'`);
+  await invalidateSettingsCache();
+});
 
 describe('computeNextStep (খাঁটি ফাংশন)', () => {
   const slabs = [{ min: 500, amount: 75 }, { min: 1000, amount: 100 }, { min: 30000, amount: 1000 }];

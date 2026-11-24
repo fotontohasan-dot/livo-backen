@@ -58,13 +58,29 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
           [userId, Math.round(given / 100), bonusTx.created_at]
         )).rows[0];
       }
-      if (b && b.status === 'forfeited') {
+      // Turnover V2: ডিপোজিট-বোনাস এখন deposit_turnovers-এ (source='deposit') — আগে সেটাই, না পেলে পুরোনো bonuses।
+      let t = (await client.query(
+        `SELECT id, status FROM deposit_turnovers WHERE user_id = $1 AND source = 'deposit' AND deposit_id = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
+        [userId, id]
+      )).rows[0];
+      if (!t) {
+        t = (await client.query(
+          `SELECT id, status FROM deposit_turnovers
+            WHERE user_id = $1 AND source = 'deposit' AND deposit_id IS NULL AND bonus_amount = $2
+            ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
+          [userId, Math.round(given / 100), bonusTx.created_at]
+        )).rows[0];
+      }
+      const cur = t || b;
+      if (cur && cur.status === 'forfeited') {
         bonusC = 0; // আগেই বাতিল (ও তখনই কাটা) — দ্বিগুণ কাটা নয়
       } else {
         bonusC = given;
-        if (b && b.status === 'active') {
-          await client.query(`UPDATE bonuses SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [b.id]);
-          cancelledBonusIds.push(b.id);
+        if (cur && cur.status === 'active') {
+          await client.query(
+            `UPDATE ${t ? 'deposit_turnovers' : 'bonuses'} SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [cur.id]
+          );
+          cancelledBonusIds.push(cur.id);
         }
       }
     }
@@ -92,14 +108,24 @@ async function reverseDeposit({ depositId, adminId, reason, requireFull = false 
         freeC = toC(fb.amount);
         await client.query(`UPDATE free_bets SET status = 'reversed' WHERE id = $1`, [fb.id]);
         cancelledFreeBetIds.push(fb.id);
-        const fbb = (await client.query(
-          `SELECT id FROM bonuses WHERE user_id = $1 AND bonus_type = 'free_bet' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
+        // Turnover V2 (deposit_turnovers, source='free_bet') আগে; না পেলে পুরোনো bonuses
+        let fbT = (await client.query(
+          `SELECT id FROM deposit_turnovers WHERE user_id = $1 AND source = 'free_bet' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
             ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
           [userId, Math.round(freeC / 100), fb.used_at]
         )).rows[0];
-        if (fbb) {
-          await client.query(`UPDATE bonuses SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [fbb.id]);
-          cancelledBonusIds.push(fbb.id);
+        let fbTable = 'deposit_turnovers';
+        if (!fbT) {
+          fbT = (await client.query(
+            `SELECT id FROM bonuses WHERE user_id = $1 AND bonus_type = 'free_bet' AND deposit_id IS NULL AND bonus_amount = $2 AND status = 'active'
+              ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $3::timestamp))) ASC, id ASC LIMIT 1 FOR UPDATE`,
+            [userId, Math.round(freeC / 100), fb.used_at]
+          )).rows[0];
+          fbTable = 'bonuses';
+        }
+        if (fbT) {
+          await client.query(`UPDATE ${fbTable} SET status = 'forfeited', updated_at = NOW() WHERE id = $1`, [fbT.id]);
+          cancelledBonusIds.push(fbT.id);
         }
       }
     }

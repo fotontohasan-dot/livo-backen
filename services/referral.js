@@ -15,7 +15,8 @@ const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const { createBonus } = require('./turnover');
 const { evaluateDuplicateAccount } = require('./duplicateDetection');
-const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = require('./referralRewards');
+const rewards = require('./referralRewards');
+const { tierFor, getTiers, getBands, getLossCommissionPercent, DEFAULT_TIERS, DEFAULT_MIN_DEPOSIT } = rewards;
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
@@ -126,6 +127,34 @@ async function distributeCommission(bettorId, stake) {
   }
 }
 
+// "পরের ধাপ": বন্ধুর সর্বোচ্চ যোগ্য ডিপোজিট থেকে পরের ধাপ (bands = [{min, amount}], min ক্রমবর্ধমান)।
+//   first = এখনো কোনো ধাপ ছোঁয়নি (প্রথম ধাপই লক্ষ্য), up = উপরের ধাপ বাকি, max = সর্বোচ্চ ধাপে আছে।
+function computeNextStep(maxDeposit, slabs) {
+  if (!Array.isArray(slabs) || slabs.length === 0) return null;
+  const dep = Number(maxDeposit);
+  let idx = -1;
+  if (Number.isFinite(dep)) { for (let i = 0; i < slabs.length; i++) { if (dep >= slabs[i].min) idx = i; else break; } }
+  if (idx < 0) return { state: 'first', needDeposit: slabs[0].min, bonus: slabs[0].amount };
+  if (idx === slabs.length - 1) return { state: 'max', needDeposit: null, bonus: slabs[idx].amount };
+  return { state: 'up', needDeposit: slabs[idx + 1].min, bonus: slabs[idx + 1].amount };
+}
+
+// শেয়ার-লিংক: স্কিম/হোস্ট স্থির, সব ডাইনামিক মান percent-encode (javascript: বা অন্য স্কিম ঢোকার পথ নেই)।
+function buildShareLinks(baseUrl, referralCode, shareText) {
+  if (!referralCode) return null;
+  const link = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
+  const u = encodeURIComponent(link);
+  const t = encodeURIComponent(String(shareText || ''));
+  const tu = encodeURIComponent(`${shareText || ''} ${link}`.trim());
+  return {
+    link,
+    whatsapp: `https://wa.me/?text=${tu}`,
+    telegram: `https://t.me/share/url?url=${u}&text=${t}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+    messenger: `fb-messenger://share/?link=${u}`
+  };
+}
+
 // ==================== ৪. রেফারেল পরিসংখ্যান ====================
 // সব পড়া V2 (referral_rewards) থেকে। status: paid | legacy_paid = বোনাস পাওয়া।
 async function getReferralStats(userId) {
@@ -174,15 +203,17 @@ async function getReferralStats(userId) {
     [userId]
   );
 
+  const totalCount = parseInt(totalRes.rows[0].count);
   const successCount = parseInt(successRes.rows[0].count);
+  const bands = await rewards.getBands();
   return {
     totalReferrals: totalCount,
     successfulReferrals: successCount,
     pendingReferrals: Math.max(0, totalCount - successCount),
-    nextStep: info.mode === 'slab' ? computeNextStep(Number(maxDepRes.rows[0].max_deposit), info.slabs) : null,
+    nextStep: computeNextStep(Number(maxDepRes.rows[0].max_deposit), bands),
     totalEarnings: Number(earnRes.rows[0].total),
     nextBonus: rewards.tierFor(successCount + 1, await rewards.getTiers()).amount, // পুরোনো; পেজ এখন bonusBands ব্যবহার করে
-    bonusBands: await rewards.getBands(),
+    bonusBands: bands,
     lossCommissionPercent: await rewards.getLossCommissionPercent(),
     history: historyRes.rows,
     team: teamRes.rows

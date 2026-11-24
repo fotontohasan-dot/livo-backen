@@ -15,21 +15,14 @@ function normNote(v) {
 }
 
 async function amountFor(client, reward) {
-  const mode = rr.getBonusMode();
   const dep = (await client.query(
     `SELECT amount, status FROM payment_requests WHERE id = $1`, [reward.qualifying_deposit_id]
   )).rows[0];
   if (!dep || dep.status !== 'approved') throw new PublicError('যোগ্য ডিপোজিট পাওয়া যায়নি');
-  if (mode === 'slab') {
-    const hit = rr.slabFor(dep.amount, await rr.getSlabs(), await rr.getBonusCap());
-    if (!hit) throw new PublicError('বোনাস ধাপ নির্ধারণ করা যায়নি');
-    return { tier: hit.slab, amount: hit.amount };
-  }
-  const cnt = await client.query(
-    `SELECT COUNT(*)::int AS n FROM referral_rewards WHERE referrer_id = $1 AND status = 'paid'`,
-    [reward.referrer_id]
-  );
-  return rr.tierFor(cnt.rows[0].n + 1, await rr.getTiers());
+  // ইঞ্জিনের মতোই ডিপোজিট-অঙ্ক-ভিত্তিক ধাপ (referral_bonus_bands)
+  const hit = rr.bonusForDeposit(dep.amount, await rr.getBands());
+  if (!hit || !(Number(hit.amount) > 0)) throw new PublicError('বোনাস ধাপ নির্ধারণ করা যায়নি');
+  return { tier: hit.tier, amount: hit.amount };
 }
 
 // decision: 'approve' | 'reject'. ফলাফল: { ok, result: 'approved'|'rejected'|'already_processed'|'not_found', ... }

@@ -43,7 +43,8 @@ async function heldReward(depositAmount = 1000) {
   return { referrer, referred, rewardId: rw.id };
 }
 
-const bonusRows = async (uid) => (await pool.query(`SELECT * FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [uid])).rows;
+// Turnover V2: রেফারেল বোনাসের ওয়েজারিং-লক deposit_turnovers-এ (source='referral', বোনাস-অনলি এন্ট্রি)
+const bonusRows = async (uid) => (await pool.query(`SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [uid])).rows;
 // টোকেন আগে আনা হয় (agent কুকি রিকোয়েস্ট তৈরির সময়ই বসায়), তারপর POST গঠন।
 const post = async (admin, id, action, body = {}) => {
   const _csrf = await csrf(admin.agent);
@@ -73,8 +74,9 @@ describe('রেফারেল হোল্ড রিভিউ', () => {
     expect(await coins(referrer)).toBe(Number(rw.amount));
     const b = await bonusRows(referrer);
     expect(b).toHaveLength(1);
-    expect(Number(b[0].sports_required)).toBe(Number(rw.amount) * 5);
-    expect(Number(b[0].casino_required)).toBe(Number(rw.amount) * 5);
+    const mult = Number(await require('../../services/settings').getSetting('turnover_multiplier')); // ডিফল্ট ৫
+    expect(Number(b[0].bonus_amount)).toBe(Number(rw.amount));
+    expect(Number(b[0].required)).toBe(Number(rw.amount) * mult);
 
     const audit = await pool.query(
       `SELECT details FROM audit_logs WHERE actor_id=$1 AND action='REFERRAL_BONUS_APPROVED'`, [admin.userId]);
