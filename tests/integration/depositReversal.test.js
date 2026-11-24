@@ -121,11 +121,11 @@ describe('ডিপোজিট রিভার্সাল', () => {
     const dep = await makeDeposit(uid, 1000, { status: 'pending', wantBonus: true });
     expect((await approvePaymentRequestById(dep)).success).toBe(true);
     expect((await pool.query(`SELECT 1 FROM free_bets WHERE user_id=$1`, [uid])).rowCount).toBe(0);
-    const bonusBefore = (await pool.query(`SELECT status, deposit_id FROM bonuses WHERE user_id=$1 AND bonus_type='deposit'`, [uid])).rows;
+    const bonusBefore = (await pool.query(`SELECT status, deposit_id FROM deposit_turnovers WHERE user_id=$1 AND source='deposit'`, [uid])).rows;
     expect(bonusBefore).toEqual([{ status: 'active', deposit_id: dep }]);
     const res = await reverse(admin, dep, { reason: 'বোনাস-অপব্যবহার' });
     expect(res.status).toBe(200);
-    const bonusAfter = (await pool.query(`SELECT status FROM bonuses WHERE user_id=$1 AND bonus_type='deposit'`, [uid])).rows;
+    const bonusAfter = (await pool.query(`SELECT status FROM deposit_turnovers WHERE user_id=$1 AND source='deposit'`, [uid])).rows;
     expect(bonusAfter.map((b) => b.status)).toEqual(['forfeited']);
     expect(res.body.cancelledBonusIds.length).toBe(1);
     expect(res.body.cancelledFreeBetIds.length).toBe(0);
@@ -163,7 +163,7 @@ describe('ডিপোজিট রিভার্সাল', () => {
     expect(await coins(uid)).toBe(0);
     expect(res.body.dueAmount).toBe(50);
     expect((await pool.query(`SELECT status FROM free_bets WHERE id=$1`, [fbRow.id])).rows[0].status).toBe('reversed');
-    expect((await pool.query(`SELECT status FROM bonuses WHERE user_id=$1 AND bonus_type='free_bet'`, [uid])).rows.map((b) => b.status)).toEqual(['forfeited']);
+    expect((await pool.query(`SELECT status FROM deposit_turnovers WHERE user_id=$1 AND source='free_bet'`, [uid])).rows.map((b) => b.status)).toEqual(['forfeited']);
   });
 
   test('কারণ ছাড়া বা শুধু ফাঁকা কারণে 400, কিছুই বদলায় না', async () => {
