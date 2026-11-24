@@ -43,7 +43,8 @@ async function heldReward(depositAmount = 1000) {
   return { referrer, referred, rewardId: rw.id };
 }
 
-const bonusRows = async (uid) => (await pool.query(`SELECT * FROM bonuses WHERE user_id=$1 AND bonus_type='referral'`, [uid])).rows;
+// Turnover V2: বোনাস-অনলি এন্ট্রি এখন deposit_turnovers-এ (source='referral'); আলাদা sports/casino কলাম নেই, একটিই required।
+const bonusRows = async (uid) => (await pool.query(`SELECT * FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [uid])).rows;
 // টোকেন আগে আনা হয় (agent কুকি রিকোয়েস্ট তৈরির সময়ই বসায়), তারপর POST গঠন।
 const post = async (admin, id, action, body = {}) => {
   const _csrf = await csrf(admin.agent);
@@ -57,7 +58,7 @@ afterAll(async () => {
 });
 
 describe('রেফারেল হোল্ড রিভিউ', () => {
-  test('approve একবারই: কয়েন + bonuses (৫x টার্নওভার) + অডিট (অ্যাডমিন আইডি, পুরোনো→নতুন)', async () => {
+  test('approve একবারই: কয়েন + deposit_turnovers (৫x টার্নওভার) + অডিট (অ্যাডমিন আইডি, পুরোনো→নতুন)', async () => {
     const admin = await makeAdmin({ bonus_manage: true, reports_view: true });
     const { referrer, referred, rewardId } = await heldReward(1000);
     expect(await coins(referrer)).toBe(0);
@@ -73,8 +74,8 @@ describe('রেফারেল হোল্ড রিভিউ', () => {
     expect(await coins(referrer)).toBe(Number(rw.amount));
     const b = await bonusRows(referrer);
     expect(b).toHaveLength(1);
-    expect(Number(b[0].sports_required)).toBe(Number(rw.amount) * 5);
-    expect(Number(b[0].casino_required)).toBe(Number(rw.amount) * 5);
+    expect(Number(b[0].bonus_amount)).toBe(Number(rw.amount));
+    expect(Number(b[0].required)).toBe(Number(rw.amount) * 5); // ৫x টার্নওভার (turnover_multiplier ডিফল্ট)
 
     const audit = await pool.query(
       `SELECT details FROM audit_logs WHERE actor_id=$1 AND action='REFERRAL_BONUS_APPROVED'`, [admin.userId]);
@@ -117,7 +118,7 @@ describe('রেফারেল হোল্ড রিভিউ', () => {
     expect(await coins(referrer)).toBe(0);
   });
 
-  test('reject (কারণসহ): ব্যালেন্স অপরিবর্তিত, bonuses নেই, অ্যাডমিন আইডি+সময়+কারণ রেকর্ডে ও অডিটে', async () => {
+  test('reject (কারণসহ): ব্যালেন্স অপরিবর্তিত, deposit_turnovers নেই, অ্যাডমিন আইডি+সময়+কারণ রেকর্ডে ও অডিটে', async () => {
     const admin = await makeAdmin({ bonus_manage: true, reports_view: true });
     const { referrer, referred, rewardId } = await heldReward(1000);
     const before = await coins(referrer);

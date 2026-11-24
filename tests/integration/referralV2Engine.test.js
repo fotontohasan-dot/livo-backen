@@ -38,8 +38,11 @@ describe('কনফিগ ও টিয়ার', () => {
     expect(engine.tierFor(51).tier).toBe(5);
   });
 
-  test('ডিফল্ট কনফিগ: ন্যূনতম ১০০ ও টিয়ার settings-এ সিডেড', async () => {
-    expect(await engine.getMinDeposit()).toBe(100);
+  test('ডিফল্ট কনফিগ: ন্যূনতম ৫০০, slab ও টিয়ার settings-এ সিডেড', async () => {
+    expect(await engine.getMinDeposit()).toBe(500);
+    expect(await engine.getSlabs()).toEqual(engine.DEFAULT_SLABS);
+    expect(await engine.getBonusCap()).toBe(engine.DEFAULT_BONUS_CAP);
+    expect(engine.parseSlabs('not json')).toBeNull();
     expect(await engine.getTiers()).toEqual(engine.DEFAULT_TIERS);
     expect(engine.parseTiers('not json')).toBeNull();
     expect(engine.parseTiers('[{"max":5,"amount":10}]')).toBeNull(); // শেষ টিয়ারে max থাকলে অবৈধ
@@ -47,14 +50,14 @@ describe('কনফিগ ও টিয়ার', () => {
 });
 
 describe('পেআউট নিয়ম', () => {
-  test('৫০০-তে রেফারার বোনাস (৭৫) পায়: কয়েন, লেজার, রেকর্ড, ৩x স্পোর্টস/০x ক্যাসিনো ওয়েজারিং', async () => {
+  test('৫০০-তে রেফারার বোনাস (৭৫, slab ১) পায়: কয়েন, লেজার, রেকর্ড, টার্নওভার', async () => {
     const { referrer, referred } = await pair();
     const dep = await depositAndApprove(referred, 500);
 
     expect(await coins(referrer)).toBe(75);
     const rw = await reward(referred);
     expect(rw.status).toBe('paid');
-    expect(rw.tier).toBe(3);
+    expect(rw.tier).toBe(1); // slab মোডে tier = ধাপের ক্রম (১-ভিত্তিক)
     expect(Number(rw.amount)).toBe(75);
     expect(Number(rw.qualifying_deposit_id)).toBe(dep);
 
@@ -85,9 +88,9 @@ describe('পেআউট নিয়ম', () => {
     expect(await count(`SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1`, [referrer])).toBe(0);
   });
 
-  test('১০০-র নিচে (৯৯) বোনাস নেই; পরে ১০০+ ডিপোজিটে ট্রিগার হয়', async () => {
+  test('ন্যূনতম ৫০০-র নিচে (৪৯৯) বোনাস নেই; পরে ৫০০+ ডিপোজিটে ট্রিগার হয়', async () => {
     const { referrer, referred } = await pair();
-    await depositAndApprove(referred, 99);
+    await depositAndApprove(referred, 499);
     expect(await coins(referrer)).toBe(0);
     expect(await reward(referred)).toBeNull();
 
@@ -118,14 +121,15 @@ describe('পেআউট নিয়ম', () => {
       [legacyReferred, referrer]
     );
     const got = [];
-    for (const amount of [100, 200, 500, 150, 300, 499, 5000]) {
+    for (const amount of [500, 999, 1000, 1999, 2000, 5000, 10000]) {
       const referred = await user('rd');
       await link(referrer, referred);
       await depositAndApprove(referred, amount);
       got.push(Number((await reward(referred)).amount));
     }
-    expect(got).toEqual([20, 50, 75, 20, 50, 50, 75]);
-    expect(await coins(referrer)).toBe(20 + 50 + 75 + 20 + 50 + 50 + 75);
+    // slab: ৫০০–৯৯৯=৭৫, ১০০০–১৯৯৯=১০০, ২০০০–৪৯৯৯=২০০, ৫০০০–৯৯৯৯=৩০০, ১০০০০–২৯৯৯৯=৫০০
+    expect(got).toEqual([75, 75, 100, 100, 200, 300, 500]);
+    expect(await coins(referrer)).toBe(75 + 75 + 100 + 100 + 200 + 300 + 500);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referrer_id=$1 AND status='paid'`, [referrer])).toBe(7);
   });
 
@@ -143,7 +147,7 @@ describe('পেআউট নিয়ম', () => {
       `SELECT tier, amount FROM referral_rewards WHERE referrer_id=$1 AND status='paid' ORDER BY tier, amount`, [referrer]
     )).rows;
     expect(rows.map(r => Number(r.amount))).toEqual([75, 75, 75, 75, 75]);
-    expect(rows.map(r => r.tier)).toEqual([3, 3, 3, 3, 3]);
+    expect(rows.map(r => r.tier)).toEqual([1, 1, 1, 1, 1]);
     expect(await coins(referrer)).toBe(375);
   });
 
@@ -153,7 +157,7 @@ describe('পেআউট নিয়ম', () => {
     const results = await Promise.all([approve(dep), approve(dep), approve(dep), approve(dep)]);
     expect(results.filter(r => r.success)).toHaveLength(1);
     await Promise.all([1, 2, 3].map(() => engine.processReferralReward(referred, dep)));
-    expect(await coins(referrer)).toBe(75);
+    expect(await coins(referrer)).toBe(100); // ১০০০ → slab ২ → ১০০
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referred_user_id=$1`, [referred])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1 AND type='referral_bonus'`, [referrer])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).toBe(1);
@@ -185,8 +189,8 @@ describe('পেআউট নিয়ম', () => {
     expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referred])).toBe(0);
     expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='deposit'`, [referred])).toBe(1);
     expect(await count(`SELECT COUNT(*) FROM referral_rewards WHERE referrer_id=$1`, [referred])).toBe(0);
-    // রেফারার তার আলাদা বোনাস পায়
-    expect(await coins(referrer)).toBe(75);
+    // রেফারার তার আলাদা বোনাস পায় (১০০০ → slab ২ → ১০০)
+    expect(await coins(referrer)).toBe(100);
     const refBonus = (await pool.query(`SELECT source FROM deposit_turnovers WHERE user_id=$1`, [referrer])).rows.map(r => r.source);
     expect(refBonus).toEqual(['referral']);
   });
@@ -209,7 +213,7 @@ describe('জালিয়াতি-গেট', () => {
     expect(await coins(referrer)).toBe(0);
     expect(await count(`SELECT COUNT(*) FROM coin_transactions WHERE user_id=$1`, [referrer])).toBe(0);
     expect(await count(`SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1`, [referrer])).toBe(0);
-    expect(await count(`SELECT COUNT(*) FROM bonuses WHERE user_id=$1`, [referrer])).toBe(0);
+    expect(await count(`SELECT COUNT(*) FROM deposit_turnovers WHERE user_id=$1 AND source='referral'`, [referrer])).toBe(0);
     // রেফার-করা ইউজারের ডিপোজিট স্বাভাবিক
     expect(await coins(referred)).toBe(600);
   });
@@ -319,8 +323,8 @@ describe('ত্রুটি ও legacy', () => {
   });
 });
 
-describe('নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস ধাপ ও ০.৮% হার-কমিশন', () => {
-  test.each([[100, 20, 1], [200, 50, 2], [400, 50, 2], [500, 75, 3]])(
+describe('নতুন নিয়ম: ডিপোজিট-অঙ্ক slab বোনাস ও ০.৮% হার-কমিশন', () => {
+  test.each([[500, 75, 1], [999, 75, 1], [1000, 100, 2], [2000, 200, 3], [5000, 300, 4], [10000, 500, 5]])(
     'প্রথম ডিপোজিট %p → রেফারার বোনাস %p', async (dep, want, tier) => {
       const { referrer, referred } = await pair();
       await depositAndApprove(referred, dep);
