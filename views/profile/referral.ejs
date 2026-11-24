@@ -43,9 +43,13 @@
   .im77-2 { font-size: 40px; margin-bottom: 8px; }
   .im77-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .im77-4 { display: flex; gap: 8px; align-items: center; }
+  .rf1-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .rf1-share { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .rf1-sbtn { display: block; text-align: center; background: rgba(255,255,255,0.1); color: var(--text-main); border-radius: 8px; padding: 10px; font-size: 13px; text-decoration: none; }
 </style>
 
 <%- include('../partials/navbar') %>
+<% const numLoc = locals.lang === 'en' ? 'en-US' : 'bn-BD'; const fmtN = (n) => Number(n).toLocaleString(numLoc); const ns = stats.nextStep || null; const refLink = share ? share.link : null; %>
 <div class="container dz76-1">
   <%- include('../partials/flash') %>
 
@@ -54,76 +58,66 @@
     <h1 class="dz76-3"><%= t.invite_friends_title %></h1>
   </div>
 
-  <!-- ব্যানার -->
+  <!-- ব্যানার: একটাই সরল বাক্য -->
   <div class="dz76-4">
     <div class="im77-2">🎁</div>
     <div class="dz76-5"><%= t.refer_and_earn %></div>
-    <div class="dz76-6">
-      <%= t('ref_tagline') %>
-    </div>
+    <div class="dz76-6"><%= t('ref_tagline') %></div>
   </div>
 
   <!-- পরিসংখ্যান -->
-  <div class="im77-3">
+  <div class="rf1-grid4">
     <div class="dz76-7">
-      <div class="dz76-8"><%= stats.totalReferrals %></div>
+      <div class="dz76-8" id="ref-total"><%= fmtN(stats.totalReferrals) %></div>
       <div class="dz76-9"><%= t.total_referrals %></div>
     </div>
     <div class="dz76-7">
-      <div class="dz76-10"><%= stats.successfulReferrals %></div>
+      <div class="dz76-10" id="ref-success"><%= fmtN(stats.successfulReferrals) %></div>
       <div class="dz76-9"><%= t.successful_referrals %></div>
     </div>
     <div class="dz76-7">
-      <div class="dz76-11"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
+      <div class="dz76-8" id="ref-pending"><%= fmtN(stats.pendingReferrals || 0) %></div>
+      <div class="dz76-9"><%= t('ref_pending_label') %></div>
+    </div>
+    <div class="dz76-7">
+      <div class="dz76-11" id="ref-earnings"><%= fmtN(stats.totalEarnings) %></div>
       <div class="dz76-9"><%= t.total_earnings %></div>
     </div>
   </div>
 
-  <!-- বোনাস তথ্য: ধাপ-ছক (slab) বা পুরোনো ক্রমিক টিয়ার -->
-  <% const prog = stats.program || null; const numLoc = locals.lang === 'en' ? 'en-US' : 'bn-BD'; const fmtN = (n) => Number(n).toLocaleString(numLoc); %>
-  <div class="dz76-12">
-    <% if (prog && prog.mode === 'slab') { %>
-      <div class="dz76-13"><%= t('ref_slab_title') %></div>
-      <% prog.slabs.forEach(sl => { %>
-        <div class="dz76-23">
-          <div class="dz76-9"><%= sl.max === null ? t('ref_slab_plus').replace('{from}', fmtN(sl.min)) : t('ref_slab_range').replace('{from}', fmtN(sl.min)).replace('{to}', fmtN(sl.max)) %></div>
-          <div class="dz76-14"><%= fmtN(sl.amount) %> <%= t('ref_taka') %></div>
-        </div>
-      <% }) %>
-      <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
-      <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
-    <% } else { %>
-      <div class="dz76-13"><%= t.next_referral_reward %></div>
-      <div class="dz76-14"><%= stats.nextBonus === null || stats.nextBonus === undefined ? '' : fmtN(stats.nextBonus) + ' ' + t('ref_taka') %></div>
-      <% if (prog) { %>
-        <div class="dz76-9"><%= t('ref_condition_min').replace('{min}', fmtN(prog.minDeposit)) %></div>
-        <div class="dz76-9"><%= t('ref_turnover_note').replace('{s}', fmtN(prog.turnover.sports)).replace('{c}', fmtN(prog.turnover.casino)) %></div>
+  <!-- পরের ধাপ -->
+  <% if (ns) { %>
+  <div class="dz76-12" id="ref-next-step" data-state="<%= ns.state %>">
+    <div class="dz76-13"><%= t('ref_next_title') %></div>
+    <div class="dz76-9">
+      <% if (ns.state === 'max') { %>
+        <%= t('ref_next_max').replace('{bonus}', fmtN(ns.bonus)) %>
+      <% } else if (ns.state === 'up') { %>
+        <%= t('ref_next_up').replace('{need}', fmtN(ns.needDeposit)).replace('{bonus}', fmtN(ns.bonus)) %>
+      <% } else { %>
+        <%= t('ref_next_first').replace('{need}', fmtN(ns.needDeposit)).replace('{bonus}', fmtN(ns.bonus)) %>
       <% } %>
-    <% } %>
-    <div class="dz76-9"><%= t('ref_first_deposit_info') %></div>
-    <div class="dz76-9"><%= t('ref_friend_note') %></div>
-  </div>
-
-  <!-- রেফারেল কোড -->
-  <div class="dz76-15">
-    <div class="dz76-16"><%= t.your_referral_code %></div>
-    <div class="im77-4">
-      <div class="dz76-17" id="ref-code">
-        <%= user.referral_code || 'N/A' %>
-      </div>
-      <button class="dz76-18" data-referral-action="copy"><%= t.copy_short %></button>
     </div>
   </div>
+  <% } %>
 
   <!-- রেফারেল লিংক -->
   <div class="dz76-19">
     <div class="dz76-16"><%= t.your_referral_link %></div>
     <div class="im77-4">
-      <div class="dz76-20" id="ref-link">
-        <%= baseUrl %>/register?ref=<%= user.referral_code %>
-      </div>
-      <button class="dz76-21" data-referral-action="share"><%= t.share %></button>
+      <div class="dz76-20" id="ref-link"><%= refLink || 'N/A' %></div>
+      <button class="dz76-18" data-referral-action="copy"><%= t.copy_short %></button>
     </div>
+    <% if (share) { %>
+    <div class="dz76-9"><%= t('ref_share_via') %></div>
+    <div class="rf1-share">
+      <a class="rf1-sbtn" id="ref-share-whatsapp" href="<%= share.whatsapp %>" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      <a class="rf1-sbtn" id="ref-share-telegram" href="<%= share.telegram %>" target="_blank" rel="noopener noreferrer">Telegram</a>
+      <a class="rf1-sbtn" id="ref-share-facebook" href="<%= share.facebook %>" target="_blank" rel="noopener noreferrer">Facebook</a>
+      <a class="rf1-sbtn" id="ref-share-messenger" href="<%= share.messenger %>" rel="noopener noreferrer">Messenger</a>
+    </div>
+    <button class="dz76-21" data-referral-action="share"><%= t.share %></button>
+    <% } %>
   </div>
 
   <!-- আমার টিম -->
@@ -134,7 +128,7 @@
         <div class="dz76-23">
           <div>
             <div class="dz76-13"><%= member.username %></div>
-            <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+            <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(numLoc) %></div>
           </div>
           <div>
             <% if (member.signup_bonus_paid) { %>
@@ -161,10 +155,10 @@
               <%= (h.reason === 'signup' || h.reason === 'first_deposit') ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
             </div>
             <div class="dz76-24">
-              <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>
+              <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(numLoc) %>
             </div>
           </div>
-          <div class="dz76-32">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
+          <div class="dz76-32">+<%= fmtN(h.amount) %></div>
         </div>
       <% }) %>
     <% } else { %>
@@ -173,6 +167,6 @@
   </div>
 </div>
 
-<script type="application/json" id="profile-referralConfig"><%- jsonScriptSafe({ referralCode: user.referral_code, baseUrl: baseUrl }) %></script>
+<script type="application/json" id="profile-referralConfig"><%- jsonScriptSafe({ referralCode: user.referral_code, baseUrl: baseUrl, link: refLink }) %></script>
 <script src="/js/views/profile-referral.js"></script>
 </body></html>

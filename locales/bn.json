@@ -3581,5 +3581,12 @@
   "arf_review_approved": "বোনাস অনুমোদিত হয়েছে",
   "arf_review_rejected": "বোনাস বাতিল করা হয়েছে",
   "arf_review_reason_required": "বাতিলের কারণ দেওয়া বাধ্যতামূলক",
-  "arf_review_reason_ph": "বাতিলের কারণ (বাধ্যতামূলক)"
+  "arf_review_reason_ph": "বাতিলের কারণ (বাধ্যতামূলক)",
+  "ref_pending_label": "অপেক্ষমাণ",
+  "ref_next_title": "পরের ধাপ",
+  "ref_next_first": "বন্ধু কমপক্ষে {need} টাকা ডিপোজিট করলে আপনি {bonus} টাকা পাবেন।",
+  "ref_next_up": "বন্ধু {need} টাকা বা তার বেশি ডিপোজিট করলে পরের ধাপে আপনি {bonus} টাকা পাবেন।",
+  "ref_next_max": "আপনি সর্বোচ্চ ধাপে আছেন ({bonus} টাকা)।",
+  "ref_share_via": "শেয়ার করুন",
+  "ref_share_text": "আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!"
 }

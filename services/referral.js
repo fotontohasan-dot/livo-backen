@@ -159,11 +159,23 @@ async function getReferralStats(userId) {
     [userId]
   );
 
+  // বন্ধুদের মধ্যে সর্বোচ্চ যোগ্য (approved) ডিপোজিট — "পরের ধাপ" হিসাবের ভিত্তি
+  const maxDepRes = await pool.query(
+    `SELECT COALESCE(MAX(pr.amount), 0) AS max_deposit
+       FROM referrals r
+       JOIN payment_requests pr ON pr.user_id = r.referred_id
+      WHERE r.referrer_id = $1 AND pr.type = 'deposit' AND pr.status = 'approved'`,
+    [userId]
+  );
+
   const successCount = parseInt(successRes.rows[0].count);
+  const totalCount = parseInt(totalRes.rows[0].count);
   const info = await getReferralProgramInfo();
   return {
-    totalReferrals: parseInt(totalRes.rows[0].count),
+    totalReferrals: totalCount,
     successfulReferrals: successCount,
+    pendingReferrals: Math.max(0, totalCount - successCount),
+    nextStep: info.mode === 'slab' ? computeNextStep(Number(maxDepRes.rows[0].max_deposit), info.slabs) : null,
     totalEarnings: Number(earnRes.rows[0].total),
     // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
     nextBonus: info.mode === 'tier' ? rewards.tierFor(successCount + 1, info.tiers).amount : null,
@@ -195,7 +207,37 @@ async function getReferralProgramInfo() {
   };
 }
 
+// "পরের ধাপ": বন্ধুর সর্বোচ্চ যোগ্য ডিপোজিট থেকে পরের slab।
+//   first = এখনো কোনো slab ছোঁয়নি (প্রথম slab-ই লক্ষ্য), up = উপরের slab বাকি, max = সর্বোচ্চ slab-এ আছে।
+function computeNextStep(maxDeposit, slabs) {
+  if (!Array.isArray(slabs) || slabs.length === 0) return null;
+  const dep = Number(maxDeposit);
+  let idx = -1;
+  if (Number.isFinite(dep)) { for (let i = 0; i < slabs.length; i++) { if (dep >= slabs[i].min) idx = i; else break; } }
+  if (idx < 0) return { state: 'first', needDeposit: slabs[0].min, bonus: slabs[0].amount };
+  if (idx === slabs.length - 1) return { state: 'max', needDeposit: null, bonus: slabs[idx].amount };
+  return { state: 'up', needDeposit: slabs[idx + 1].min, bonus: slabs[idx + 1].amount };
+}
+
+// শেয়ার-লিংক: স্কিম/হোস্ট স্থির, সব ডাইনামিক মান percent-encode (javascript: বা অন্য স্কিম ঢোকার পথ নেই)।
+function buildShareLinks(baseUrl, referralCode, shareText) {
+  if (!referralCode) return null;
+  const link = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
+  const u = encodeURIComponent(link);
+  const t = encodeURIComponent(String(shareText || ''));
+  const tu = encodeURIComponent(`${shareText || ''} ${link}`.trim());
+  return {
+    link,
+    whatsapp: `https://wa.me/?text=${tu}`,
+    telegram: `https://t.me/share/url?url=${u}&text=${t}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+    messenger: `fb-messenger://share/?link=${u}`
+  };
+}
+
 module.exports = {
+  computeNextStep,
+  buildShareLinks,
   createReferral,
   distributeCommission,
   getReferralStats,

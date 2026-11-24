@@ -15,7 +15,7 @@ const { createLimiter } = require('../middleware/rateLimitFactory');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
-const { getReferralStats } = require('../services/referral');
+const { getReferralStats, buildShareLinks } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
@@ -633,11 +633,16 @@ router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => 
   try {
     const stats = await getReferralStats(req.session.user.id);
     const baseUrl = getBaseUrl(req);
+    // লগইন-সেশনে referral_code না-ও থাকতে পারে — নিজের কোড সবসময় DB থেকে (শুধু নিজের id দিয়ে)
+    const codeRow = await pool.query('SELECT referral_code FROM users WHERE id = $1', [req.session.user.id]);
+    const myCode = (codeRow.rows[0] && codeRow.rows[0].referral_code) || null;
+    const share = buildShareLinks(baseUrl, myCode, req.t('ref_share_text'));
     res.render('profile/referral', {
-      user: req.session.user,
+      user: { ...req.session.user, referral_code: myCode },
       referralCount: stats.totalReferrals,
       stats,
-      baseUrl
+      baseUrl,
+      share
     });
   } catch (err) {
     console.error('referral page error:', err.message);
@@ -645,8 +650,9 @@ router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => 
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
-      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: null, program: null, history: [], team: [] },
-      baseUrl
+      stats: { totalReferrals: 0, successfulReferrals: 0, pendingReferrals: 0, totalEarnings: 0, nextBonus: null, nextStep: null, program: null, history: [], team: [] },
+      baseUrl,
+      share: null
     });
   }
 });

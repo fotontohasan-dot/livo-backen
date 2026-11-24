@@ -3581,5 +3581,12 @@
   "arf_review_approved": "Bonus approved",
   "arf_review_rejected": "Bonus rejected",
   "arf_review_reason_required": "A rejection reason is required",
-  "arf_review_reason_ph": "Reject reason (required)"
+  "arf_review_reason_ph": "Reject reason (required)",
+  "ref_pending_label": "Pending",
+  "ref_next_title": "Next step",
+  "ref_next_first": "If your friend deposits at least {need} Taka, you get {bonus} Taka.",
+  "ref_next_up": "If your friend deposits {need} Taka or more, you reach the next step and get {bonus} Taka.",
+  "ref_next_max": "You are at the top step ({bonus} Taka).",
+  "ref_share_via": "Share via",
+  "ref_share_text": "Register with my referral link!"
 }

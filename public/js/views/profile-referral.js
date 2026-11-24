@@ -10,11 +10,11 @@
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
 
   function copyCode() {
-    const code = cfg.referralCode;
-    navigator.clipboard.writeText(code).then(() => alert('কোড কপি হয়েছে!'));
+    const link = cfg.link || (cfg.baseUrl + '/register?ref=' + encodeURIComponent(cfg.referralCode));
+    navigator.clipboard.writeText(link).then(() => alert('লিংক কপি হয়েছে!'));
   }
   function shareLink() {
-    const link = cfg.baseUrl + '/register?ref=' + encodeURIComponent(cfg.referralCode);
+    const link = cfg.link || (cfg.baseUrl + '/register?ref=' + encodeURIComponent(cfg.referralCode));
     if (navigator.share) {
       navigator.share({ title: 'BET420 ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
     } else {
