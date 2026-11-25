@@ -172,27 +172,6 @@ async function expireDue(client, userId) {
   return due.rows.length;
 }
 
-// কাটা মোট (deducted, টাকায়) সারিগুলোর bonus_amount-এর মধ্যে ভাগ করে; সেন্ট-পূর্ণসংখ্যার অ্যারে ফেরত দেয়।
-// • ব্যালেন্স যথেষ্ট (কাটা ≥ মোট বোনাস): প্রতিটি সারি তার পুরো bonus_amount।
-// • কম হলে: bonus_amount-এর অনুপাতে (নিচের দিকে গোল); বাকি সেন্ট শেষ বোনাস-সারি নেয়,
-//   সারির bonus_amount ছাড়ালে বাকিটা তার আগের সারিতে যায়।
-// যোগফল সবসময় ঠিক কাটা মোটের সমান; কোনো সারি নিজের bonus_amount-এর বেশি পায় না।
-function splitExpiredDeduction(bonusAmounts, deducted) {
-  const bonusC = bonusAmounts.map((v) => Math.max(0, Math.round((Number(v) || 0) * 100)));
-  const totalC = bonusC.reduce((s, c) => s + c, 0);
-  const dedC = Math.max(0, Math.min(Math.round((Number(deducted) || 0) * 100), totalC));
-  if (dedC >= totalC) return bonusC.slice();
-  const shares = bonusC.map((c) => Math.floor((dedC * c) / totalC));
-  let rest = dedC - shares.reduce((s, c) => s + c, 0);
-  for (let i = bonusC.length - 1; i >= 0 && rest > 0; i--) {
-    if (bonusC[i] <= 0) continue;
-    const take = Math.min(rest, bonusC[i] - shares[i]);
-    shares[i] += take;
-    rest -= take;
-  }
-  return shares;
-}
-
 // ==================== ৩. যোগ্য বেট সেটেল/প্লেস হলে টার্নওভার ====================
 // addTurnover(client, userId, category, stake, opts)  — অথবা পুরোনো addTurnover(userId, category, stake)
 // opts: { ref, odds, kind: 'bet'|'cashout'|'void'|'cancelled'|'refund' }
