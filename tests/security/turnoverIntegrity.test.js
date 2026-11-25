@@ -50,17 +50,18 @@ describe('turnover progress is incremented atomically (P2-08)', () => {
 
   test('done columns are updated in-place, not from a read value', () => {
     const code = stripComments(source());
-    expect(code).toMatch(/sports_done = sports_done \+ \$1/);
-    expect(code).toMatch(/casino_done = casino_done \+ \$1/);
+    // V2: কলাম নাম ${col} টেমপ্লেটে — দুটোই "col = col + $1" প্যাটার্নে।
+    expect(code).toMatch(/\$\{col\} = \$\{col\} \+ \$1/);
+    expect(code).toMatch(/const col = category === 'sports' \? 'sports_done' : 'casino_done'/);
     expect(code).not.toMatch(/SET sports_done = \$1/);
     expect(code).not.toMatch(/SET casino_done = \$1/);
     expect(code).not.toMatch(/const newDone/);
   });
 
-  test('increments only apply to still-active bonuses', () => {
+  test('increments only apply to still-active turnovers', () => {
     const code = stripComments(source());
-    const updates = code.match(/UPDATE bonuses SET (?:sports|casino)_done[^`]*/g) || [];
-    expect(updates.length).toBe(2);
+    const updates = code.match(/UPDATE deposit_turnovers\s+SET \$\{col\}[^`]*/g) || [];
+    expect(updates.length).toBe(1);
     updates.forEach((sql) => expect(sql).toMatch(/status = 'active'/));
   });
 });

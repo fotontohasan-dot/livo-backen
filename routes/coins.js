@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
+const businessTime = require('../utils/businessTime');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -52,9 +53,10 @@ router.post('/daily-bonus', isAuth, requireFeature('daily_rewards'), async (req,
       `UPDATE users
          SET coins = coins + $1, last_bonus_date = NOW()
        WHERE id = $2
-         AND (last_bonus_date IS NULL OR last_bonus_date::date < CURRENT_DATE)
+         AND (last_bonus_date IS NULL
+              OR ((last_bonus_date AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE $3::text)::date < $4::date)
        RETURNING coins`,
-      [bonusAmount, userId]
+      [bonusAmount, userId, businessTime.sqlTimezone(), businessTime.today()]
     );
 
     if (upd.rowCount === 0) {

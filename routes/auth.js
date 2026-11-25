@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
+const { recordReferralClick } = require('../services/referralClicks');
 const { sendQueuedEmail } = require('../services/email');
 const { scanRegistration, scanFailedLogin, scanLogin } = require('../services/fraudDetection');
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
@@ -154,13 +155,18 @@ async function recordLogin(req, userId, vpnInfo = null) {
 
 router.get('/', async (req, res) => {
   try {
-    // ক্যাসিনো-প্রথম হোম: ফিল্টার (ক্যাটাগরি/প্রোভাইডার/A-Z/সার্চ) সার্ভার-সাইডে; ডেটা-পড়া
-    // services/homeCasino.js-এ। ব্যর্থ হলে সেখানেই খালি-কিন্তু-বৈধ অবস্থা ফেরে, তাই হোম 500 দেয় না।
-    const [casino, banners] = await Promise.all([
-      homeCasino.getHomeCasino(req.query),
-      homeCasino.getBanners(),
-    ]);
-    res.render('index', { user: req.session.user || null, casino, banners, homeCasino, currentPage: 'home', bottomNavVariant: 'casino' });
+    // ক্যাসিনো-প্রথম হোম: গেম/ক্যাটাগরি/প্রোভাইডার/ব্যানার services/homeCasino.js থেকে
+    // (শুধু পড়া; ফিল্টার সার্ভার-সাইডে)। ত্রুটিতে খালি অবস্থায় রেন্ডার — হোম ভাঙে না।
+    let casino;
+    try {
+      casino = await homeCasino.getHomeCasino(req.query);
+    } catch (gErr) {
+      console.error('Homepage casino fetch error:', gErr.message);
+      casino = homeCasino.emptyHomeCasino(req.query);
+    }
+    // গেম খেলা যাবে কি না তা games টেবিলের সারি + প্রোভাইডার সাসপেন্ড অবস্থা দিয়ে নির্ধারিত;
+    // লঞ্চ-পথ /games/launch/:provider/:gameId অপরিবর্তিত।
+    res.render('index', { user: req.session.user || null, casino });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
@@ -208,8 +214,14 @@ async function insertWithUniqueReferralCode(username, insertFn) {
   throw lastErr;
 }
 
-router.get('/register', (req, res) => {
+router.get('/register', async (req, res) => {
   const ref = req.query.ref || '';
+  // ক্লিক রেকর্ড — ব্যর্থ হলে পেজ লোড আটকায় না (recordReferralClick কখনো throw করে না)
+  if (ref) {
+    try {
+      await recordReferralClick({ code: String(ref), ip: getReqIp(req), userAgent: req.get('user-agent') || '', viewerUserId: req.session && req.session.user && req.session.user.id });
+    } catch (e) { console.error('referral click error:', e.message); }
+  }
   const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register', req });
   let captcha = null;
   if (botCheck.requiresCaptcha) {

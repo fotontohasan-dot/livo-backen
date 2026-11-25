@@ -15,7 +15,8 @@ const { createLimiter } = require('../middleware/rateLimitFactory');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
-const { getReferralStats } = require('../services/referral');
+const { getReferralStats, buildShareLinks } = require('../services/referral');
+const { getReferralFunnel } = require('../services/referralClicks');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
@@ -27,6 +28,7 @@ const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
+const businessTime = require('../utils/businessTime');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
@@ -234,12 +236,10 @@ router.get('/history', isAuth, async (req, res) => {
     }
 
     let dateFrom = from, dateTo = to;
-    if (quick === 'today') { dateFrom = new Date().toISOString().slice(0, 10); dateTo = dateFrom; }
-    else if (quick === 'yesterday') { const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10); dateFrom = y; dateTo = y; }
-    else if (quick === '7days') { dateFrom = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10); dateTo = new Date().toISOString().slice(0, 10); }
+    { const qr = businessTime.quickRange(['today', 'yesterday', '7days'].includes(quick) ? quick : null); if (qr) { dateFrom = qr.dateFrom; dateTo = qr.dateTo; } }
 
-    if (dateFrom) { params.push(dateFrom); conditions.push(`b.created_at::date >= $${params.length}`); }
-    if (dateTo) { params.push(dateTo); conditions.push(`b.created_at::date <= $${params.length}`); }
+    if (dateFrom) { params.push(dateFrom, businessTime.sqlTimezone()); conditions.push(`${businessTime.sqlBusinessDate('b.created_at', `$${params.length}`)} >= $${params.length - 1}`); }
+    if (dateTo) { params.push(dateTo, businessTime.sqlTimezone()); conditions.push(`${businessTime.sqlBusinessDate('b.created_at', `$${params.length}`)} <= $${params.length - 1}`); }
 
     const bets = await pool.query(`
       SELECT b.*, m.title, m.team_a, m.team_b
@@ -267,12 +267,10 @@ router.get('/stats', isAuth, async (req, res) => {
     const params = [req.session.user.id];
 
     let dateFrom = from, dateTo = to;
-    if (quick === 'today') { dateFrom = new Date().toISOString().slice(0, 10); dateTo = dateFrom; }
-    else if (quick === 'yesterday') { const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10); dateFrom = y; dateTo = y; }
-    else if (quick === '7days') { dateFrom = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10); dateTo = new Date().toISOString().slice(0, 10); }
+    { const qr = businessTime.quickRange(['today', 'yesterday', '7days'].includes(quick) ? quick : null); if (qr) { dateFrom = qr.dateFrom; dateTo = qr.dateTo; } }
 
-    if (dateFrom) { params.push(dateFrom); conditions.push(`created_at::date >= $${params.length}`); }
-    if (dateTo) { params.push(dateTo); conditions.push(`created_at::date <= $${params.length}`); }
+    if (dateFrom) { params.push(dateFrom, businessTime.sqlTimezone()); conditions.push(`${businessTime.sqlBusinessDate('created_at', `$${params.length}`)} >= $${params.length - 1}`); }
+    if (dateTo) { params.push(dateTo, businessTime.sqlTimezone()); conditions.push(`${businessTime.sqlBusinessDate('created_at', `$${params.length}`)} <= $${params.length - 1}`); }
 
     const result = await pool.query(`
       SELECT
@@ -635,12 +633,19 @@ router.get('/api/vip-progress', isAuth, requireFeature('vip'), async (req, res) 
 router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
+    const funnel = await getReferralFunnel(req.session.user.id);
     const baseUrl = getBaseUrl(req);
+    // লগইন-সেশনে referral_code না-ও থাকতে পারে — নিজের কোড সবসময় DB থেকে (শুধু নিজের id দিয়ে)
+    const codeRow = await pool.query('SELECT referral_code FROM users WHERE id = $1', [req.session.user.id]);
+    const myCode = (codeRow.rows[0] && codeRow.rows[0].referral_code) || null;
+    const share = buildShareLinks(baseUrl, myCode, req.t('ref_share_text'));
     res.render('profile/referral', {
-      user: req.session.user,
+      user: { ...req.session.user, referral_code: myCode },
       referralCount: stats.totalReferrals,
       stats,
-      baseUrl
+      funnel,
+      baseUrl,
+      share
     });
   } catch (err) {
     console.error('referral page error:', err.message);
@@ -648,8 +653,10 @@ router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => 
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
-      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: null, program: null, history: [], team: [] },
-      baseUrl
+      stats: { totalReferrals: 0, successfulReferrals: 0, pendingReferrals: 0, totalEarnings: 0, nextBonus: null, nextStep: null, program: null, history: [], team: [] },
+      funnel: { clicks: 0, signups: 0, deposits: 0 },
+      baseUrl,
+      share: null
     });
   }
 });

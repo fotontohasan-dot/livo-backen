@@ -84,7 +84,7 @@ const NAV = [
     items: [
       { href: '/admin/vip',         label: 'VIP', labelKey: 'admin_nav_item_vip',         icon: 'fa-crown',      active: 'vip',         permission: 'vip_manage' },
       { href: '/admin/vip/history', label: 'VIP History', labelKey: 'admin_nav_item_vip_history', icon: 'fa-history',    active: 'vip-history', permission: 'vip_manage' },
-      { href: '/admin/bonuses',     label: 'Bonuses', labelKey: 'admin_nav_item_bonuses',     icon: 'fa-gift',       active: 'bonuses',     permission: 'vip_manage' },
+      { href: '/admin/bonuses',     label: 'Bonuses', labelKey: 'admin_nav_item_bonuses',     icon: 'fa-gift',       active: 'bonuses',     permission: 'bonus_manage' },
       { href: '/admin/referrals',   label: 'Referrals', labelKey: 'admin_nav_item_referrals',   icon: 'fa-user-group', active: 'referrals',   permission: 'reports_view' },
       { href: '/admin/promotions',  label: 'Promotions', labelKey: 'admin_nav_item_promotions',  icon: 'fa-bullhorn',   active: 'promotions',  permission: 'games_manage' }
     ]

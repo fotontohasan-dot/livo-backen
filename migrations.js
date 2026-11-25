@@ -842,12 +842,18 @@ async function applyMigrations(pool) {
       INSERT INTO site_settings (key, value) VALUES
       ('min_bet', '10'),
       ('max_bet', '50000'),
-      ('turnover_multiplier', '3'),
+      ('turnover_multiplier', '5'),
       ('deposit_commission_percent', '0'),
       ('withdraw_commission_percent', '0'),
       ('max_withdraw_per_request', '50000'),
       ('max_withdraw_per_day', '100000')
       ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইমের টার্নওভার গুণক (শুধু reason='first_deposit' সারির জন্য); বিদ্যমান মান অক্ষত
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES ('free_bet_turnover_multiplier', '3')
+      ON CONFLICT (key) DO NOTHING
     `);
 
     // maintenance_mode আগে প্রতিটা স্টার্টআপে জোর করে 'false' করা হতো
@@ -1172,6 +1178,17 @@ async function applyMigrations(pool) {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_games_lobby
         ON games(category, is_active, admin_disabled, sort_order);
+    `);
+    // হোম (ক্যাসিনো-প্রথম) ফিল্টারের জন্য: প্রোভাইডার ফিল্টার ও A-Z অক্ষর/নাম-ক্রম। শুধু ইনডেক্স, ডেটা অক্ষত।
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_home_provider
+        ON games(provider, sort_order, name)
+        WHERE is_active = true AND admin_disabled = false;
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_home_letter
+        ON games((UPPER(LEFT(LTRIM(name), 1))), name, id)
+        WHERE is_active = true AND admin_disabled = false;
     `);
     // হোমের প্রোভাইডার ফিল্টার ও A-Z (ইংরেজি নামের প্রথম অক্ষর) ফিল্টারের জন্য ইনডেক্স
     await pool.query(`
@@ -2084,6 +2101,19 @@ async function applyMigrations(pool) {
     `);
     console.log("✅ Referral Contest Payout Tracking table ready");
 
+    // ==================== রেফারেল ক্লিক ফানেল (additive) ====================
+    // visitor_hash = HMAC-SHA256(সার্ভার সিক্রেট, IP+UA); কাঁচা IP নেই। click_day = Asia/Dhaka দিন।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id BIGSERIAL PRIMARY KEY,
+        referrer_user_id INTEGER NOT NULL REFERENCES users(id),
+        visitor_hash CHAR(64) NOT NULL,
+        click_day DATE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT referral_clicks_uniq UNIQUE (referrer_user_id, visitor_hash, click_day)
+      );
+    `);
+
     // ==================== Referral V2: referral_rewards ====================
     // docs/REFERRAL_V2_DESIGN.md। শুধু additive (IF NOT EXISTS) — পুরোনো referrals /
     // referral_commissions / bonuses অপরিবর্তিত। রোলব্যাক: ওই ডকের "Rollback" অংশ।
@@ -2109,6 +2139,8 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_referrer_status ON referral_rewards(referrer_id, status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_status ON referral_rewards(status);`);
+    // অ্যাডমিন রিভিউয়ের মন্তব্য/কারণ (reject-এ বাধ্যতামূলক) — আলাদা nullable কলাম, review_reason (হোল্ডের কারণ) অক্ষত।
+    await pool.query(`ALTER TABLE referral_rewards ADD COLUMN IF NOT EXISTS review_note TEXT;`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referral_reward_adjustments (
         id BIGSERIAL PRIMARY KEY,
@@ -2121,6 +2153,39 @@ async function applyMigrations(pool) {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_reward_adj_reward ON referral_reward_adjustments(reward_id);`);
+
+    // ==================== ডিপোজিট রিভার্সাল (অ্যাডমিন-হাতে, deposit_reverse) ====================
+    // শুধু নতুন টেবিল — বিদ্যমান ডেটা/কলাম অপরিবর্তিত। deposit_id UNIQUE = একটি ডিপোজিট জীবনে একবারই রিভার্স।
+    // due_amount > 0 মানে ব্যালেন্স কম থাকায় যা কাটা যায়নি (বকেয়া) — ব্যালেন্স কখনো ঋণাত্মক হয় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deposit_reversals (
+        id BIGSERIAL PRIMARY KEY,
+        deposit_id INTEGER NOT NULL REFERENCES payment_requests(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        admin_id INTEGER REFERENCES users(id),
+        reason TEXT NOT NULL,
+        deposit_amount NUMERIC(14,2) NOT NULL,
+        deducted_deposit NUMERIC(14,2) NOT NULL DEFAULT 0,
+        deducted_bonus NUMERIC(14,2) NOT NULL DEFAULT 0,
+        due_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        due_status VARCHAR(20) NOT NULL DEFAULT 'none',
+        balance_before NUMERIC(14,2),
+        balance_after NUMERIC(14,2),
+        old_status VARCHAR(20) NOT NULL,
+        new_status VARCHAR(20) NOT NULL DEFAULT 'reversed',
+        cancelled_bonus_ids JSONB,
+        cancelled_free_bet_ids JSONB,
+        referral_payouts JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT deposit_reversals_deposit_uniq UNIQUE (deposit_id),
+        CONSTRAINT deposit_reversals_due_status_chk CHECK (due_status IN ('none','open','settled'))
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_user ON deposit_reversals(user_id);`);
+    // বোনাস ↔ ডিপোজিট সরাসরি যোগ (নতুন nullable কলাম; পুরোনো সারি NULL — রিভার্সালে বর্ণনা/সময় মিলে ফলব্যাক)।
+    await pool.query(`ALTER TABLE bonuses ADD COLUMN IF NOT EXISTS deposit_id INTEGER REFERENCES payment_requests(id) ON DELETE SET NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonuses_deposit_id ON bonuses(deposit_id) WHERE deposit_id IS NOT NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_reversals_due ON deposit_reversals(due_status) WHERE due_status = 'open';`);
 
     // কনফিগ (বিদ্যমান site_settings কাঠামো); বিদ্যমান মান অ্যাডমিনের — ON CONFLICT DO NOTHING।
     // referral_tiers: আগের paid রেফারেল সংখ্যা অনুযায়ী (max = ওই টিয়ারের সর্বোচ্চ ক্রমিক, null = অসীম)।
@@ -2138,6 +2203,50 @@ async function applyMigrations(pool) {
       ('referral_bonus_cap', '1000'),
       ('referral_turnover_sports', '5'),
       ('referral_turnover_casino', '5')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+
+    // ==================== রেফারেল নতুন নিয়ম: ডিপোজিট-অঙ্ক বোনাস + ০.৮% ডিপোজিট-হার কমিশন ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_deposit_cycles (
+        id BIGSERIAL PRIMARY KEY,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id),
+        referrer_id INTEGER NOT NULL REFERENCES users(id),
+        deposited NUMERIC(14,2) NOT NULL DEFAULT 0,
+        deposit_ids INTEGER[] NOT NULL DEFAULT '{}',
+        status VARCHAR(20) NOT NULL DEFAULT 'open',
+        commission NUMERIC(12,2) NOT NULL DEFAULT 0,
+        opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        closed_at TIMESTAMP,
+        CONSTRAINT referral_deposit_cycles_status_chk CHECK (status IN
+          ('open','lost_paid','closed_withdrawn','closed_held','closed_zero'))
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_referral_cycle_open ON referral_deposit_cycles(referred_user_id) WHERE status = 'open';`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_referral_cycle_referrer ON referral_deposit_cycles(referrer_id, status);`);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('referral_bonus_bands', '[{"min":100,"amount":20},{"min":200,"amount":50},{"min":500,"amount":75}]'),
+      ('referral_loss_commission_percent', '0.8'),
+      ('referral_bet_commission_enabled', 'false')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    console.log('✅ Referral deposit-based bonus + loss-commission tables ready');
+
+
+    // ==================== রেফারেল ডিপোজিট-হার (০.৮%) লস-কমিশন: শুধু নতুন nullable কলাম + UNIQUE (টেবিল ওপরের main-ব্লকেই তৈরি; কিছু মোছা হয় না)
+    // একই সাইকেলের loss_commission দ্বিগুণ ঠেকানো: নতুন nullable cycle_id + আংশিক UNIQUE (বিদ্যমান সারি অক্ষত)
+    await pool.query(`ALTER TABLE referral_commissions ADD COLUMN IF NOT EXISTS cycle_id BIGINT;`);
+    const dupCycle = await pool.query(
+      `SELECT cycle_id FROM referral_commissions WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL
+        GROUP BY cycle_id HAVING COUNT(*) > 1 LIMIT 1`);
+    if (dupCycle.rows.length) {
+      throw new Error('referral_commissions: একই cycle_id-তে loss_commission ডুপ্লিকেট আছে — UNIQUE বসানো বন্ধ; আগে ডুপ্লিকেট দেখুন');
+    }
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_refcom_loss_cycle ON referral_commissions(cycle_id) WHERE reason = 'loss_commission' AND cycle_id IS NOT NULL;`);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES ('referral_loss_commission_percent', '0.8')
       ON CONFLICT (key) DO NOTHING;
     `);
 
@@ -2374,6 +2483,21 @@ async function applyMigrations(pool) {
       `status IN ('pending','approved','rejected')`,
       `SELECT COUNT(*)::int AS c FROM payment_requests WHERE status NOT IN ('pending','approved','rejected')`
     );
+    // ডিপোজিট রিভার্সাল (deposit_reverse) নতুন স্ট্যাটাস 'reversed' ব্যবহার করে — চেক-কনস্ট্রেইন্টে শুধু সেটি যোগ (কোনো ডেটা/কলাম মোছা নয়)।
+    // বিদ্যমান VALID/NOT VALID অবস্থা বজায় থাকে; DROP+ADD একই মাল্টি-স্টেটমেন্ট (implicit transaction) — মাঝখানে খোলা জানালা নেই। idempotent।
+    {
+      const sv = (await pool.query(
+        `SELECT pg_get_constraintdef(oid) AS def, convalidated FROM pg_constraint
+          WHERE conname = 'payment_requests_status_valid' AND conrelid = 'payment_requests'::regclass`
+      )).rows[0];
+      if (sv && !sv.def.includes("'reversed'")) {
+        await pool.query(
+          `ALTER TABLE payment_requests DROP CONSTRAINT payment_requests_status_valid;
+           ALTER TABLE payment_requests ADD CONSTRAINT payment_requests_status_valid
+             CHECK (status IN ('pending','approved','rejected','reversed'))${sv.convalidated ? '' : ' NOT VALID'};`
+        );
+      }
+    }
     await addCheck(
       'payment_requests', 'payment_requests_type_valid',
       `type IN ('deposit','withdraw')`,
@@ -2799,6 +2923,53 @@ async function applyMigrations(pool) {
     // K10: probe-এর ২ মিনিটের সীমা সব প্রসেসের মধ্যে শেয়ার্ড (আগে প্রসেস-লোকাল ছিল, তাই একাধিক web/worker প্রসেস মিলে বেশি probe যেত)।
     await pool.query(`ALTER TABLE integration_suspend ADD COLUMN IF NOT EXISTS last_probe_at TIMESTAMPTZ`);
     console.log('✅ integration_suspend ready');
+
+    // ==================== Turnover System V2 ====================
+    // পুরোনো `bonuses` টেবিল অপরিবর্তিত (আর্কাইভ) — কিছু DELETE/UPDATE করা হয় না।
+    // নতুন সিস্টেম নিচের দুটো টেবিলে চলে; পুরোনো লজিক আর কোথাও চালু নেই।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deposit_turnovers (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        deposit_id INTEGER,
+        source VARCHAR(20) NOT NULL DEFAULT 'deposit',
+        deposit_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        bonus_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        multiplier NUMERIC(8,2) NOT NULL,
+        required NUMERIC(16,2) NOT NULL,
+        sports_done NUMERIC(16,2) NOT NULL DEFAULT 0,
+        casino_done NUMERIC(16,2) NOT NULL DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        expires_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_deposit_turnovers_deposit ON deposit_turnovers(deposit_id) WHERE deposit_id IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_turnovers_user_status ON deposit_turnovers(user_id, status)`);
+    // expireDue মেয়াদে এই সারির ভাগে আসলে যা কাটা হয়েছে (NULL = পুরোনো সারি, রেকর্ড নেই → পুরো কাটা ধরা হয়)
+    await pool.query(`ALTER TABLE deposit_turnovers ADD COLUMN IF NOT EXISTS expired_deducted NUMERIC(14,2)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS turnover_events (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        ref TEXT NOT NULL,
+        category VARCHAR(10) NOT NULL,
+        amount NUMERIC(16,2) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, ref)
+      );
+    `);
+    await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+        ('turnover_no_bonus_multiplier', '1'),
+        ('turnover_min_odds', '1.5'),
+        ('turnover_expiry_hours', '0'),
+        ('turnover_cashout_counts', '0')
+      ON CONFLICT (key) DO NOTHING
+    `);
+    console.log('✅ turnover v2 ready');
 
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration

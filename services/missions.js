@@ -3,23 +3,20 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+const businessTime = require('../utils/businessTime');
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return businessTime.today();
 }
 
-// সপ্তাহের শুরু (সোমবার) — YYYY-MM-DD
+// সপ্তাহের শুরু (সোমবার, ব্যবসায়িক দিন অনুযায়ী) — YYYY-MM-DD
 function weekStart() {
-  const d = new Date();
-  const day = d.getUTCDay(); // 0=Sun..6=Sat
+  const day = businessTime.businessWeekday(); // 0=Sun..6=Sat
   const diff = (day === 0 ? -6 : 1) - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().slice(0, 10);
+  return businessTime.addDays(businessTime.today(), diff);
 }
 function weekEnd() {
-  const d = new Date(weekStart());
-  d.setUTCDate(d.getUTCDate() + 6);
-  return d.toISOString().slice(0, 10);
+  return businessTime.addDays(weekStart(), 6);
 }
 
 // প্রতিটা বাজিতে ডেইলি প্রোগ্রেস আপডেট (উইকলি/স্পেশাল এখান থেকেই অ্যাগ্রিগেট হয়)
@@ -92,7 +89,8 @@ async function getWeeklyMissions(userId) {
 async function getSpecialMissions(userId) {
   const defs = (await pool.query(
     `SELECT * FROM mission_defs WHERE active = true AND period = 'special'
-     AND CURRENT_DATE BETWEEN start_date AND end_date ORDER BY reward ASC`
+     AND $1::date BETWEEN start_date AND end_date ORDER BY reward ASC`,
+    [today()]
   )).rows;
 
   const missions = [];

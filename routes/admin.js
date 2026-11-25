@@ -2,6 +2,8 @@ const { fetchWithTimeout } = require('../utils/httpClient');
 const express = require('express');
 const secretBox = require('../utils/secretBox');
 const router = express.Router();
+// from/to তারিখ: 2026-3-5 → 2026-03-05 স্বয়ংক্রিয় সংশোধন; অচেনা হলে বন্ধুত্বপূর্ণ বার্তা (এরর পেজ নয়)
+router.use(require('../middleware/dateRangeNormalize').dateRangeNormalize);
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
@@ -13,6 +15,16 @@ const scheduler = require('../services/scheduler');
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
 // কারণটা আগের মতোই console.error()-এ সার্ভার লগে থাকে। utils/safeError.js দেখুন।
 const { publicMessage } = require('../utils/safeError');
+// রিপোর্টের "দিন" = Asia/Dhaka ব্যবসায়িক দিন (utils/businessTime.js)। আগে CURRENT_DATE / created_at::date
+// (DB-টাইমজোন = UTC) ও toISOString().slice (UTC) — দিন বদলাত BD ০৬:০০-এ, ব্যবসায়িক মধ্যরাতে নয়।
+const bt = require('../utils/businessTime');
+const sqlBizDate = bt.sqlBusinessDate;
+// BD দিন-সীমা (UTC Date) → টাইমজোনবিহীন TIMESTAMP কলামের সাথে তুলনার জন্য সেশন-লোকাল ঘড়িতে
+const BIZ_TS = (p) => `(${p}::timestamptz AT TIME ZONE current_setting('TimeZone'))`;
+// ফিল্টারের 'YYYY-MM-DD' → BD দিন-সীমা (ISO UTC স্ট্রিং)। SQL-এ BIZ_TS($n)-এর সাথে:
+//   col >= BIZ_TS(bizFrom(from))  AND  col < BIZ_TS(bizToExcl(to))   (to = সেই BD দিনসহ; সীমা = পরের BD দিনের শুরু, `<`)
+const bizFrom = (day) => bt.startOfDay(day).toISOString();
+const bizToExcl = (day) => bt.endOfDay(day).toISOString();
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
 // আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
@@ -25,21 +37,21 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
     const [revenue, userGrowth, betStats, topUsers, kycSummary, queueH] = await Promise.all([
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND created_at::date=d::date),0) AS deposit,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date=d::date),0) AS withdraw
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND ${sqlBizDate('created_at', '$2')}=d::date),0) AS deposit,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$2')}=d::date),0) AS withdraw
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date=d::date),0) AS new_users
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT COUNT(*) FROM users WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS new_users
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date=d::date),0) AS cnt,
-          COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date=d::date),0) AS staked
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
+          COALESCE((SELECT COUNT(*) FROM bets WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS cnt,
+          COALESCE((SELECT SUM(stake) FROM bets WHERE ${sqlBizDate('created_at', '$2')}=d::date),0) AS staked
+        FROM generate_series($1::date - INTERVAL '${interval}', $1::date, INTERVAL '1 day') d ORDER BY day
+      `, [bt.today(), bt.sqlTimezone()]),
       pool.query(`
         SELECT u.username, SUM(pr.amount) AS total FROM payment_requests pr
         JOIN users u ON pr.user_id=u.id
@@ -1068,9 +1080,10 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
-  'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
+  'referral_loss_commission_percent',
   // রেফারেল বোনাস (ধাপ-ভিত্তিক): ন্যূনতম ডিপোজিট, ক্যাপ, ধাপ-ছক (JSON), টার্নওভার — services/referralRewards.js
   'referral_min_deposit', 'referral_bonus_cap', 'referral_slabs', 'referral_turnover_sports', 'referral_turnover_casino',
   'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
@@ -1131,14 +1144,79 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
   }
 });
 
-router.post('/settings/update', rbac.requirePermission('settings_edit'), async (req, res) => {
+// বোনাস/টার্নওভার সেটিং key — এগুলো আর settings_edit নয়, bonus_manage চায়।
+const BONUS_SETTING_KEYS = new Set([
+  'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds',
+  'turnover_expiry_hours', 'turnover_cashout_counts'
+]);
+
+// ফর্মের ডিফল্ট (views/admin/settings.ejs) — সেটিং সারি না থাকলে ফর্ম এই মান পাঠায়, তাই এটাকে "অপরিবর্তিত" ধরা হয়
+const BONUS_SETTING_DEFAULTS = {
+  turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5',
+  turnover_expiry_hours: '0', turnover_cashout_counts: '0'
+};
+// turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
+const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k);
+// সিক্রেট-জাতীয় key-র মান কখনো লগে যায় না — শুধু "বদলেছে"
+const SECRET_SETTING_KEY_RE = /(token|secret|passw(or)?d|passwd|api[_-]?key|private|credential|signature|salt)/i;
+const auditVal = (v) => (v === null || v === undefined || v === '') ? '(খালি)' : String(v).slice(0, 200);
+const buildBonusAuditDetail = (c) => c.secret
+  ? `সেটিং ${c.key} বদলেছে`
+  : `সেটিং ${c.key} বদলেছে | পুরোনো: ${auditVal(c.oldV)} → নতুন: ${auditVal(c.newV)}`;
+const sameSettingValue = (a, b) => {
+  const x = a === null || a === undefined ? '' : String(a).trim();
+  const y = b === null || b === undefined ? '' : String(b).trim();
+  if (x === y) return true;
+  const nx = Number(x), ny = Number(y);
+  return x !== '' && y !== '' && Number.isFinite(nx) && Number.isFinite(ny) && nx === ny;
+};
+
+// settings_edit অথবা bonus_manage — যেকোনো একটা থাকলে ফর্মে ঢোকা যায়; কোনোটাই না থাকলে
+// আগের মতোই rbac.requirePermission('settings_edit')-এর স্বাভাবিক প্রত্যাখ্যান + UNAUTHORIZED_ACCESS লগ।
+// কোন key সেভ হবে সেটা হ্যান্ডলারে req.settingsAccess দিয়ে আলাদা হয়।
+async function requirePermissionSettingsOrBonus(req, res, next) {
   try {
+    const uid = req.session && req.session.user && req.session.user.id;
+    if (!uid) return rbac.requirePermission('settings_edit')(req, res, next);
+    const [canEdit, canBonus] = await Promise.all([
+      rbac.hasPermission(uid, 'settings_edit'),
+      rbac.hasPermission(uid, 'bonus_manage')
+    ]);
+    if (!canEdit && !canBonus) return rbac.requirePermission('settings_edit')(req, res, next);
+    req.settingsAccess = { canEdit, canBonus };
+    return next();
+  } catch (err) {
+    console.error('settings gate error:', err.message);
+    return res.status(500).send('Permission check failed');
+  }
+}
+
+router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, res) => {
+  try {
+    const { canEdit, canBonus } = req.settingsAccess;
     // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
     const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
 
+    // বোনাস/টার্নওভার key-র পুরোনো মান — অডিট লগের জন্য (সেভ করার আগেই পড়া)
+    const auditKeys = SETTING_KEYS.filter(isBonusAuditKey);
+    const prevBonus = {};
+    (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [auditKeys]))
+      .rows.forEach(r => { prevBonus[r.key] = r.value; });
+    const bonusChanges = [];   // { key, oldV, newV, secret }
+    const deniedBonusKeys = []; // bonus_manage ছাড়া যে turnover_* বদলাতে চেয়েছিল
+
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
+      if (!canBonus && BONUS_SETTING_KEYS.has(key) && key in req.body) {
+        // আগে চুপচাপ বাদ যেত — এখন জানানো হবে। ফর্ম সবসময় বর্তমান মান পাঠায়, তাই শুধু আসলেই ভিন্ন মান হলে।
+        let rawD = req.body[key];
+        if (Array.isArray(rawD)) rawD = rawD[rawD.length - 1];
+        const cur = key in prevBonus ? prevBonus[key] : BONUS_SETTING_DEFAULTS[key];
+        if (!sameSettingValue(rawD, cur)) deniedBonusKeys.push(key);
+      }
+      // turnover_* শুধু bonus_manage-ওয়ালা বদলাতে পারে; বাকি সব key শুধু settings_edit-ওয়ালা
+      if (BONUS_SETTING_KEYS.has(key) ? !canBonus : !canEdit) continue;
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
@@ -1159,7 +1237,7 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
       if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
       // রেফারেল কমিশন রেট — ০-১০০-এর মধ্যে সংখ্যা না হলে সেভ না করে আগের মান রেখে দেওয়া হয়
       // (ভুল মান যেমন negative বা খালি স্ট্রিং সেভ হলে distributeCommission()-এ ভুল কমিশন যেতে পারত)
-      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'].includes(key)) {
+      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent', 'referral_loss_commission_percent'].includes(key)) {
         const n = parseFloat(value);
         if (!Number.isFinite(n) || n < 0 || n > 100) continue;
         value = String(n);
@@ -1181,6 +1259,10 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
         value = JSON.stringify(parsed);
       }
 
+      if (isBonusAuditKey(key) && !sameSettingValue(prevBonus[key], value)) {
+        bonusChanges.push({ key, oldV: prevBonus[key], newV: value, secret: SECRET_SETTING_KEY_RE.test(key) });
+      }
+
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
@@ -1188,17 +1270,24 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
       );
     }
 
+    if (deniedBonusKeys.length) {
+      req.flash('error', req.t('admin_turnover_needs_bonus_manage').replace('{keys}', deniedBonusKeys.join(', ')));
+    }
+
     // চেকবক্স আনচেক থাকলে ব্রাউজার req.body-তে maintenance_mode ফিল্ডটাই পাঠায় না,
     // তাই এখানে সবসময় boolean-এ coerce করে explicit true/false লেখা হচ্ছে।
     let rawMaintenance = 'maintenance_mode' in req.body ? req.body.maintenance_mode : 'false';
     if (Array.isArray(rawMaintenance)) rawMaintenance = rawMaintenance[rawMaintenance.length - 1];
-    const maintenanceBool = rawMaintenance === true || rawMaintenance === 'true' || rawMaintenance === 'on' || rawMaintenance === '1';
+    const maintenanceBool = !canEdit ? wasOn : (rawMaintenance === true || rawMaintenance === 'true' || rawMaintenance === 'on' || rawMaintenance === '1');
 
-    await pool.query(
-      `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [String(maintenanceBool)]
-    );
+    // শুধু bonus_manage থাকলে maintenance_mode স্পর্শ হয় না (ফর্মে চেকবক্স না থাকায় সেটা false হয়ে যেত)
+    if (canEdit) {
+      await pool.query(
+        `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [String(maintenanceBool)]
+      );
+    }
 
     // এই দুটো ব্যর্থ হলেও সেটিংস তো সেভ হয়েই গেছে — তাই আলাদা try/catch দিয়ে
     // এদের এরর মূল সেভ অপারেশনকে ব্যর্থ দেখানো থেকে আটকানো হচ্ছে
@@ -1207,6 +1296,20 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
       await loadSettings();
     } catch (e) {
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
+    }
+    // প্রতি বদলানো বোনাস/টার্নওভার key-র জন্য আলাদা অডিট এন্ট্রি (পুরোনো → নতুন; সিক্রেট হলে শুধু "বদলেছে")
+    for (const c of bonusChanges) {
+      try {
+        const detail = buildBonusAuditDetail(c);
+        await logAdminAction(req.session.user.id, req.session.user.username, 'SETTING_CHANGE', detail, req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'BONUS_SETTING_CHANGED', category: 'settings', status: 'success', riskLevel: 'medium',
+          details: c.secret ? { key: c.key, changed: true } : { key: c.key, old: auditVal(c.oldV), new: auditVal(c.newV) }
+        }).catch(e => console.error('logAuditEvent (BONUS_SETTING_CHANGED) error:', e.message));
+      } catch (e) {
+        console.error('bonus setting audit failed (settings already saved):', e && e.message);
+      }
     }
     try {
       if (maintenanceBool && !wasOn) {
@@ -1358,8 +1461,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     // কিন্তু এই ভ্যারিয়েবলটা কখনো তৈরি/পাস করা হতো না — ফলে প্রতিবার লগইনের পর প্রথম পেজ
     // (dashboard) 500 এরর দিয়ে ক্র্যাশ করত ("dateRange is not defined")। ডিফল্ট গত ৩০ দিন,
     // query param দিয়ে ওভাররাইড করা যায়।
-    const today = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const today = bt.today();
+    const thirtyDaysAgo = bt.addDays(today, -29);
     const dateRange = {
       from: /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : thirtyDaysAgo,
       to: /^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '') ? req.query.to : today
@@ -1376,24 +1479,29 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayWithdraw = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayBets = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
+      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), today]
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), bt.addDays(today, -1)]
     );
 
     // ==== সর্বমোট (লাইফটাইম) ডিপোজিট/উইথড্র — ড্যাশবোর্ড কার্ডের আসল সংখ্যা ====
@@ -1404,7 +1512,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
     );
     const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
 
     // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
@@ -1427,18 +1536,18 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 
     const revenueTrend = await pool.query(`
       SELECT d::date AS day,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$2')} = d::date),0) AS deposit,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$2')} = d::date),0) AS withdraw
+      FROM generate_series($1::date - INTERVAL '13 days', $1::date, INTERVAL '1 day') d
       ORDER BY day
-    `);
+    `, [today, bt.sqlTimezone()]);
 
     const userGrowth = await pool.query(`
       SELECT d::date AS day,
-        COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+        COALESCE((SELECT COUNT(*) FROM users WHERE ${sqlBizDate('created_at', '$2')} = d::date),0) AS new_users
+      FROM generate_series($1::date - INTERVAL '13 days', $1::date, INTERVAL '1 day') d
       ORDER BY day
-    `);
+    `, [today, bt.sqlTimezone()]);
 
     const recentBets = await pool.query(`
       SELECT b.*, u.username, m.team_a, m.team_b, m.title
@@ -1532,11 +1641,11 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='won') AS won,
              COUNT(*) FILTER (WHERE status='lost') AS lost, COUNT(*) FILTER (WHERE status='pending') AS pending,
              COALESCE(SUM(stake),0) AS staked
-      FROM bets WHERE created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      FROM bets WHERE created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const betPayoutRes = await pool.query(`
-      SELECT COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END),0) AS payout FROM bets WHERE status='won' AND created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      SELECT COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END),0) AS payout FROM bets WHERE status='won' AND created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const totalBetsN = betStatsRes ? parseInt(betStatsRes.rows[0].total) : 0;
     const wonN = betStatsRes ? parseInt(betStatsRes.rows[0].won) : 0;
     const totalStakeN = betStatsRes ? Number(betStatsRes.rows[0].staked) : 0;
@@ -1555,8 +1664,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     const apiLogStatsRes = await pool.query(`
       SELECT COUNT(*) AS total, COALESCE(AVG(response_time_ms),0) AS avg_ms,
              COUNT(*) FILTER (WHERE status_code >= 400) AS errors
-      FROM api_usage_logs WHERE created_at BETWEEN $1 AND $2
-    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+      FROM api_usage_logs WHERE created_at >= ${BIZ_TS('$1')} AND created_at < ${BIZ_TS('$2')}
+    `, [bt.startOfDay(dateRange.from).toISOString(), bt.endOfDay(dateRange.to).toISOString()]).catch(() => null);
     const totalReqN = apiLogStatsRes ? parseInt(apiLogStatsRes.rows[0].total) : 0;
     const apiUsageStats = {
       totalRequests: totalReqN,
@@ -1676,8 +1785,8 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    const today = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const today = bt.today();
+    const thirtyDaysAgo = bt.addDays(today, -29);
     res.render('admin/dashboard', { loadError: true,
       dateRange: { from: thirtyDaysAgo, to: today },
       betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
@@ -1698,27 +1807,32 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
 // ==================== ড্যাশবোর্ড লাইভ স্ট্যাটস (পোলিং API) ====================
 router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), async (req, res) => {
   try {
+    const today = bt.today(); // BD ব্যবসায়িক দিন (S5–S8 ড্যাশবোর্ড কার্ডের সাথে একই সংজ্ঞা)
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
     const activeUsersPoll = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='deposit' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayWithdraw = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+       WHERE type='withdraw' AND status='approved' AND ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const todayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), today]
     );
     const yesterdayProfitLoss = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS staked,
               COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+       FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')`,
+      [bt.sqlTimezone(), bt.addDays(today, -1)]
     );
     const totalDepositAll = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
@@ -1727,7 +1841,8 @@ router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), asy
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
     );
     const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), today]
     );
     const pendingDeposits = await pool.query(
       `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
@@ -1812,12 +1927,12 @@ router.get('/deposits/legacy-disabled', rbac.requirePermission('payments_view'),
     `;
     const params = [];
     if (from) {
-      params.push(from);
-      recentQuery += ` AND pr.created_at >= $${params.length}::date`;
+      params.push(bizFrom(from));
+      recentQuery += ` AND pr.created_at >= ${BIZ_TS('$' + params.length)}`;
     }
     if (to) {
-      params.push(to);
-      recentQuery += ` AND pr.created_at < ($${params.length}::date + INTERVAL '1 day')`;
+      params.push(bizToExcl(to));
+      recentQuery += ` AND pr.created_at < ${BIZ_TS('$' + params.length)}`;
     }
     recentQuery += ` ORDER BY pr.created_at DESC` + (from || to ? '' : ' LIMIT 30');
     const recent = await pool.query(recentQuery, params);
@@ -1908,6 +2023,41 @@ router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'
   }
 });
 
+// ==================== approved ডিপোজিট হাতে রিভার্স (permission: deposit_reverse) ====================
+// স্বয়ংক্রিয় নয়; কারণ বাধ্যতামূলক (না থাকলে 400, কিছুই বদলায় না)। বিস্তারিত: services/depositReversal.js
+// body: { reason, require_full? } — require_full=true হলে কম ব্যালেন্সে অস্বীকৃত; নইলে যা আছে কেটে বাকিটা বকেয়া।
+// রেফারেল বোনাস পেআউট স্বয়ংক্রিয় কাটা হয় না — referral_payouts তালিকা ফেরত যায়।
+router.post('/api/deposits/:id/reverse', rbac.requirePermission('deposit_reverse'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+  const reason = String((req.body && req.body.reason) || '').replace(/\s+/g, ' ').trim();
+  if (!reason) return res.status(400).json({ success: false, error: 'reason_required' });
+  const requireFull = !!(req.body && (req.body.require_full === true || req.body.require_full === 'true' || req.body.require_full === '1'));
+  try {
+    const out = await require('../services/depositReversal').reverseDeposit({
+      depositId: req.params.id, adminId: req.session.user.id, reason, requireFull
+    });
+    if (!out.ok) {
+      const code = out.result === 'not_found' ? 404 : 409;
+      return res.status(code).json({ success: false, error: out.result, ...(out.balance != null ? { balance: out.balance, needed: out.needed } : {}) });
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reverse',
+      `Deposit #${out.depositId} reversed (user #${out.userId}, ${out.depositAmount}) — কারণ: ${out.reason}`, req.ip);
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_REVERSED', category: 'financial', status: 'success', riskLevel: 'high',
+      details: {
+        deposit_id: out.depositId, user_id: out.userId, reason: out.reason, old_status: out.oldStatus, new_status: out.newStatus,
+        balance_before: out.balanceBefore, balance_after: out.balanceAfter, deducted_deposit: out.deductedDeposit,
+        deducted_bonus: out.deductedBonus, due_amount: out.dueAmount, cancelled_bonus_ids: out.cancelledBonusIds,
+        cancelled_free_bet_ids: out.cancelledFreeBetIds, referral_payouts: out.referralPayouts
+      }
+    });
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    console.error('deposit reverse error:', err);
+    return res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
+  }
+});
+
 // ==================== উইথড্র ম্যানেজমেন্ট ====================
 // ==================== উইথড্র (ডুপ্লিকেট — ক্যানোনিকাল পেজে রিডাইরেক্ট) ====================
 // উপরের /deposits-এর মতোই কারণ: /payment/admin/payments-এর উইথড্র ট্যাবই এখন একমাত্র কিউ।
@@ -1932,12 +2082,12 @@ router.get('/withdrawals/legacy-disabled', rbac.requirePermission('payments_view
     `;
     const params = [];
     if (from) {
-      params.push(from);
-      recentQuery += ` AND pr.created_at >= $${params.length}::date`;
+      params.push(bizFrom(from));
+      recentQuery += ` AND pr.created_at >= ${BIZ_TS('$' + params.length)}`;
     }
     if (to) {
-      params.push(to);
-      recentQuery += ` AND pr.created_at < ($${params.length}::date + INTERVAL '1 day')`;
+      params.push(bizToExcl(to));
+      recentQuery += ` AND pr.created_at < ${BIZ_TS('$' + params.length)}`;
     }
     recentQuery += ` ORDER BY pr.created_at DESC` + (from || to ? '' : ' LIMIT 30');
     const recent = await pool.query(recentQuery, params);
@@ -2220,17 +2370,12 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
     }
     // V2: বোনাস-অবস্থা শুধু referral_rewards থেকে (সাইন-আপ-ফ্ল্যাগ/bonus_held পড়া বন্ধ; কলাম DB-তে থাকে)।
-    // paid/legacy_paid = বোনাস পাওয়া; held = pending_review (অ্যাডমিন রিভিউ); retry_pending আলাদা।
+    // paid/legacy_paid = বোনাস পাওয়া; held = pending_review (অ্যাডমিন রিভিউয়ের অপেক্ষায়); retry_pending ও rejected আলাদা; বাকি সব pending।
     if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
     if (status === 'held') conditions.push("rr.status = 'pending_review'");
     if (status === 'retry_pending') conditions.push("rr.status = 'retry_pending'");
     if (status === 'rejected') conditions.push("rr.status IN ('rejected','reversed')");
     if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid','pending_review','rejected','reversed'))");
-    // V2: বোনাস-অবস্থা referral_rewards থেকে — paid/legacy_paid = বোনাস পাওয়া;
-    // pending_review = আটকানো (আগের "held"), অ্যাডমিন রিভিউয়ের অপেক্ষায়; বাকি সব pending।
-    if (status === 'bonus_paid') conditions.push("rr.status IN ('paid','legacy_paid')");
-    if (status === 'held') conditions.push("rr.status = 'pending_review'");
-    if (status === 'pending') conditions.push("(rr.status IS NULL OR rr.status NOT IN ('paid','legacy_paid','pending_review'))");
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -2244,9 +2389,6 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     const total = parseInt(countRes.rows[0].count);
 
     const summaryRes = await pool.query(`
-      SELECT (SELECT COUNT(*) FROM referrals) AS total_referrals,
-             (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
-             (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count
       SELECT COUNT(*) AS total_referrals,
              (SELECT COUNT(*) FROM referral_rewards WHERE status IN ('paid','legacy_paid')) AS bonus_paid_count,
              (SELECT COUNT(*) FROM referral_rewards WHERE status = 'pending_review') AS held_count
@@ -2259,10 +2401,8 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
       `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done,
               COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid,
               (rr.status = 'pending_review') AS bonus_held,
-              rr.status AS reward_status, rr.review_reason AS hold_reason,
+              rr.id AS reward_id, rr.status AS reward_status, rr.review_reason AS hold_reason,
               rr.tier AS reward_tier, rr.amount AS reward_amount, r.created_at,
-              COALESCE(rr.status IN ('paid','legacy_paid'), false) AS signup_bonus_paid, rr.status AS reward_status,
-              (rr.status = 'pending_review') AS bonus_held, rr.review_reason AS hold_reason, r.created_at,
               ru.username AS referrer_username, ru.referral_code AS referrer_code,
               rd.username AS referred_username, rd.created_at AS referred_joined_at,
               COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned
@@ -2294,6 +2434,40 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     });
   }
 });
+
+// ==================== রেফারেল হোল্ড রিভিউ (approve/reject) ====================
+// ফোন/পেমেন্ট-অ্যাকাউন্ট/ডিভাইস মিল বা স্কোর ≥৫০ হলে বোনাস pending_review। permission: bonus_manage।
+async function reviewReferralHandler(decision, req, res) {
+  const back = '/admin/referrals?status=held';
+  // reject-এ কারণ বাধ্যতামূলক — না থাকলে 400 (কিছুই বদলায় না)
+  if (decision === 'reject' && !String((req.body && req.body.reason) || '').trim()) {
+    return res.status(400).type('text').send(req.t('arf_review_reason_required'));
+  }
+  try {
+    const out = await require('../services/referralReview').reviewHeldReward({
+      rewardId: req.params.id, adminId: req.session.user.id, decision, reason: req.body && req.body.reason
+    });
+    if (!out.ok) {
+      req.flash('error', out.result === 'not_found' ? req.t('arf_review_not_found') : req.t('arf_review_already'));
+      return res.redirect(back);
+    }
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: out.result === 'approved' ? 'REFERRAL_BONUS_APPROVED' : 'REFERRAL_BONUS_REJECTED',
+      category: 'financial', riskLevel: 'medium',
+      details: { reward_id: Number(req.params.id), referrer_id: out.referrerId, referred_user_id: out.referredId,
+        old_status: out.oldStatus, new_status: out.newStatus, reason: out.reason, amount: out.amount }
+    });
+    req.flash('success', out.result === 'approved' ? req.t('arf_review_approved') : req.t('arf_review_rejected'));
+    return res.redirect(back);
+  } catch (err) {
+    console.error('referral review error:', err.message);
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
+    return res.redirect(back);
+  }
+}
+router.post('/referrals/:id/approve', rbac.requirePermission('bonus_manage'), (req, res) => reviewReferralHandler('approve', req, res));
+router.post('/referrals/:id/reject', rbac.requirePermission('bonus_manage'), (req, res) => reviewReferralHandler('reject', req, res));
 
 // ==================== USERS ====================
 router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {
@@ -2712,11 +2886,13 @@ router.get('/bot-logs', rbac.requirePermission('bot_monitoring_manage'), async (
     if (risk_level) { params.push(risk_level); conditions.push(`risk_level = $${params.length}`); }
     if (endpoint) { params.push(endpoint); conditions.push(`endpoint = $${params.length}`); }
     if (ip) { params.push(ip); conditions.push(`ip = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    // `b.created_at`: লিস্ট কোয়েরি users-এর সাথে JOIN করে (users.created_at আছে) — অযোগ্য `created_at` দিয়ে
+    // from/to দিলেই "column reference created_at is ambiguous" হয়ে পেজ loadError দিত। COUNT-এও একই alias।
+    if (from) { params.push(bizFrom(from)); conditions.push(`b.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`b.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countRes = await pool.query(`SELECT COUNT(*) FROM bot_activity_logs ${where}`, params);
+    const countRes = await pool.query(`SELECT COUNT(*) FROM bot_activity_logs b ${where}`, params);
     const total = parseInt(countRes.rows[0].count);
 
     const listParams = [...params, limit, offset];
@@ -2826,7 +3002,9 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
 router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
-    await grantFreeBet(req.params.id, amount, 'admin');
+    // প্রতিবার ইউনিক reason (admin:<id>:<র‍্যান্ডম>) — অ্যাডমিন একই ইউজারকে একাধিক ফ্রি বেট দিতে পারে; বিদ্যমান 'admin' সারি অপরিবর্তিত
+    const freeBetReason = `admin:${req.session.user.id}:${require('crypto').randomBytes(4).toString('hex')}`;
+    await grantFreeBet(req.params.id, amount, freeBetReason);
     await logAdminAction(req.session.user.id, req.session.user.username, 'freebet_grant', `${amount} taka free bet to user #${req.params.id}`, req.ip);
     req.flash('success', req.t('admin_freebet_granted').replace('{value}', amount));
   } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
@@ -3074,12 +3252,14 @@ router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => 
     `, params);
 
     const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
-    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
+    const todayStakeRes = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), bt.today()]);
     const todayGgrRes = await pool.query(`
       SELECT COALESCE(SUM(stake),0) AS staked,
              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
-    `);
+      FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')
+    `, [bt.sqlTimezone(), bt.today()]);
 
     res.render('admin/bets', {
       bets: bets.rows,
@@ -3121,12 +3301,14 @@ router.get('/api/bets-live', rbac.requirePermission('games_manage'), async (req,
     `, params);
 
     const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
-    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
+    const todayStakeRes = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+      [bt.sqlTimezone(), bt.today()]);
     const todayGgrRes = await pool.query(`
       SELECT COALESCE(SUM(stake),0) AS staked,
              COALESCE(SUM(CASE WHEN status='won' THEN (CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) ELSE 0 END),0) AS paidout
-      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
-    `);
+      FROM bets WHERE ${sqlBizDate('created_at', '$1')} = $2::date AND status IN ('won','lost')
+    `, [bt.sqlTimezone(), bt.today()]);
 
     res.json({
       success: true,
@@ -3290,7 +3472,7 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
 });
 
 // ==================== বোনাস ম্যানেজমেন্ট ====================
-router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) => {
+router.get('/bonuses', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT b.*, u.username FROM bonuses b LEFT JOIN users u ON u.id = b.user_id
@@ -3311,7 +3493,7 @@ router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) =>
   }
 });
 
-router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, res) => {
+router.post('/bonuses/add', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const { username } = req.body;
     const bonus_type = sanitizeText(req.body.bonus_type || '', { maxLen: 50 });
@@ -3334,7 +3516,7 @@ router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, re
   }
 });
 
-router.post('/bonuses/:id/cancel', rbac.requirePermission('users_edit'), async (req, res) => {
+router.post('/bonuses/:id/cancel', rbac.requirePermission('bonus_manage'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query("UPDATE bonuses SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [id]);
@@ -3714,7 +3896,8 @@ router.get('/bot-monitoring', rbac.requirePermission('bot_monitoring_manage'), a
   try {
     const [statsToday, byRisk, byEndpoint, ipRules, recentLogs] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE blocked) AS blocked
-                  FROM bot_activity_logs WHERE created_at::date = CURRENT_DATE`),
+                  FROM bot_activity_logs WHERE ${sqlBizDate('created_at', '$1')} = $2::date`,
+                 [bt.sqlTimezone(), bt.today()]),
       pool.query(`SELECT risk_level, COUNT(*) AS cnt FROM bot_activity_logs
                   WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY risk_level`),
       pool.query(`SELECT endpoint, COUNT(*) AS cnt FROM bot_activity_logs
@@ -4271,11 +4454,12 @@ router.get('/fraud-logs', rbac.requirePermission('bot_monitoring_manage'), async
     if (risk_level) { params.push(risk_level); conditions.push(`risk_level = $${params.length}`); }
     if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
     if (user_id) { params.push(user_id); conditions.push(`user_id = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    // `f.created_at` — S17 নোট দেখুন (users JOIN-এ অস্পষ্ট); COUNT-এও alias f।
+    if (from) { params.push(bizFrom(from)); conditions.push(`f.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`f.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countRes = await pool.query(`SELECT COUNT(*) FROM fraud_flags ${where}`, params);
+    const countRes = await pool.query(`SELECT COUNT(*) FROM fraud_flags f ${where}`, params);
     const total = parseInt(countRes.rows[0].count);
 
     const listParams = [...params, limit, offset];
@@ -4373,28 +4557,31 @@ router.post('/duplicate-accounts/scan', rbac.requirePermission('bot_monitoring_m
 
 router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
-    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const to = req.query.to || new Date().toISOString().slice(0, 10);
+    const from = req.query.from || bt.addDays(bt.today(), -30);
+    const to = req.query.to || bt.today();
+    // রেঞ্জ = [BD from-এর শুরু, BD to-এর পরের দিনের শুরু) — আগে `BETWEEN $1 AND $2::date + 1 day` (UTC; দুই প্রান্তই বন্ধ)
+    const rangeParams = [bizFrom(from), bizToExcl(to)];
+    const inRange = (col) => `${col} >= ${BIZ_TS('$1')} AND ${col} < ${BIZ_TS('$2')}`;
 
     const depositRes = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-       WHERE type = 'deposit' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       WHERE type = 'deposit' AND status = 'approved' AND ${inRange('created_at')}`,
+      rangeParams
     );
     const withdrawRes = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-       WHERE type = 'withdraw' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       WHERE type = 'withdraw' AND status = 'approved' AND ${inRange('created_at')}`,
+      rangeParams
     );
     const betsRes = await pool.query(
       `SELECT COALESCE(SUM(stake),0) AS total_stake, COUNT(*) AS cnt,
               COALESCE(SUM(CASE WHEN side='lay' THEN stake+COALESCE(liability,0) ELSE stake*odd END) FILTER (WHERE status = 'won'),0) AS total_payout
-       FROM bets WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+       FROM bets WHERE ${inRange('created_at')}`,
+      rangeParams
     );
     const usersRes = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
-      [from, to]
+      `SELECT COUNT(*) AS cnt FROM users WHERE ${inRange('created_at')}`,
+      rangeParams
     );
 
     const deposits = depositRes.rows[0];
@@ -4405,12 +4592,12 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) ====
     const ggrTrendRes = await pool.query(`
       SELECT d::date AS day,
-             COALESCE(SUM(b.stake) FILTER (WHERE b.created_at::date = d::date),0) AS staked,
-             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE b.created_at::date = d::date AND b.status='won'),0) AS payout
+             COALESCE(SUM(b.stake) FILTER (WHERE ${sqlBizDate('b.created_at', '$3')} = d::date),0) AS staked,
+             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE ${sqlBizDate('b.created_at', '$3')} = d::date AND b.status='won'),0) AS payout
       FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN bets b ON b.created_at::date = d::date
+      LEFT JOIN bets b ON ${sqlBizDate('b.created_at', '$3')} = d::date
       GROUP BY d ORDER BY d
-    `, [from, to]);
+    `, [from, to, bt.sqlTimezone()]);
     const ggrTrend = ggrTrendRes.rows.map(r => ({
       day: r.day, ggr: Number(r.staked) - Number(r.payout)
     }));
@@ -4419,9 +4606,9 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     const userTrendRes = await pool.query(`
       SELECT d::date AS day, COUNT(u.id) AS cnt
       FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN users u ON u.created_at::date = d::date
+      LEFT JOIN users u ON ${sqlBizDate('u.created_at', '$3')} = d::date
       GROUP BY d ORDER BY d
-    `, [from, to]);
+    `, [from, to, bt.sqlTimezone()]);
     const userTrend = userTrendRes.rows.map(r => ({ day: r.day, count: parseInt(r.cnt) }));
 
     res.render('admin/reports', {
@@ -4558,8 +4745,8 @@ router.get('/login-history', rbac.requirePermission('activity_log_view'), async 
       conditions.push(`(u.username ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.location ILIKE $${params.length})`);
     }
     if (new_device === '1') conditions.push(`l.is_new_device = true`);
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -4715,8 +4902,8 @@ router.get('/api-logs', rbac.requirePermission('reports_view'), async (req, res)
     if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
     if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
     if (api_key_id) { params.push(api_key_id); conditions.push(`l.api_key_id = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(`SELECT COUNT(*) FROM api_usage_logs l ${where}`, params);
@@ -4785,8 +4972,8 @@ router.get('/api-logs/export.csv', rbac.requirePermission('reports_view'), async
     if (method) { params.push(method); conditions.push(`l.method = $${params.length}`); }
     if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
     if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
-    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
-    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    if (from) { params.push(bizFrom(from)); conditions.push(`l.created_at >= ${BIZ_TS('$' + params.length)}`); }
+    if (to) { params.push(bizToExcl(to)); conditions.push(`l.created_at < ${BIZ_TS('$' + params.length)}`); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const result = await pool.query(
@@ -5693,4 +5880,5 @@ router.get('/cron-jobs/status/json', rbac.requirePermission('cron_jobs_manage'),
 
 // ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
 
+router.__test = { SECRET_SETTING_KEY_RE, buildBonusAuditDetail, isBonusAuditKey };
 module.exports = router;

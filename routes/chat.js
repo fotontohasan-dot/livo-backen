@@ -23,6 +23,7 @@ const isAuth = (req, res, next) => {
 // যাচাই করা হয় (middleware/auth.js-এর isAdmin-এর একই প্যাটার্ন), এই রাউটারের সব
 // admin এন্ডপয়েন্ট AJAX/JSON হওয়ায় আগের মতোই JSON 403 রেসপন্স রাখা হয়েছে।
 const rbac = require('../services/rbac');
+const { today: businessToday, sqlBusinessDate, sqlTimezone } = require('../utils/businessTime');
 
 // MEDIUM-6: chat admin route গুলো প্রতিটি user-এর private conversation প্রকাশ
 // করে, তাই এগুলো support_view permission-এর অধীনে আনা হয়েছে।
@@ -352,7 +353,7 @@ router.get('/admin/conversations', isAdmin, requireSupportView, async (req, res)
 //  total    = যতজন ইউজার অন্তত একবার মেসেজ করেছেন/পেয়েছেন
 //  active   = এই মুহূর্তে লাইভ এজেন্টের অপেক্ষায় (waiting) বা কানেক্টেড (connected)
 //  pending  = যাদের সর্বশেষ মেসেজ ইউজারের পাঠানো, অর্থাৎ অ্যাডমিনের উত্তর বাকি
-//  resolved = আজ যাদের সমস্যা সমাধান (resolved) করা হয়েছে
+//  resolved = আজ (Asia/Dhaka ব্যবসায়িক দিন; আগে UTC মধ্যরাত) যাদের সমস্যা সমাধান (resolved) করা হয়েছে
 router.get('/admin/stats', isAdmin, requireSupportView, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -362,7 +363,7 @@ router.get('/admin/stats', isAdmin, requireSupportView, async (req, res) => {
         COUNT(*) FILTER (WHERE last_is_admin = false)::int AS pending,
         COUNT(*) FILTER (
           WHERE support_status = 'resolved'
-            AND support_status_updated_at >= date_trunc('day', NOW())
+            AND ${sqlBusinessDate('support_status_updated_at', '$1')} = $2
         )::int AS resolved_today
       FROM (
         SELECT u.support_status, u.support_status_updated_at, lm.is_admin AS last_is_admin
@@ -376,7 +377,7 @@ router.get('/admin/stats', isAdmin, requireSupportView, async (req, res) => {
         ) lm ON true
         WHERE u.role != 'admin'
       ) c
-    `);
+    `, [sqlTimezone(), businessToday()]);
     const row = result.rows[0] || {};
     res.json({
       total: row.total || 0,

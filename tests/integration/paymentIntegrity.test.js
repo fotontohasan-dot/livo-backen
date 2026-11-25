@@ -127,6 +127,20 @@ describe('payment_requests — ডাটাবেজ CHECK কনস্ট্র
     ).rejects.toMatchObject({ code: '23514' });
   });
 
+  test("'reversed' বৈধ status (ডিপোজিট রিভার্সাল), অন্য অবৈধ মান আগের মতোই প্রত্যাখ্যাত", async () => {
+    const r = await pool.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, status)
+       VALUES ($1,'deposit','bkash',500,'approved') RETURNING id`, [userId]
+    );
+    await pool.query(`UPDATE payment_requests SET status='reversed' WHERE id=$1`, [r.rows[0].id]);
+    expect((await pool.query('SELECT status FROM payment_requests WHERE id=$1', [r.rows[0].id])).rows[0].status).toBe('reversed');
+    for (const bad of ['Reversed', 'reverse', 'refunded', '']) {
+      await expect(
+        pool.query(`UPDATE payment_requests SET status=$2 WHERE id=$1`, [r.rows[0].id, bad])
+      ).rejects.toMatchObject({ code: '23514' });
+    }
+  });
+
   test('অবৈধ status প্রত্যাখ্যাত হয়', async () => {
     await expect(
       pool.query(
@@ -223,7 +237,7 @@ describe('আর্থিক ডেটার বাস্তব অবস্থ�
         (SELECT COUNT(*) FROM users WHERE coins < 0)                                       AS negative_balances,
         (SELECT COUNT(*) FROM payment_requests WHERE amount IS NULL OR amount <= 0)        AS bad_amounts,
         (SELECT COUNT(*) FROM payment_requests
-          WHERE status NOT IN ('pending','approved','rejected'))                           AS bad_statuses,
+          WHERE status NOT IN ('pending','approved','rejected','reversed'))                 AS bad_statuses,
         (SELECT COUNT(*) FROM payment_requests WHERE type NOT IN ('deposit','withdraw'))   AS bad_types,
         (SELECT COUNT(*) FROM payment_requests p
           WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = p.user_id))                 AS orphans

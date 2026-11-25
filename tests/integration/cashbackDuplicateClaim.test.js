@@ -59,9 +59,9 @@ async function seedLoss(userId, category) {
   // claimCashback() গতকালের ক্ষতি দেখে, আজকের নয় — তাই seed-ও গতকালের।
   // আজকের তারিখে seed করলে প্রতিটা claim বৈধভাবেই ব্যর্থ হত এবং টেস্টটা
   // "duplicate আটকেছে" বলে মিথ্যা আশ্বাস দিত।
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const today = d.toISOString().slice(0, 10);
+  // গতকাল = Asia/Dhaka ব্যবসায়িক গতকাল (claimCashback-এর সঙ্গে একই নিয়ম; UTC নয়)।
+  const businessTime = require('../../utils/businessTime');
+  const today = businessTime.addDays(businessTime.today(), -1);
   await pool.query(
     `INSERT INTO daily_losses (user_id, loss_date, category, total_bet, total_win)
      VALUES ($1, $2, $3, 100000, 0)

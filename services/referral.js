@@ -17,7 +17,8 @@ const rewards = require('./referralRewards');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
-const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+// বাজির ওপর ৩-ধাপ কমিশন ডিফল্টে বন্ধ (০)। আগের ডিফল্ট ছিল ২.৫/১.৫/০.৮% — docs/COMMISSION_OFF_NOTES.md দেখুন।
+const DEFAULT_COMMISSION_RATES = [0, 0, 0]; // Tier 1,2,3
 
 // অ্যাডমিন-কনফিগারড কমিশন রেট (fraction, যেমন 0.025 = 2.5%) — site_settings থেকে,
 // ৩০ সেকেন্ড ক্যাশড getSetting() দিয়ে, তাই প্রতি বাজিতে আলাদা DB কল লাগে না।
@@ -63,8 +64,14 @@ async function createReferral(client, referrerId, referredId) {
 // নিজে আলাদা transaction ব্যবহার করে (pool থেকে), যাতে মূল বেট আটকে না যায়।
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
+  // নতুন নিয়ম: বাজি ধরলে কোনো কমিশন নেই — কমিশন শুধু ডিপোজিট সম্পূর্ণ হারলে ০.৮%
+  // (services/referralRewards.js settleLossCycles)। পুরোনো প্রতি-বাজি ৩-লেভেল কমিশন ডিফল্টে বন্ধ;
+  // site_settings referral_bet_commission_enabled = 'true' দিলে আবার চালু হয়।
+  if (String(await getSetting('referral_bet_commission_enabled')) !== 'true') return;
 
   const rates = await getCommissionRates();
+  // তিন হারই ০ হলে কিছুই লেখা হয় না — ট্রানজ্যাকশনও খোলা হয় না
+  if (rates.every(r => !(r > 0))) return;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -156,11 +163,23 @@ async function getReferralStats(userId) {
     [userId]
   );
 
+  // বন্ধুদের মধ্যে সর্বোচ্চ যোগ্য (approved) ডিপোজিট — "পরের ধাপ" হিসাবের ভিত্তি
+  const maxDepRes = await pool.query(
+    `SELECT COALESCE(MAX(pr.amount), 0) AS max_deposit
+       FROM referrals r
+       JOIN payment_requests pr ON pr.user_id = r.referred_id
+      WHERE r.referrer_id = $1 AND pr.type = 'deposit' AND pr.status = 'approved'`,
+    [userId]
+  );
+
   const successCount = parseInt(successRes.rows[0].count);
+  const totalCount = parseInt(totalRes.rows[0].count);
   const info = await getReferralProgramInfo();
   return {
-    totalReferrals: parseInt(totalRes.rows[0].count),
+    totalReferrals: totalCount,
     successfulReferrals: successCount,
+    pendingReferrals: Math.max(0, totalCount - successCount),
+    nextStep: info.mode === 'slab' ? computeNextStep(Number(maxDepRes.rows[0].max_deposit), info.slabs) : null,
     totalEarnings: Number(earnRes.rows[0].total),
     // slab মোডে বোনাস বন্ধুর ডিপোজিটের পরিমাণের ওপর নির্ভর করে — একক "পরের বোনাস" নেই (null); tier মোডে ক্রমিক।
     nextBonus: info.mode === 'tier' ? rewards.tierFor(successCount + 1, info.tiers).amount : null,
@@ -192,7 +211,37 @@ async function getReferralProgramInfo() {
   };
 }
 
+// "পরের ধাপ": বন্ধুর সর্বোচ্চ যোগ্য ডিপোজিট থেকে পরের slab।
+//   first = এখনো কোনো slab ছোঁয়নি (প্রথম slab-ই লক্ষ্য), up = উপরের slab বাকি, max = সর্বোচ্চ slab-এ আছে।
+function computeNextStep(maxDeposit, slabs) {
+  if (!Array.isArray(slabs) || slabs.length === 0) return null;
+  const dep = Number(maxDeposit);
+  let idx = -1;
+  if (Number.isFinite(dep)) { for (let i = 0; i < slabs.length; i++) { if (dep >= slabs[i].min) idx = i; else break; } }
+  if (idx < 0) return { state: 'first', needDeposit: slabs[0].min, bonus: slabs[0].amount };
+  if (idx === slabs.length - 1) return { state: 'max', needDeposit: null, bonus: slabs[idx].amount };
+  return { state: 'up', needDeposit: slabs[idx + 1].min, bonus: slabs[idx + 1].amount };
+}
+
+// শেয়ার-লিংক: স্কিম/হোস্ট স্থির, সব ডাইনামিক মান percent-encode (javascript: বা অন্য স্কিম ঢোকার পথ নেই)।
+function buildShareLinks(baseUrl, referralCode, shareText) {
+  if (!referralCode) return null;
+  const link = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
+  const u = encodeURIComponent(link);
+  const t = encodeURIComponent(String(shareText || ''));
+  const tu = encodeURIComponent(`${shareText || ''} ${link}`.trim());
+  return {
+    link,
+    whatsapp: `https://wa.me/?text=${tu}`,
+    telegram: `https://t.me/share/url?url=${u}&text=${t}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+    messenger: `fb-messenger://share/?link=${u}`
+  };
+}
+
 module.exports = {
+  computeNextStep,
+  buildShareLinks,
   createReferral,
   distributeCommission,
   getReferralStats,

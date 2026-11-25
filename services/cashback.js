@@ -4,14 +4,23 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+const businessTime = require('../utils/businessTime');
 
 const CASHBACK_RATE = 0.05;   // নিট লোকসানের ৫%
 const MIN_CASHBACK = 10;      // সর্বনিম্ন ক্লেইম ১০ টাকা
 const CATEGORIES = ['sports', 'casino', 'live'];
 const CATEGORY_LABEL = { sports: 'স্পোর্টস', casino: 'ক্যাসিনো', live: 'লাইভ ডিলার' };
 
+// loss_date-এর একমাত্র লেখক এই ফাইল (addBet/addWin) এবং পাঠকও এই ফাইল ও
+// services/periodicReward.js — সবাই এখন একই Asia/Dhaka ব্যবসায়িক দিন ব্যবহার করে
+// (আগে লেখা UTC দিনে, পড়া UTC/DB CURRENT_DATE-এ — BD ০০:০০–০৬:০০-এ ভুল দিনে যেত)।
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return businessTime.today();
+}
+
+// গতকাল — ব্যবসায়িক দিনের হিসাবে
+function yesterdayBd() {
+  return businessTime.addDays(businessTime.today(), -1);
 }
 
 // বাজি ধরলে total_bet বাড়াও (category: sports/casino/live)
@@ -50,9 +59,7 @@ async function addWin(userId, amount, category = 'sports') {
 
 // গতকালের প্রতিটা ক্যাটাগরির ক্যাশব্যাক অবস্থা
 async function getCashbackStatus(userId) {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const yesterday = d.toISOString().slice(0, 10);
+  const yesterday = yesterdayBd();
 
   const r = await pool.query(
     `SELECT * FROM daily_losses WHERE user_id = $1 AND loss_date = $2`,
@@ -91,8 +98,8 @@ async function getPeriodSummary(userId, days) {
        COALESCE(SUM(total_win), 0) AS total_win,
        COALESCE(SUM(CASE WHEN cashback_claimed THEN GREATEST(total_bet - total_win, 0) * $3 ELSE 0 END), 0) AS cashback_earned
      FROM daily_losses
-     WHERE user_id = $1 AND loss_date >= (CURRENT_DATE - $2::int)`,
-    [userId, days, CASHBACK_RATE]
+     WHERE user_id = $1 AND loss_date >= ($4::date - $2::int)`,
+    [userId, days, CASHBACK_RATE, today()]
   );
   const row = r.rows[0] || {};
   return {
@@ -105,9 +112,7 @@ async function getPeriodSummary(userId, days) {
 // ক্যাশব্যাক ক্লেইম (নির্দিষ্ট ক্যাটাগরির গতকালের লোকসানের উপর)
 async function claimCashback(userId, category = 'sports', lang = 'bn') {
   if (!CATEGORIES.includes(category)) category = 'sports';
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const yesterday = d.toISOString().slice(0, 10);
+  const yesterday = yesterdayBd();
 
   const client = await pool.connect();
   try {

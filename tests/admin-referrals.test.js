@@ -78,12 +78,12 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     expect(rwRow.rows[0].status).toBe('paid');
   });
 
-  test('ন্যূনতম (৫০০)-র কম ডিপোজিটে বোনাস দেওয়া হয় না, পেজে "পেন্ডিং" দেখায়', async () => {
+  test('ন্যূনতম (১০০)-র কম ডিপোজিটে বোনাস দেওয়া হয় না, পেজে "পেন্ডিং" দেখায়', async () => {
     const { userId: referrerId } = await registerUser();
     const { userId: referredId, username: referredUsername } = await registerUser();
     await createReferral(null, referrerId, referredId);
 
-    await runEngine(referredId, 100); // < ন্যূনতম ডিপোজিট (৫০০)
+    await runEngine(referredId, 99); // < ন্যূনতম ডিপোজিট (১০০)
 
     const { agent } = await makeAdminAgent();
     const res = await agent.get('/admin/referrals?search=' + referredUsername);
@@ -171,8 +171,10 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const before = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
     const coinsBefore = Number(before.rows[0].coins);
 
-    // V2: প্রতিটা ডিপোজিটের জন্য আলাদা ইঞ্জিন-ট্রানজ্যাকশন (আলাদা connection) — admin bulk-approve,
-    // SSLCommerz redirect/IPN ইত্যাদি সবই COMMIT-এর পরে এই ইঞ্জিন ডাকে
+    // দুইটা আলাদা connection, প্রতিটা নিজের সম্পূর্ণ BEGIN..COMMIT transaction-এ — যেমন
+    // admin bulk-approve, SSLCommerz success-redirect ও IPN callback প্রতিটা নিজের সম্পূর্ণ
+    // transaction-এ processReferralDeposit ডাকে (creditApprovedDeposit-এর মতো)
+    // V2: প্রতিটা ডিপোজিটের জন্য আলাদা ইঞ্জিন-ট্রানজ্যাকশন (আলাদা connection)
     const dep1 = await makeDeposit(referredId, 1000, { status: 'approved' });
     const dep2 = await makeDeposit(referredId, 1500, { status: 'approved' });
     await Promise.all([
@@ -182,7 +184,8 @@ describe('Admin Referral Management (/admin/referrals)', () => {
 
     const after = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
     const coinsAfter = Number(after.rows[0].coins);
-    // slab: ১,০০০ ও ১,৫০০ দুটোই ১,০০০–১,৯৯৯ ধাপে = ১০০ টাকা — দুইবার দিলে ২০০ হতো
+    // slab মডেল: ১০০০ ও ১৫০০ দুটোই একই ধাপে (১,০০০–১,৯৯৯ → বোনাস ১০০), তাই রেসে যেটাই আগে জিতুক
+    // অঙ্ক নির্দিষ্ট — বোনাস একবারই; দুইবার দিলে ২০০ হতো
     expect(coinsAfter - coinsBefore).toBe(100);
 
     const refRow = await pool.query('SELECT status FROM referral_rewards WHERE referrer_id=$1 AND referred_user_id=$2', [referrerId, referredId]);

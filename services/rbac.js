@@ -28,6 +28,7 @@ const PERMISSIONS = {
   users_delete: { label: 'ইউজার ডিলিট', group: 'Users' },
   payments_view: { label: 'পেমেন্ট রিকোয়েস্ট দেখা', group: 'Payments' },
   payments_approve: { label: 'ডিপোজিট/উইথড্র অনুমোদন', group: 'Payments' },
+  deposit_reverse: { label: 'অনুমোদিত ডিপোজিট হাতে রিভার্স (কারণ বাধ্যতামূলক)', group: 'Payments' },
   payments_reject: { label: 'ডিপোজিট/উইথড্র বাতিল', group: 'Payments' },
   payment_methods_manage: { label: 'ডিপোজিট অ্যাকাউন্ট/পেমেন্ট মেথড ম্যানেজমেন্ট', group: 'Payments' },
   withdrawal_window_manage: { label: 'উইথড্র সময়সূচি ম্যানেজমেন্ট', group: 'Payments' },
@@ -49,6 +50,7 @@ const PERMISSIONS = {
   cron_jobs_manage: { label: 'Cron Jobs enable/disable/run', group: 'System' },
   reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },
   vip_manage: { label: 'VIP সিস্টেম ম্যানেজমেন্ট (লেভেল, বোনাস, অ্যানালিটিক্স)', group: 'Content' },
+  bonus_manage: { label: 'বোনাস ম্যানেজমেন্ট ও টার্নওভার সেটিং (বোনাস দেওয়া/বাতিল, turnover_* সেটিং)', group: 'Content' },
   merchants_manage: { label: 'মার্চেন্ট ও সাব-মার্চেন্ট ম্যানেজমেন্ট (তৈরি, এডিট, স্ট্যাটাস, ডিলিট)', group: 'Merchants' }
 };
 

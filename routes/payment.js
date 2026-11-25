@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
-const { createBonus, canWithdraw } = require('../services/turnover');
+const { createBonus, createDepositTurnover, canWithdraw } = require('../services/turnover');
+const { grantFirstDepositFreeBet } = require('../services/freebet');
 const { afterDepositCommit: referralAfterDepositCommit } = require('../services/referralRewards');
 const paymentMethods = require('../services/paymentMethods');
 const trxIds = require('../services/transactionId');
@@ -93,7 +94,13 @@ const MAX_BONUS = 15000;
 // (creditApprovedDeposit) একই হিসাব ব্যবহার করে, যাতে দুটো কখনো আলাদা না হয়।
 async function approvedDepositCount(db, userId, excludeRequestId = null) {
   const r = await db.query(
-    `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND ($2::int IS NULL OR id <> $2)`,
+    // approved ছাড়াও: reversed ডিপোজিট, যেটায় ডিপোজিট বোনাস আগে দেওয়া হয়েছিল — "প্রথম" ১০০% বোনাস রিভার্সের পরেও দ্বিতীয়বার মেলে না।
+    // (বোনাস ছাড়া reversed ডিপোজিট গোনা হয় না — ইউজার তখনও বোনাস পায়নি।)
+    `SELECT COUNT(*) FROM payment_requests p WHERE p.user_id=$1 AND p.type='deposit' AND ($2::int IS NULL OR p.id <> $2)
+        AND (p.status='approved'
+          OR (p.status='reversed' AND EXISTS (
+                SELECT 1 FROM coin_transactions c
+                 WHERE c.user_id = p.user_id AND c.type = 'deposit_bonus' AND c.description = 'ডিপোজিট বোনাস (#' || p.id || ')')))`,
     [userId, excludeRequestId]
   );
   return parseInt(r.rows[0].count, 10) || 0;
@@ -132,7 +139,7 @@ router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   let bonusPct = 100;
   try {
     const before = await approvedDepositCount(pool, req.session.user.id);
-    bonusPct = bonusPercentFor(before, new Date().getDay() === 5);
+    bonusPct = bonusPercentFor(before, businessTime.businessWeekday() === 5);
   } catch (e) {
     console.error('deposit bonus pct error:', e.message);
   }
@@ -560,7 +567,7 @@ router.get('/withdraw/turnover-status', isAuth, requireFeature('withdrawal'), as
   res.set('Cache-Control', 'no-store');
   try {
     const check = await canWithdraw(req.session.user.id);
-    res.json({ success: true, allowed: !!check.allowed, pending: check.pending || [] });
+    res.json({ success: true, allowed: !!check.allowed, pending: check.pending || [], summary: check.summary || null });
   } catch (err) {
     console.error('turnover-status error:', err.message);
     // ব্যর্থ হলে আনলক বলা যাবে না
@@ -720,24 +727,9 @@ const DEPOSIT_METHOD_META = {
 
 function resolveDepositDateRange(query) {
   const { quick, from, to } = query;
-  const fmt = (d) => d.toISOString().slice(0, 10);
-  let dateFrom = from || '', dateTo = to || '';
-  const today = new Date();
-  if (quick === 'today') {
-    dateFrom = dateTo = fmt(today);
-  } else if (quick === '7d') {
-    const d = new Date(today); d.setDate(d.getDate() - 7);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === '30d') {
-    const d = new Date(today); d.setDate(d.getDate() - 30);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === '90d') {
-    const d = new Date(today); d.setDate(d.getDate() - 90);
-    dateFrom = fmt(d); dateTo = fmt(today);
-  } else if (quick === 'year') {
-    dateFrom = `${today.getFullYear()}-01-01`; dateTo = fmt(today);
-  }
-  return { dateFrom, dateTo };
+  const range = businessTime.quickRange(quick);
+  if (range && quick !== 'yesterday' && quick !== '7days') return range;
+  return { dateFrom: from || '', dateTo: to || '' };
 }
 
 // মেথড-ভিত্তিক ডিপোজিট রিপোর্ট — আগে এই পেজেই তিন জায়গায় আলাদা করে
@@ -757,8 +749,8 @@ router.get('/admin/deposits', rbac.requirePermission('payments_view'), async (re
     const params = [method];
     let dateClause = '';
     if (dateFrom && dateTo) {
-      dateClause = ` AND pr.created_at::date BETWEEN $2 AND $3`;
-      params.push(dateFrom, dateTo);
+      dateClause = ` AND ${businessTime.sqlBusinessDate('pr.created_at', '$4')} BETWEEN $2 AND $3`;
+      params.push(dateFrom, dateTo, businessTime.sqlTimezone());
     }
 
     const listRes = await pool.query(
@@ -772,9 +764,9 @@ router.get('/admin/deposits', rbac.requirePermission('payments_view'), async (re
       `SELECT method, COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
        FROM payment_requests
        WHERE type='deposit' AND status='approved' AND method = ANY($1::text[])
-       ${dateFrom && dateTo ? 'AND created_at::date BETWEEN $2 AND $3' : ''}
+       ${dateFrom && dateTo ? `AND ${businessTime.sqlBusinessDate('created_at', '$4')} BETWEEN $2 AND $3` : ''}
        GROUP BY method`,
-      dateFrom && dateTo ? [VALID_METHODS, dateFrom, dateTo] : [VALID_METHODS]
+      dateFrom && dateTo ? [VALID_METHODS, dateFrom, dateTo, businessTime.sqlTimezone()] : [VALID_METHODS]
     );
     const totals = {};
     VALID_METHODS.forEach((m) => { totals[m] = { total: 0, cnt: 0 }; });
@@ -824,6 +816,9 @@ async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
 
   if (request.type === 'deposit') {
+    // একই ইউজারের একাধিক ডিপোজিট একসাথে অনুমোদনে সিরিয়াল ক্রম নিশ্চিত করতে ইউজার-সারিতে স্পষ্ট লক —
+    // বোনাস-হার (approvedDepositCount) ও ফ্রি বেট পড়ার আগে। হিসাবের মান অপরিবর্তিত।
+    await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [request.user_id]);
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit',$3)`,
@@ -833,7 +828,7 @@ async function creditApprovedDeposit(client, request) {
 
     if (request.want_bonus) {
       const before = await approvedDepositCount(client, request.user_id, request.id);
-      const isFriday = new Date().getDay() === 5;
+      const isFriday = businessTime.businessWeekday() === 5; // Asia/Dhaka বার (UTC নয়)
       const pct = bonusPercentFor(before, isFriday);
       bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
       if (bonusGiven > 0) {
@@ -842,9 +837,12 @@ async function creditApprovedDeposit(client, request) {
           `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit_bonus',$3)`,
           [request.user_id, bonusGiven, `ডিপোজিট বোনাস (#${request.id})`]
         );
-        await createBonus(client, request.user_id, 'deposit', bonusGiven);
       }
     }
+    // প্রথম যোগ্য ডিপোজিটে একবার ফ্রি বেট — একই transaction, SAVEPOINT-এ আলাদা (এরর হলে ডিপোজিট চলে)।
+    await grantFirstDepositFreeBet(client, request);
+    // Turnover V2: প্রতিটি approved Deposit-এর আলাদা এন্ট্রি — বোনাস নিলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
+    await createDepositTurnover(client, { userId: request.user_id, depositId: request.id, depositAmount: request.amount, bonusAmount: bonusGiven });
     // রেফারেল বোনাস এখানে নয় — ডিপোজিট COMMIT-এর পরে আলাদা ট্রানজ্যাকশনে (services/referralRewards.js)।
   }
 

@@ -98,6 +98,17 @@
                     <td class="dz27-10">৳ <%= Number(r.commission_earned || 0).toLocaleString('en-US') %></td>
                     <td><%= r.created_at ? new Date(r.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td class="dz27-13">
+                      <% if (r.reward_status === 'pending_review' && r.reward_id) { %>
+                        <form method="POST" action="/admin/referrals/<%= r.reward_id %>/approve" style="display:inline">
+                          <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
+                          <button type="submit" class="btn btn-sm btn-primary"><%= t('admin_btn_approve') %></button>
+                        </form>
+                        <form method="POST" action="/admin/referrals/<%= r.reward_id %>/reject" style="display:inline">
+                          <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
+                          <input type="text" name="reason" required maxlength="500" placeholder="<%= t('arf_review_reason_ph') %>">
+                          <button type="submit" class="btn btn-sm"><%= t('admin_btn_reject') %></button>
+                        </form>
+                      <% } %>
                       <a class="btn btn-sm" href="/admin/users/<%= r.referrer_id %>"><%= t('admin_col_referrer') %></a>
                       <a class="btn btn-sm" href="/admin/users/<%= r.referred_id %>"><%= t('admin_label_referred') %></a>
                     </td>

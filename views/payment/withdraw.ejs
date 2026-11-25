@@ -177,7 +177,7 @@
       const k = 'to_type_' + ty;
       return (t[k] && t[k] !== k) ? t[k] : ty;
     };
-    const lockedRows = (lockInfo.pending || []).filter(function (p) { return p.sportsLeft > 0 || p.casinoLeft > 0; });
+    const lockedRows = (lockInfo.pending || []).filter(function (p) { return p.remaining > 0; });
   %>
   <% if (turnoverLocked) { %>
     <div class="to-banner" id="turnoverBanner">
@@ -189,7 +189,7 @@
   <div class="to-modal<%= turnoverLocked ? ' show' : '' %>" id="turnoverModal" role="dialog" aria-modal="true" aria-labelledby="turnoverModalTitle"
        data-locked="<%= turnoverLocked ? '1' : '0' %>"
        data-status-url="/payment/withdraw/turnover-status"
-       data-l-sports="<%= t.to_sports_label %>" data-l-casino="<%= t.to_casino_label %>"
+       data-l-total="<%= t.to_total_label %>" data-l-sports="<%= t.to_sports_label %>" data-l-casino="<%= t.to_casino_label %>"
        data-l-left="<%= t.to_left_label %>" data-l-done="<%= t.to_done_of %>"
        data-l-type-deposit="<%= t.to_type_deposit %>" data-l-type-daily="<%= t.to_type_daily %>" data-l-type-referral="<%= t.to_type_referral %>"
        data-l-unlocked="<%= t.to_unlocked %>" data-l-failed="<%= t.to_check_failed %>">
@@ -203,16 +203,10 @@
         <% lockedRows.forEach(function (p) { %>
           <div class="to-row">
             <div class="to-row-title"><%= toTypeLabel(p.type) %></div>
-            <% if (p.sportsLeft > 0) { %>
-              <div class="to-line"><span><%= t.to_sports_label %></span><b>৳ <%= toNum(p.sportsLeft) %> <%= t.to_left_label %></b></div>
-              <progress class="to-bar" max="<%= toNum(p.sportsRequired) %>" value="<%= toNum(p.sportsDone) %>"></progress>
-              <div class="to-meta">৳ <%= toNum(p.sportsDone) %> / ৳ <%= toNum(p.sportsRequired) %> <%= t.to_done_of %></div>
-            <% } %>
-            <% if (p.casinoLeft > 0) { %>
-              <div class="to-line"><span><%= t.to_casino_label %></span><b>৳ <%= toNum(p.casinoLeft) %> <%= t.to_left_label %></b></div>
-              <progress class="to-bar" max="<%= toNum(p.casinoRequired) %>" value="<%= toNum(p.casinoDone) %>"></progress>
-              <div class="to-meta">৳ <%= toNum(p.casinoDone) %> / ৳ <%= toNum(p.casinoRequired) %> <%= t.to_done_of %></div>
-            <% } %>
+            <div class="to-line"><span><%= t.to_total_label %></span><b>৳ <%= toNum(p.remaining) %> <%= t.to_left_label %></b></div>
+            <progress class="to-bar" max="<%= toNum(p.required) %>" value="<%= toNum(p.completed) %>"></progress>
+            <div class="to-meta">৳ <%= toNum(p.completed) %> / ৳ <%= toNum(p.required) %> <%= t.to_done_of %> (<%= toNum(p.percent) %>%)</div>
+            <div class="to-meta"><%= t.to_sports_label %>: ৳ <%= toNum(p.sportsDone) %> · <%= t.to_casino_label %>: ৳ <%= toNum(p.casinoDone) %></div>
           </div>
         <% }) %>
       </div>

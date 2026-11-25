@@ -8,7 +8,7 @@ const secureRandom = require('../utils/secureRandom');
 // হাতে করা `+6 ঘণ্টা` অফসেটের বদলে কেন্দ্রীয় ব্যবসায়িক-দিন সংজ্ঞা।
 // আগে এই ফাইল একা UTC+6 ধরত, অথচ বাকি ফিচারগুলো UTC বা SQL CURRENT_DATE —
 // ফলে একই ইউজারের কাছে "আজ" ফিচারভেদে আলাদা সময়ে পাল্টাত।
-const { today: businessToday } = require('../utils/businessTime');
+const { today: businessToday, sqlBusinessDate, sqlTimezone } = require('../utils/businessTime');
 
 function todayStr() {
   return businessToday();
@@ -29,9 +29,9 @@ async function hasQualifyingActivityToday(userId) {
   const dep = await pool.query(
     `SELECT 1 FROM payment_requests
      WHERE user_id=$1 AND type='deposit' AND status='approved'
-       AND (updated_at + interval '6 hours')::date = $2
+       AND ${sqlBusinessDate('updated_at', '$3')} = $2
      LIMIT 1`,
-    [userId, d]
+    [userId, d, sqlTimezone()]
   );
   return !!dep.rows[0];
 }
