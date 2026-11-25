@@ -123,15 +123,17 @@ async function expireDue(client, userId) {
   const due = await client.query(
     `SELECT id, bonus_amount FROM deposit_turnovers
       WHERE user_id = $1 AND status = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW()
+      ORDER BY id
       FOR UPDATE`,
     [userId]
   );
   if (due.rows.length === 0) return 0;
   const totalBonus = due.rows.reduce((s, b) => s + (Number(b.bonus_amount) || 0), 0);
+  let deducted = 0;
   if (totalBonus > 0) {
     await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
     const bal = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
-    const deducted = Math.max(0, Math.min(totalBonus, Math.round(Number(bal.rows[0]?.coins) || 0)));
+    deducted = Math.max(0, Math.min(totalBonus, Math.round(Number(bal.rows[0]?.coins) || 0)));
     if (deducted > 0) {
       await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [deducted, userId]);
       await client.query(
@@ -141,10 +143,31 @@ async function expireDue(client, userId) {
       );
     }
   }
+  // প্রতি সারির ভাগ (সেন্ট-পূর্ণসংখ্যায়, যোগফল ঠিক `deducted`): যথেষ্ট ব্যালেন্সে পুরো bonus_amount;
+  // কম হলে bonus_amount-এর অনুপাতে (নিচের দিকে), শেষ সারি বাকিটা নেয়; শেষ সারির বোনাস ছাড়িয়ে গেলে বাড়তিটা আগের সারিতে।
+  const toC = (v) => Math.round((Number(v) || 0) * 100);
+  const bonusC = due.rows.map((r) => toC(r.bonus_amount));
+  const totalC = bonusC.reduce((s, c) => s + c, 0);
+  const dedC = Math.min(toC(deducted), totalC);
+  let shareC;
+  if (dedC >= totalC) {
+    shareC = bonusC.slice();
+  } else {
+    shareC = bonusC.map((c) => Math.floor((dedC * c) / totalC));
+    const last = shareC.length - 1;
+    shareC[last] = dedC - shareC.slice(0, last).reduce((s, c) => s + c, 0);
+    let excess = Math.max(0, shareC[last] - bonusC[last]);
+    shareC[last] -= excess;
+    for (let i = 0; i < last && excess > 0; i++) {
+      const add = Math.min(excess, bonusC[i] - shareC[i]);
+      shareC[i] += add; excess -= add;
+    }
+  }
   await client.query(
-    `UPDATE deposit_turnovers SET status = 'expired', updated_at = NOW()
-      WHERE id = ANY($1::int[]) AND status = 'active'`,
-    [due.rows.map((r) => r.id)]
+    `UPDATE deposit_turnovers d SET status = 'expired', updated_at = NOW(), expired_deducted = x.share
+       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::numeric[]) AS share) x
+      WHERE d.id = x.id AND d.status = 'active'`,
+    [due.rows.map((r) => r.id), shareC.map((c) => c / 100)]
   );
   return due.rows.length;
 }

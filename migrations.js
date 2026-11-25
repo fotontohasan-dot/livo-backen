@@ -2976,6 +2976,8 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_deposit_turnovers_deposit ON deposit_turnovers(deposit_id) WHERE deposit_id IS NOT NULL`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deposit_turnovers_user_status ON deposit_turnovers(user_id, status)`);
+    // expireDue মেয়াদে এই সারির ভাগে আসলে যা কাটা হয়েছে (NULL = পুরোনো সারি, রেকর্ড নেই → পুরো কাটা ধরা হয়)
+    await pool.query(`ALTER TABLE deposit_turnovers ADD COLUMN IF NOT EXISTS expired_deducted NUMERIC(14,2)`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS turnover_events (
         id BIGSERIAL PRIMARY KEY,
