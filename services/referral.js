@@ -14,6 +14,7 @@
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
 const rewards = require('./referralRewards');
+const { loadConfig: loadTurnoverConfig } = require('./turnover');
 
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
 // আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
@@ -200,13 +201,14 @@ async function getReferralProgramInfo() {
     max: i < raw.length - 1 ? raw[i + 1].min - 1 : null,
     amount: Math.min(sl.amount, cap)
   }));
-  const num = (v, d) => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 0 ? n : d; };
+  // রেফারেল বোনাসের আসল টার্নওভার গুণক: createBonus বোনাস-অনলি এন্ট্রিতে সাধারণ গুণক (turnover_multiplier, ডিফল্ট ৫) নেয়; স্পোর্টস/ক্যাসিনো আলাদা নয়।
+  const turnoverMultiplier = (await loadTurnoverConfig(null)).multiplier;
   return {
     mode, minDeposit, cap, slabs,
     tiers: await rewards.getTiers(),
     turnover: {
-      sports: num(await getSetting('referral_turnover_sports'), rewards.DEFAULT_TURNOVER.sports),
-      casino: num(await getSetting('referral_turnover_casino'), rewards.DEFAULT_TURNOVER.casino)
+      sports: turnoverMultiplier,
+      casino: turnoverMultiplier
     }
   };
 }
