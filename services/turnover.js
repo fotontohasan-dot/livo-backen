@@ -63,7 +63,8 @@ async function loadConfig(db) {
 // ==================== ১. Deposit-এর টার্নওভার তৈরি ====================
 // Deposit approve হলে (routes/payment.js creditApprovedDeposit) প্রতিবার ডাকা হয়।
 // bonusAmount > 0 হলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
-async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit', multiplierOverride = null }) {
+async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit', multiplierOverride = null, status: reqStatus = 'active' }) {
+  const pendingReview = reqStatus === 'pending_review';
   const deposit = Math.max(0, Math.round(Number(depositAmount) || 0));
   const bonus = Math.max(0, Math.round(Number(bonusAmount) || 0));
   if (deposit + bonus <= 0) return null;
@@ -73,16 +74,20 @@ async function createDepositTurnover(client, { userId, depositId = null, deposit
   // multiplierOverride: নির্দিষ্ট উৎসের (যেমন প্রথম-ডিপোজিট ফ্রি বেট) আলাদা গুণক; না দিলে আগের নিয়ম
   const multiplier = Number.isFinite(ov) && ov > 0 ? ov : (bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier);
   const required = (deposit + bonus) * multiplier;
-  const expiresAt = cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
+  const expiresAt = !pendingReview && cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
 
   const db = client || pool;
+  // status = 'pending_review' হলে এন্ট্রি তৈরি হয় কিন্তু ওয়েজারিং শুরু হয় না: addTurnover / getTurnoverStatus /
+  // canWithdraw / forfeitBonuses / expireDue সবাই status = 'active' ফিল্টার করে, তাই এটা গোনাও হয় না, লকও করে না —
+  // অ্যাডমিন ছাড় দিলে (releaseDepositTurnover) তবেই 'active' হয়।
+  const status = pendingReview ? 'pending_review' : 'active';
   const r = await db.query(
     `INSERT INTO deposit_turnovers
-       (user_id, deposit_id, source, deposit_amount, bonus_amount, multiplier, required, expires_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       (user_id, deposit_id, source, deposit_amount, bonus_amount, multiplier, required, status, expires_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      ON CONFLICT (deposit_id) WHERE deposit_id IS NOT NULL DO NOTHING
      RETURNING id`,
-    [userId, depositId, source, deposit, bonus, multiplier, required, expiresAt]
+    [userId, depositId, source, deposit, bonus, multiplier, required, status, expiresAt]
   );
   return r.rows[0] ? r.rows[0].id : null;
 }
@@ -90,8 +95,26 @@ async function createDepositTurnover(client, { userId, depositId = null, deposit
 // পুরোনো কলারদের জন্য শিম (referral, freebet, redpacket…): বোনাস-অনলি এন্ট্রি,
 // Deposit = 0, তাই required = Bonus × multiplier — একই নিয়ম, একই সিস্টেম।
 async function createBonus(client, userId, type, bonusAmount, options = {}) {
-  if (options.status === 'pending_review') return null; // অ্যাডমিন ছাড় না দেওয়া পর্যন্ত গোনা হয় না
-  return createDepositTurnover(client, { userId, depositId: null, depositAmount: 0, bonusAmount, source: type, multiplierOverride: options.multiplier });
+  // pending_review: এন্ট্রি তৈরি হয় (deposit_turnovers.status = 'pending_review') কিন্তু গোনা/লক হয় না, অ্যাডমিন ছাড় না দেওয়া পর্যন্ত।
+  const depositId = Number.isInteger(options.depositId) ? options.depositId : null;
+  return createDepositTurnover(client, {
+    userId, depositId, depositAmount: 0, bonusAmount, source: type,
+    multiplierOverride: options.multiplier,
+    status: options.status === 'pending_review' ? 'pending_review' : 'active'
+  });
+}
+
+// ==================== ২ক. pending_review ছাড় (অ্যাডমিন অনুমোদন) ====================
+// pending_review এন্ট্রি 'active' করে; মেয়াদ (থাকলে) এখান থেকে শুরু। শুধু pending_review সারিতেই কাজ করে।
+async function releaseDepositTurnover(client, id) {
+  const cfg = await loadConfig(client);
+  const expiresAt = cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
+  const r = await (client || pool).query(
+    `UPDATE deposit_turnovers SET status = 'active', expires_at = $2, updated_at = NOW()
+      WHERE id = $1 AND status = 'pending_review' RETURNING id`,
+    [id, expiresAt]
+  );
+  return r.rows[0] ? r.rows[0].id : null;
 }
 
 // ==================== ২. মেয়াদ শেষ হওয়া এন্ট্রি ====================
@@ -299,4 +322,4 @@ async function forfeitBonuses(userId) {
   }
 }
 
-module.exports = { createDepositTurnover, createBonus, addTurnover, canWithdraw, getTurnoverStatus, forfeitBonuses, expireDue, loadConfig, DEFAULTS };
+module.exports = { createDepositTurnover, createBonus, releaseDepositTurnover, addTurnover, canWithdraw, getTurnoverStatus, forfeitBonuses, expireDue, loadConfig, DEFAULTS };

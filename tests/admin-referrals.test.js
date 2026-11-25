@@ -184,8 +184,9 @@ describe('Admin Referral Management (/admin/referrals)', () => {
 
     const after = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
     const coinsAfter = Number(after.rows[0].coins);
-    // দুটো ডিপোজিটই ৫০০+ ধাপে (বোনাস ৭৫) — বোনাস একবারই; দুইবার দিলে ১৫০ হতো
-    expect(coinsAfter - coinsBefore).toBe(75);
+    // slab মডেল: ১০০০ ও ১৫০০ দুটোই একই ধাপে (১,০০০–১,৯৯৯ → বোনাস ১০০), তাই রেসে যেটাই আগে জিতুক
+    // অঙ্ক নির্দিষ্ট — বোনাস একবারই; দুইবার দিলে ২০০ হতো
+    expect(coinsAfter - coinsBefore).toBe(100);
 
     const refRow = await pool.query('SELECT status FROM referral_rewards WHERE referrer_id=$1 AND referred_user_id=$2', [referrerId, referredId]);
     expect(refRow.rows).toHaveLength(1);
