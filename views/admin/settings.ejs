@@ -70,8 +70,6 @@ function adminRow(a, currentAdminId) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('referral_min_deposit', t('adms_ref_min_deposit'), 'number', s.referral_min_deposit || 500, '1')}
             ${field('referral_bonus_cap', t('adms_ref_bonus_cap'), 'number', s.referral_bonus_cap || 1000, '1')}
-            ${field('referral_turnover_sports', t('adms_ref_turnover_sports'), 'number', s.referral_turnover_sports === undefined ? 5 : s.referral_turnover_sports, '0.1')}
-            ${field('referral_turnover_casino', t('adms_ref_turnover_casino'), 'number', s.referral_turnover_casino === undefined ? 5 : s.referral_turnover_casino, '0.1')}
         </div>
         <div>
             <label class="block text-sm font-medium mb-1.5 text-slate-700">${t('adms_ref_slabs')}</label>

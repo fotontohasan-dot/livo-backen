@@ -18,6 +18,8 @@ services:
       - fromGroup: livo-shared
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
       - key: PORT
         value: "3000"
       - key: DB_POOL_MAX
@@ -62,6 +64,8 @@ services:
       - fromGroup: livo-shared
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
       - key: DB_POOL_MAX
         value: "5" # 5 DB connections max for worker
       - key: REDIS_URL
