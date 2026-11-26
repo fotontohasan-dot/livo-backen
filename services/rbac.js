@@ -51,7 +51,6 @@ const PERMISSIONS = {
   reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },
   vip_manage: { label: 'VIP সিস্টেম ম্যানেজমেন্ট (লেভেল, বোনাস, অ্যানালিটিক্স)', group: 'Content' },
   bonus_manage: { label: 'বোনাস ম্যানেজমেন্ট ও টার্নওভার সেটিং (বোনাস দেওয়া/বাতিল, turnover_* সেটিং)', group: 'Content' },
-  merchants_manage: { label: 'মার্চেন্ট ও সাব-মার্চেন্ট ম্যানেজমেন্ট (তৈরি, এডিট, স্ট্যাটাস, ডিলিট)', group: 'Merchants' }
 };
 
 function permissionGroups() {
