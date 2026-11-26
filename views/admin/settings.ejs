@@ -44,12 +44,23 @@ function adminRow(a, currentAdminId) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('min_bet', t('adms_min_bet'), 'number', s.min_bet || 10)}
             ${field('max_bet', t('adms_max_bet'), 'number', s.max_bet || 50000)}
-            ${field('turnover_multiplier', t('adms_turnover_mult'), 'number', s.turnover_multiplier || 5, '0.1')}
             ${field('turnover_no_bonus_multiplier', t('adms_turnover_nobonus_mult'), 'number', s.turnover_no_bonus_multiplier || 1, '0.1')}
             ${field('turnover_min_odds', t('adms_turnover_min_odds'), 'number', s.turnover_min_odds || 1.5, '0.01')}
             ${field('turnover_expiry_hours', t('adms_turnover_expiry_hours'), 'number', s.turnover_expiry_hours || 0, '1')}
             ${field('turnover_cashout_counts', t('adms_turnover_cashout_counts'), 'number', s.turnover_cashout_counts || 0, '1')}
             ${field('max_daily_bets', t('adms_max_daily_bets'), 'number', s.max_daily_bets || 0)}
+        </div>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_turnover_section')}</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                ${field('turnover_multiplier', t('adms_turnover_mult'), 'number', s.turnover_multiplier != null && s.turnover_multiplier !== '' ? s.turnover_multiplier : 5, '0.1')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_turnover_mult_note')}</p>
+            </div>
+            <div>
+                ${field('free_bet_turnover_multiplier', t('adms_fb_turnover_mult'), 'number', s.free_bet_turnover_multiplier != null && s.free_bet_turnover_multiplier !== '' ? s.free_bet_turnover_multiplier : 3, '0.1')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_fb_turnover_mult_note')}</p>
+            </div>
         </div>
 
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_payment')}</h3>

@@ -1080,7 +1080,7 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
-  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'free_bet_turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
   'referral_loss_commission_percent',
@@ -1147,13 +1147,13 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
 // বোনাস/টার্নওভার সেটিং key — এগুলো আর settings_edit নয়, bonus_manage চায়।
 const BONUS_SETTING_KEYS = new Set([
   'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds',
-  'turnover_expiry_hours', 'turnover_cashout_counts'
+  'turnover_expiry_hours', 'turnover_cashout_counts', 'free_bet_turnover_multiplier'
 ]);
 
 // ফর্মের ডিফল্ট (views/admin/settings.ejs) — সেটিং সারি না থাকলে ফর্ম এই মান পাঠায়, তাই এটাকে "অপরিবর্তিত" ধরা হয়
 const BONUS_SETTING_DEFAULTS = {
   turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5',
-  turnover_expiry_hours: '0', turnover_cashout_counts: '0'
+  turnover_expiry_hours: '0', turnover_cashout_counts: '0', free_bet_turnover_multiplier: '3'
 };
 // turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
 const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k);
@@ -1170,6 +1170,17 @@ const sameSettingValue = (a, b) => {
   const nx = Number(x), ny = Number(y);
   return x !== '' && y !== '' && Number.isFinite(nx) && Number.isFinite(ny) && nx === ny;
 };
+
+// টার্নওভার গুণক (turnover_multiplier, free_bet_turnover_multiplier): সংখ্যা >=1 ও <=50, সর্বোচ্চ এক দশমিক ঘর।
+// অবৈধ হলে স্বাভাবিক সংখ্যায় রূপান্তর হয় না (null) — কলার পুরো সেভ বন্ধ করে।
+const TURNOVER_MULT_KEYS = ['turnover_multiplier', 'free_bet_turnover_multiplier'];
+function parseTurnoverMultiplier(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,2}(\.\d)?$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 1 || n > 50) return null;
+  return String(n);
+}
 
 // settings_edit অথবা bonus_manage — যেকোনো একটা থাকলে ফর্মে ঢোকা যায়; কোনোটাই না থাকলে
 // আগের মতোই rbac.requirePermission('settings_edit')-এর স্বাভাবিক প্রত্যাখ্যান + UNAUTHORIZED_ACCESS লগ।
@@ -1194,6 +1205,20 @@ async function requirePermissionSettingsOrBonus(req, res, next) {
 router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, res) => {
   try {
     const { canEdit, canBonus } = req.settingsAccess;
+    // টার্নওভার গুণক যাচাই — অবৈধ হলে বাংলা এরর, কিছুই সেভ হয় না (bonus_manage থাকলেই শুধু প্রযোজ্য)
+    if (canBonus) {
+      const badMult = [];
+      for (const k of TURNOVER_MULT_KEYS) {
+        if (!(k in req.body)) continue;
+        let r0 = req.body[k];
+        if (Array.isArray(r0)) r0 = r0[r0.length - 1];
+        if (parseTurnoverMultiplier(r0) === null) badMult.push(k);
+      }
+      if (badMult.length) {
+        req.flash('error', req.t('admin_turnover_multiplier_invalid').replace('{keys}', badMult.join(', ')));
+        return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
+      }
+    }
     // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
     const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
@@ -1224,6 +1249,7 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
 
       // মেইনটেন্যান্স মেসেজ ইউজার-facing পেজে (মেইনটেন্যান্স স্ক্রিন) সরাসরি দেখানো হয়,
       // তাই stored-XSS ঠেকাতে HTML স্ট্রিপ করে sanitize করা হচ্ছে
+      if (TURNOVER_MULT_KEYS.includes(key)) value = parseTurnoverMultiplier(value);
       if (key === 'maintenance_message') value = sanitizeText(value, { maxLen: 500 });
       // Allowed IP লিস্ট — শুধু বৈধ ফরম্যাটের এন্ট্রিগুলোই রাখা হচ্ছে (IPv4/IPv6, কমা/নিউলাইন দিয়ে আলাদা)
       if (key === 'maintenance_allowed_ips') {
