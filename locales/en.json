@@ -3660,5 +3660,15 @@
   "ref_share_text": "Register with my referral link!",
   "ref_funnel_clicks": "Link clicks",
   "ref_funnel_signups": "Sign-ups",
-  "ref_funnel_deposits": "Deposited"
+  "ref_funnel_deposits": "Deposited",
+  "adms_ref_losscap_section": "Loss commission & bonus cap",
+  "adms_ref_loss_percent": "Deposit-loss commission % (0–10)",
+  "adms_ref_loss_percent_note": "When a referred user loses their entire deposit, the referrer earns this % of the deposit. The value at settlement time is used; commissions already paid do not change. (0–10, two decimals)",
+  "adms_ref_bonus_cap_label": "Referral bonus cap (BDT, 100–100,000)",
+  "adms_ref_bonus_cap_note": "Applies to slab-based referral bonuses; bonuses already given do not change. (whole number)",
+  "adms_ref_slab_table_title": "Current slab list (read-only)",
+  "adms_ref_slab_min": "Minimum deposit",
+  "adms_ref_slab_amount": "Bonus (BDT)",
+  "adms_ref_slab_table_note": "This table is read-only; slabs are edited in the bonus-slabs (JSON) box below. The bonus never exceeds the cap.",
+  "admin_referral_loss_cap_invalid": "Loss commission % or bonus cap ({keys}) is invalid — commission 0 to 10 (at most two decimals), cap a whole number from 100 to 100,000. Nothing was saved."
 }
