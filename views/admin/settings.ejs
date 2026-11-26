@@ -77,6 +77,22 @@ function adminRow(a, currentAdminId) {
         </div>
         <p class="text-xs text-slate-400 -mt-3">${t('adms_loss_commission_hint')}</p>
 
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_ref_bet_commission_section')}</h3>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="referral_bet_commission_enabled" value="false">
+                <input type="checkbox" name="referral_bet_commission_enabled" value="true" ${s.referral_bet_commission_enabled === 'true' ? 'checked' : ''} class="w-5 h-5 rounded">
+                <span class="text-sm font-medium text-slate-700">${t('adms_ref_bet_commission_enabled')}</span>
+            </label>
+            <p class="text-xs text-amber-700 mt-2"><i class="fas fa-triangle-exclamation"></i> ${t('adms_ref_bet_commission_warning')}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            ${field('referral_commission_tier1_percent', t('adms_ref_tier1_percent'), 'number', s.referral_commission_tier1_percent != null && s.referral_commission_tier1_percent !== '' ? s.referral_commission_tier1_percent : 0, '0.01')}
+            ${field('referral_commission_tier2_percent', t('adms_ref_tier2_percent'), 'number', s.referral_commission_tier2_percent != null && s.referral_commission_tier2_percent !== '' ? s.referral_commission_tier2_percent : 0, '0.01')}
+            ${field('referral_commission_tier3_percent', t('adms_ref_tier3_percent'), 'number', s.referral_commission_tier3_percent != null && s.referral_commission_tier3_percent !== '' ? s.referral_commission_tier3_percent : 0, '0.01')}
+        </div>
+        <p class="text-xs text-slate-400 -mt-3">${t('adms_ref_tier_hint')}</p>
+
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_ref_bonus_title')}</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('referral_min_deposit', t('adms_ref_min_deposit'), 'number', s.referral_min_deposit || 500, '1')}

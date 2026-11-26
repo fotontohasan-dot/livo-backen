@@ -1083,6 +1083,7 @@ const SETTING_KEYS = [
   'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'free_bet_turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
+  'referral_bet_commission_enabled',
   'referral_loss_commission_percent',
   // রেফারেল বোনাস (ধাপ-ভিত্তিক): ন্যূনতম ডিপোজিট, ক্যাপ, ধাপ-ছক (JSON), টার্নওভার — services/referralRewards.js
   'referral_min_deposit', 'referral_bonus_cap', 'referral_slabs', 'referral_turnover_sports', 'referral_turnover_casino',
@@ -1156,7 +1157,11 @@ const BONUS_SETTING_DEFAULTS = {
   turnover_expiry_hours: '0', turnover_cashout_counts: '0', free_bet_turnover_multiplier: '3'
 };
 // turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
-const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k);
+// বাজির ওপর রেফারেল কমিশন গেট ও tier % (K9b) — টাকার পেআউটে প্রভাব ফেলে, তাই এগুলোর বদলও অডিট লগে যায়
+const REF_COMMISSION_TIER_KEYS = ['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'];
+const REF_COMMISSION_GATE_KEY = 'referral_bet_commission_enabled';
+const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k) ||
+  REF_COMMISSION_TIER_KEYS.includes(k) || k === REF_COMMISSION_GATE_KEY;
 // সিক্রেট-জাতীয় key-র মান কখনো লগে যায় না — শুধু "বদলেছে"
 const SECRET_SETTING_KEY_RE = /(token|secret|passw(or)?d|passwd|api[_-]?key|private|credential|signature|salt)/i;
 const auditVal = (v) => (v === null || v === undefined || v === '') ? '(খালি)' : String(v).slice(0, 200);
@@ -1179,6 +1184,15 @@ function parseTurnoverMultiplier(raw) {
   if (!/^\d{1,2}(\.\d)?$/.test(v)) return null;
   const n = Number(v);
   if (!Number.isFinite(n) || n < 1 || n > 50) return null;
+  return String(n);
+}
+
+// রেফারেল tier কমিশন %: সংখ্যা >=0 ও <=10, সর্বোচ্চ দুই দশমিক ঘর। অবৈধ হলে null — কলার পুরো সেভ বন্ধ করে।
+function parseReferralTierPercent(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 10) return null;
   return String(n);
 }
 
@@ -1216,6 +1230,20 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       }
       if (badMult.length) {
         req.flash('error', req.t('admin_turnover_multiplier_invalid').replace('{keys}', badMult.join(', ')));
+        return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
+      }
+    }
+    // রেফারেল tier কমিশন যাচাই — অবৈধ হলে বাংলা এরর, কিছুই সেভ হয় না (এই key-গুলো settings_edit-ওয়ালার)
+    if (canEdit) {
+      const badTier = [];
+      for (const k of REF_COMMISSION_TIER_KEYS) {
+        if (!(k in req.body)) continue;
+        let r0 = req.body[k];
+        if (Array.isArray(r0)) r0 = r0[r0.length - 1];
+        if (parseReferralTierPercent(r0) === null) badTier.push(k);
+      }
+      if (badTier.length) {
+        req.flash('error', req.t('admin_referral_tier_invalid').replace('{keys}', badTier.join(', ')));
         return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
       }
     }
@@ -1263,7 +1291,15 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
       // রেফারেল কমিশন রেট — ০-১০০-এর মধ্যে সংখ্যা না হলে সেভ না করে আগের মান রেখে দেওয়া হয়
       // (ভুল মান যেমন negative বা খালি স্ট্রিং সেভ হলে distributeCommission()-এ ভুল কমিশন যেতে পারত)
-      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent', 'referral_loss_commission_percent'].includes(key)) {
+      // tier কমিশন: আগেই যাচাই হয়ে গেছে (০–১০, দুই দশমিক) — এখানে স্বাভাবিক রূপে লেখা হয়
+      if (REF_COMMISSION_TIER_KEYS.includes(key)) {
+        const t0 = parseReferralTierPercent(value);
+        if (t0 === null) continue;
+        value = t0;
+      }
+      // কমিশন গেট: শুধু 'true' হলে চালু; অন্য সবকিছু (খালি, on, 1, abc) 'false' হিসেবে সেভ হয়
+      if (key === REF_COMMISSION_GATE_KEY) value = value === 'true' ? 'true' : 'false';
+      if (['referral_loss_commission_percent'].includes(key)) {
         const n = parseFloat(value);
         if (!Number.isFinite(n) || n < 0 || n > 100) continue;
         value = String(n);
