@@ -6,7 +6,8 @@ const { grantFreeBet } = require('../../services/freebet');
 const { reverseDeposit } = require('../../services/depositReversal');
 const { makeUser, makeDeposit, coins, cleanup } = require('../helpers/referralDeposit');
 
-const IS_FRIDAY = new Date().getDay() === 5;
+// অ্যাপ শুক্রবার ধরে Asia/Dhaka বার দিয়ে (routes/payment.js) — সার্ভার-লোকাল getDay() দিয়ে নয়; নইলে বৃহস্পতি ১৮:০০–২৪:০০ UTC-তে টেস্ট ভুল % আশা করে
+const IS_FRIDAY = require('../../utils/businessTime').businessWeekday() === 5;
 const SECOND_PCT = IS_FRIDAY ? 80 : 50;
 const users = [];
 let adminId;

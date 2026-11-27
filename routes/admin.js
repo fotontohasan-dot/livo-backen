@@ -1080,9 +1080,10 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
-  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'max_daily_bets',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds', 'turnover_expiry_hours', 'turnover_cashout_counts', 'free_bet_turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
   'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
+  'referral_bet_commission_enabled',
   'referral_loss_commission_percent',
   // রেফারেল বোনাস (ধাপ-ভিত্তিক): ন্যূনতম ডিপোজিট, ক্যাপ, ধাপ-ছক (JSON), টার্নওভার — services/referralRewards.js
   'referral_min_deposit', 'referral_bonus_cap', 'referral_slabs', 'referral_turnover_sports', 'referral_turnover_casino',
@@ -1132,8 +1133,14 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
       "SELECT id, username, email, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC"
     );
 
+    // K9c: slab তালিকা শুধু-পড়ার জন্য (referral_slabs সেটিং বৈধ হলে সেটা, নইলে DEFAULT_SLABS)
+    const rr = require('../services/referralRewards');
+    let referralSlabs = rr.DEFAULT_SLABS;
+    try { referralSlabs = rr.parseSlabs(settings.referral_slabs) || rr.DEFAULT_SLABS; } catch (_) { /* ডিফল্ট */ }
+
     res.render('admin/settings', {
       settings,
+      referralSlabs,
       admins: adminsRes.rows,
       saved: req.query.saved === '1',
       saveError: req.query.error === '1'
@@ -1147,16 +1154,20 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
 // বোনাস/টার্নওভার সেটিং key — এগুলো আর settings_edit নয়, bonus_manage চায়।
 const BONUS_SETTING_KEYS = new Set([
   'turnover_multiplier', 'turnover_no_bonus_multiplier', 'turnover_min_odds',
-  'turnover_expiry_hours', 'turnover_cashout_counts'
+  'turnover_expiry_hours', 'turnover_cashout_counts', 'free_bet_turnover_multiplier'
 ]);
 
 // ফর্মের ডিফল্ট (views/admin/settings.ejs) — সেটিং সারি না থাকলে ফর্ম এই মান পাঠায়, তাই এটাকে "অপরিবর্তিত" ধরা হয়
 const BONUS_SETTING_DEFAULTS = {
   turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5',
-  turnover_expiry_hours: '0', turnover_cashout_counts: '0'
+  turnover_expiry_hours: '0', turnover_cashout_counts: '0', free_bet_turnover_multiplier: '3'
 };
 // turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
-const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k);
+// বাজির ওপর রেফারেল কমিশন গেট ও tier % (K9b) — টাকার পেআউটে প্রভাব ফেলে, তাই এগুলোর বদলও অডিট লগে যায়
+const REF_COMMISSION_TIER_KEYS = ['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'];
+const REF_COMMISSION_GATE_KEY = 'referral_bet_commission_enabled';
+const isBonusAuditKey = (k) => BONUS_SETTING_KEYS.has(k) || /^turnover_/.test(k) || /bonus/i.test(k) ||
+  REF_COMMISSION_TIER_KEYS.includes(k) || k === REF_COMMISSION_GATE_KEY || k === 'referral_loss_commission_percent';
 // সিক্রেট-জাতীয় key-র মান কখনো লগে যায় না — শুধু "বদলেছে"
 const SECRET_SETTING_KEY_RE = /(token|secret|passw(or)?d|passwd|api[_-]?key|private|credential|signature|salt)/i;
 const auditVal = (v) => (v === null || v === undefined || v === '') ? '(খালি)' : String(v).slice(0, 200);
@@ -1170,6 +1181,45 @@ const sameSettingValue = (a, b) => {
   const nx = Number(x), ny = Number(y);
   return x !== '' && y !== '' && Number.isFinite(nx) && Number.isFinite(ny) && nx === ny;
 };
+
+// টার্নওভার গুণক (turnover_multiplier, free_bet_turnover_multiplier): সংখ্যা >=1 ও <=50, সর্বোচ্চ এক দশমিক ঘর।
+// অবৈধ হলে স্বাভাবিক সংখ্যায় রূপান্তর হয় না (null) — কলার পুরো সেভ বন্ধ করে।
+const TURNOVER_MULT_KEYS = ['turnover_multiplier', 'free_bet_turnover_multiplier'];
+function parseTurnoverMultiplier(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,2}(\.\d)?$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 1 || n > 50) return null;
+  return String(n);
+}
+
+// রেফারেল tier কমিশন %: সংখ্যা >=0 ও <=10, সর্বোচ্চ দুই দশমিক ঘর। অবৈধ হলে null — কলার পুরো সেভ বন্ধ করে।
+function parseReferralTierPercent(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 10) return null;
+  return String(n);
+}
+
+// K9c: লস-কমিশন % (০–১০, সর্বোচ্চ দুই দশমিক) ও বোনাস ক্যাপ (পূর্ণসংখ্যা ১০০–১,০০,০০০)।
+// অবৈধ হলে null — কলার পুরো সেভ বন্ধ করে। শুধু এই দুই key-র নিয়ম; অন্য key-র ০–১০০ নিয়ম অপরিবর্তিত।
+const REF_LOSS_COMMISSION_KEY = 'referral_loss_commission_percent';
+const REF_BONUS_CAP_KEY = 'referral_bonus_cap';
+function parseReferralLossPercent(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 10) return null;
+  return String(n);
+}
+function parseReferralBonusCap(raw) {
+  const v = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!/^\d{1,6}$/.test(v)) return null;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 100 || n > 100000) return null;
+  return String(n);
+}
 
 // settings_edit অথবা bonus_manage — যেকোনো একটা থাকলে ফর্মে ঢোকা যায়; কোনোটাই না থাকলে
 // আগের মতোই rbac.requirePermission('settings_edit')-এর স্বাভাবিক প্রত্যাখ্যান + UNAUTHORIZED_ACCESS লগ।
@@ -1194,6 +1244,55 @@ async function requirePermissionSettingsOrBonus(req, res, next) {
 router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, res) => {
   try {
     const { canEdit, canBonus } = req.settingsAccess;
+    // টার্নওভার গুণক যাচাই — অবৈধ হলে বাংলা এরর, কিছুই সেভ হয় না (bonus_manage থাকলেই শুধু প্রযোজ্য)
+    if (canBonus) {
+      const badMult = [];
+      for (const k of TURNOVER_MULT_KEYS) {
+        if (!(k in req.body)) continue;
+        let r0 = req.body[k];
+        if (Array.isArray(r0)) r0 = r0[r0.length - 1];
+        if (parseTurnoverMultiplier(r0) === null) badMult.push(k);
+      }
+      if (badMult.length) {
+        req.flash('error', req.t('admin_turnover_multiplier_invalid').replace('{keys}', badMult.join(', ')));
+        return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
+      }
+    }
+    // রেফারেল tier কমিশন যাচাই — অবৈধ হলে বাংলা এরর, কিছুই সেভ হয় না (এই key-গুলো settings_edit-ওয়ালার)
+    if (canEdit) {
+      const badTier = [];
+      for (const k of REF_COMMISSION_TIER_KEYS) {
+        if (!(k in req.body)) continue;
+        let r0 = req.body[k];
+        if (Array.isArray(r0)) r0 = r0[r0.length - 1];
+        if (parseReferralTierPercent(r0) === null) badTier.push(k);
+      }
+      if (badTier.length) {
+        req.flash('error', req.t('admin_referral_tier_invalid').replace('{keys}', badTier.join(', ')));
+        return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
+      }
+    }
+    // K9c: লস-কমিশন % ও বোনাস ক্যাপ যাচাই — অবৈধ হলে বাংলা এরর, কিছুই সেভ হয় না।
+    // ফর্ম সবসময় বর্তমান মান পাঠায়; তাই সংরক্ষিত (বা ডিফল্ট) মানের সমান হলে যাচাই বাদ — পুরোনো মান থাকলে অন্য সেটিং সেভ আটকে যাবে না।
+    if (canEdit) {
+      const cur = {};
+      (await pool.query('SELECT key, value FROM site_settings WHERE key = ANY($1)', [[REF_LOSS_COMMISSION_KEY, REF_BONUS_CAP_KEY]]))
+        .rows.forEach(r => { cur[r.key] = r.value; });
+      const defs = { [REF_LOSS_COMMISSION_KEY]: '0.8', [REF_BONUS_CAP_KEY]: '1000' };
+      const badLc = [];
+      for (const [k, fn] of [[REF_LOSS_COMMISSION_KEY, parseReferralLossPercent], [REF_BONUS_CAP_KEY, parseReferralBonusCap]]) {
+        if (!(k in req.body)) continue;
+        let r0 = req.body[k];
+        if (Array.isArray(r0)) r0 = r0[r0.length - 1];
+        const base = k in cur ? cur[k] : defs[k];
+        if (sameSettingValue(r0, base)) continue;
+        if (fn(r0) === null) badLc.push(k);
+      }
+      if (badLc.length) {
+        req.flash('error', req.t('admin_referral_loss_cap_invalid').replace('{keys}', badLc.join(', ')));
+        return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
+      }
+    }
     // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
     const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
@@ -1224,6 +1323,7 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
 
       // মেইনটেন্যান্স মেসেজ ইউজার-facing পেজে (মেইনটেন্যান্স স্ক্রিন) সরাসরি দেখানো হয়,
       // তাই stored-XSS ঠেকাতে HTML স্ট্রিপ করে sanitize করা হচ্ছে
+      if (TURNOVER_MULT_KEYS.includes(key)) value = parseTurnoverMultiplier(value);
       if (key === 'maintenance_message') value = sanitizeText(value, { maxLen: 500 });
       // Allowed IP লিস্ট — শুধু বৈধ ফরম্যাটের এন্ট্রিগুলোই রাখা হচ্ছে (IPv4/IPv6, কমা/নিউলাইন দিয়ে আলাদা)
       if (key === 'maintenance_allowed_ips') {
@@ -1237,16 +1337,26 @@ router.post('/settings/update', requirePermissionSettingsOrBonus, async (req, re
       if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
       // রেফারেল কমিশন রেট — ০-১০০-এর মধ্যে সংখ্যা না হলে সেভ না করে আগের মান রেখে দেওয়া হয়
       // (ভুল মান যেমন negative বা খালি স্ট্রিং সেভ হলে distributeCommission()-এ ভুল কমিশন যেতে পারত)
-      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent', 'referral_loss_commission_percent'].includes(key)) {
+      // tier কমিশন: আগেই যাচাই হয়ে গেছে (০–১০, দুই দশমিক) — এখানে স্বাভাবিক রূপে লেখা হয়
+      if (REF_COMMISSION_TIER_KEYS.includes(key)) {
+        const t0 = parseReferralTierPercent(value);
+        if (t0 === null) continue;
+        value = t0;
+      }
+      // কমিশন গেট: শুধু 'true' হলে চালু; অন্য সবকিছু (খালি, on, 1, abc) 'false' হিসেবে সেভ হয়
+      if (key === REF_COMMISSION_GATE_KEY) value = value === 'true' ? 'true' : 'false';
+      if (['referral_loss_commission_percent'].includes(key)) {
         const n = parseFloat(value);
         if (!Number.isFinite(n) || n < 0 || n > 100) continue;
-        value = String(n);
+        const strict = parseReferralLossPercent(value);
+        value = strict !== null ? strict : String(n); // strict null = অপরিবর্তিত পুরোনো মান (আগেই যাচাই পেরিয়েছে)
       }
       // রেফারেল বোনাস কনফিগ — অবৈধ মান সেভ না করে আগের মান রাখা হয় (ভুল মানে ভুল পেআউট ঠেকাতে)
       if (key === 'referral_min_deposit' || key === 'referral_bonus_cap') {
         const n = Number(value);
         if (!Number.isFinite(n) || n <= 0) continue;
         value = String(n);
+        if (key === REF_BONUS_CAP_KEY) { const strict = parseReferralBonusCap(value); if (strict !== null) value = strict; }
       }
       if (key === 'referral_turnover_sports' || key === 'referral_turnover_casino') {
         const n = Number(value);

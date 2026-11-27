@@ -2839,40 +2839,6 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_merchant_uid ON merchants(merchant_uid);`);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_merchants_api_key_hash ON merchants(api_key_hash);`);
 
-    // বিদ্যমান মার্চেন্টদের জন্য ব্যাকফিল (শুধু যাদের এখনো নেই; পুনরায় চালালে কিছু বদলায় না)
-    {
-      const merchantCreds = require('./services/merchantCredentials');
-      const missing = await pool.query(
-        `SELECT id FROM merchants WHERE merchant_uid IS NULL OR api_key_hash IS NULL ORDER BY id`
-      );
-      for (const row of missing.rows) {
-        const c = await pool.connect();
-        try {
-          await c.query('BEGIN');
-          const cur = await c.query('SELECT merchant_uid, api_key_hash FROM merchants WHERE id = $1 FOR UPDATE', [row.id]);
-          const m = cur.rows[0];
-          if (m) {
-            const uid = m.merchant_uid || await merchantCreds.allocateMerchantUid(c);
-            if (m.api_key_hash) {
-              await c.query('UPDATE merchants SET merchant_uid = $1 WHERE id = $2', [uid, row.id]);
-            } else {
-              const k = merchantCreds.newKeyFields();
-              await c.query(
-                `UPDATE merchants SET merchant_uid = $1, api_key_hash = $2, api_key_enc = $3,
-                        api_key_prefix = $4, api_key_created_at = NOW() WHERE id = $5`,
-                [uid, k.api_key_hash, k.api_key_enc, k.api_key_prefix, row.id]
-              );
-            }
-          }
-          await c.query('COMMIT');
-        } catch (e) {
-          try { await c.query('ROLLBACK'); } catch (_) { /* ignore */ }
-          throw e;
-        } finally {
-          c.release();
-        }
-      }
-    }
     console.log('✅ merchants ক্রেডেনশিয়াল কলাম ready');
 
     // Step 3: ইন্টিগ্রেশন স্ট্যাটাস (web ও worker আলাদা প্রসেস, তাই DB-তে) — গোপন মান কখনো নয়, শুধু ফ্ল্যাগ/সময়/ছাঁটা error

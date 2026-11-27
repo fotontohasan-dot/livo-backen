@@ -44,12 +44,23 @@ function adminRow(a, currentAdminId) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('min_bet', t('adms_min_bet'), 'number', s.min_bet || 10)}
             ${field('max_bet', t('adms_max_bet'), 'number', s.max_bet || 50000)}
-            ${field('turnover_multiplier', t('adms_turnover_mult'), 'number', s.turnover_multiplier || 5, '0.1')}
             ${field('turnover_no_bonus_multiplier', t('adms_turnover_nobonus_mult'), 'number', s.turnover_no_bonus_multiplier || 1, '0.1')}
             ${field('turnover_min_odds', t('adms_turnover_min_odds'), 'number', s.turnover_min_odds || 1.5, '0.01')}
             ${field('turnover_expiry_hours', t('adms_turnover_expiry_hours'), 'number', s.turnover_expiry_hours || 0, '1')}
             ${field('turnover_cashout_counts', t('adms_turnover_cashout_counts'), 'number', s.turnover_cashout_counts || 0, '1')}
             ${field('max_daily_bets', t('adms_max_daily_bets'), 'number', s.max_daily_bets || 0)}
+        </div>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_turnover_section')}</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                ${field('turnover_multiplier', t('adms_turnover_mult'), 'number', s.turnover_multiplier != null && s.turnover_multiplier !== '' ? s.turnover_multiplier : 5, '0.1')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_turnover_mult_note')}</p>
+            </div>
+            <div>
+                ${field('free_bet_turnover_multiplier', t('adms_fb_turnover_mult'), 'number', s.free_bet_turnover_multiplier != null && s.free_bet_turnover_multiplier !== '' ? s.free_bet_turnover_multiplier : 3, '0.1')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_fb_turnover_mult_note')}</p>
+            </div>
         </div>
 
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_payment')}</h3>
@@ -60,16 +71,45 @@ function adminRow(a, currentAdminId) {
             ${field('withdraw_commission_percent', t('adms_wd_commission'), 'number', s.withdraw_commission_percent || 0, '0.1')}
         </div>
 
-        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_referral_commission')}</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            ${field('referral_loss_commission_percent', t('adms_loss_commission'), 'number', s.referral_loss_commission_percent || 0.8, '0.01')}
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_ref_bet_commission_section')}</h3>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="referral_bet_commission_enabled" value="false">
+                <input type="checkbox" name="referral_bet_commission_enabled" value="true" ${s.referral_bet_commission_enabled === 'true' ? 'checked' : ''} class="w-5 h-5 rounded">
+                <span class="text-sm font-medium text-slate-700">${t('adms_ref_bet_commission_enabled')}</span>
+            </label>
+            <p class="text-xs text-amber-700 mt-2"><i class="fas fa-triangle-exclamation"></i> ${t('adms_ref_bet_commission_warning')}</p>
         </div>
-        <p class="text-xs text-slate-400 -mt-3">${t('adms_loss_commission_hint')}</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            ${field('referral_commission_tier1_percent', t('adms_ref_tier1_percent'), 'number', s.referral_commission_tier1_percent != null && s.referral_commission_tier1_percent !== '' ? s.referral_commission_tier1_percent : 0, '0.01')}
+            ${field('referral_commission_tier2_percent', t('adms_ref_tier2_percent'), 'number', s.referral_commission_tier2_percent != null && s.referral_commission_tier2_percent !== '' ? s.referral_commission_tier2_percent : 0, '0.01')}
+            ${field('referral_commission_tier3_percent', t('adms_ref_tier3_percent'), 'number', s.referral_commission_tier3_percent != null && s.referral_commission_tier3_percent !== '' ? s.referral_commission_tier3_percent : 0, '0.01')}
+        </div>
+        <p class="text-xs text-slate-400 -mt-3">${t('adms_ref_tier_hint')}</p>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_ref_losscap_section')}</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                ${field('referral_loss_commission_percent', t('adms_ref_loss_percent'), 'number', s.referral_loss_commission_percent != null && s.referral_loss_commission_percent !== '' ? s.referral_loss_commission_percent : 0.8, '0.01')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_ref_loss_percent_note')}</p>
+            </div>
+            <div>
+                ${field('referral_bonus_cap', t('adms_ref_bonus_cap_label'), 'number', s.referral_bonus_cap != null && s.referral_bonus_cap !== '' ? s.referral_bonus_cap : 1000, '1')}
+                <p class="text-xs text-slate-500 mt-1.5">${t('adms_ref_bonus_cap_note')}</p>
+            </div>
+        </div>
+        <div id="referralSlabTable">
+            <p class="text-sm font-medium text-slate-700 mb-2">${t('adms_ref_slab_table_title')}</p>
+            <div class="overflow-x-auto"><table class="w-full text-sm border border-slate-100 rounded-2xl">
+                <thead><tr class="bg-slate-50 text-slate-500 text-xs"><th class="px-4 py-2 text-left">#</th><th class="px-4 py-2 text-left">${t('adms_ref_slab_min')}</th><th class="px-4 py-2 text-left">${t('adms_ref_slab_amount')}</th></tr></thead>
+                <tbody>${(typeof referralSlabs !== 'undefined' && Array.isArray(referralSlabs) ? referralSlabs : []).map((sl, i) => '<tr class="border-t border-slate-100"><td class="px-4 py-2">' + (i + 1) + '</td><td class="px-4 py-2" data-slab-min>' + escapeHtml(sl.min) + '</td><td class="px-4 py-2" data-slab-amount>' + escapeHtml(sl.amount) + '</td></tr>').join('')}</tbody>
+            </table></div>
+            <p class="text-xs text-slate-400 mt-1">${t('adms_ref_slab_table_note')}</p>
+        </div>
 
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">${t('adms_ref_bonus_title')}</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('referral_min_deposit', t('adms_ref_min_deposit'), 'number', s.referral_min_deposit || 500, '1')}
-            ${field('referral_bonus_cap', t('adms_ref_bonus_cap'), 'number', s.referral_bonus_cap || 1000, '1')}
         </div>
         <div>
             <label class="block text-sm font-medium mb-1.5 text-slate-700">${t('adms_ref_slabs')}</label>
