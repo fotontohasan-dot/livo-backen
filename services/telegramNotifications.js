@@ -48,13 +48,16 @@ async function notifyPaymentRequest(requestId) {
 
     const lines = [
       `${p.type === 'deposit' ? '💰' : '🏧'} <b>নতুন ${LABEL[p.type]} রিকোয়েস্ট</b>`,
-      `রিকোয়েস্ট: #${p.id}`,
+      `রেফারেন্স: <code>#${p.id}</code>`,
       `ইউজার: ${escapeHtml(p.username)} (user_id: ${p.user_id})`,
       `পরিমাণ: ${escapeHtml(p.amount)} টাকা`,
       `মেথড: ${escapeHtml(p.method)}`
     ];
     if (p.account_number) lines.push(`অ্যাকাউন্ট: <code>${escapeHtml(clip(p.account_number, 100))}</code>`);
-    if (p.transaction_id) lines.push(`Transaction ID: <code>${escapeHtml(clip(p.transaction_id, 100))}</code>`);
+    // ডিপোজিটে লাইনটা সবসময় থাকে, যাতে TrxID না থাকাটাও অ্যাডমিনের চোখে পড়ে
+    if (p.type === 'deposit' || p.transaction_id) {
+      lines.push(`ট্রানজ্যাকশন আইডি: ${p.transaction_id ? `<code>${escapeHtml(clip(p.transaction_id, 100))}</code>` : 'নেই'}`);
+    }
     if (p.want_bonus) lines.push('বোনাস: নিতে চায়');
 
     const config = await telegramConfig.getConfig();

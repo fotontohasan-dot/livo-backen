@@ -127,9 +127,22 @@ describe('ডিপোজিট/উইথড্র বাটন', () => {
     const id = await makePayment(u.id, 'deposit');
     expect(await notifyPaymentRequest(id)).toEqual({ sent: true });
     const body = sent('sendMessage')[0].body;
-    expect(body.text).toContain('Transaction ID');
+    const trx = (await pool.query('SELECT transaction_id FROM payment_requests WHERE id=$1', [id])).rows[0].transaction_id;
+    expect(body.text).toContain(`রেফারেন্স: <code>#${id}</code>`);
+    expect(body.text).toContain(`ট্রানজ্যাকশন আইডি: <code>${trx}</code>`);
     expect(body.reply_markup.inline_keyboard[0].map((b) => b.callback_data))
       .toEqual([`pay:approve:deposit:${id}`, `pay:reject:deposit:${id}`]);
+  });
+
+  test('TrxID ছাড়া ডিপোজিটে "নেই" দেখায়; উইথড্রতে লাইনটাই থাকে না', async () => {
+    const u = await makeUser();
+    const dep = await makePayment(u.id, 'deposit');
+    await pool.query('UPDATE payment_requests SET transaction_id=NULL WHERE id=$1', [dep]);
+    await notifyPaymentRequest(dep);
+    await notifyPaymentRequest(await makePayment(u.id, 'withdraw'));
+    const [a, b] = sent('sendMessage').map((c) => c.body.text);
+    expect(a).toContain('ট্রানজ্যাকশন আইডি: নেই');
+    expect(b).not.toContain('ট্রানজ্যাকশন আইডি');
   });
 
   test('ডিপোজিট সমান্তরাল ডাবল-ক্লিকে একবারই ক্রেডিট হয়', async () => {
