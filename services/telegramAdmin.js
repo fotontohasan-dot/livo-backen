@@ -1,12 +1,15 @@
 // services/telegramAdmin.js
 // Webhook থেকে আসা update-এর রাউটার:
 //   • callback_query            → ডিপোজিট/উইথড্র Approve/Reject
+//   • /pending                  → অপেক্ষমাণ রিকোয়েস্ট, বাটনসহ
 //   • সাপোর্ট মেসেজে Reply, /reply → ইউজারের সাপোর্ট চ্যাটে উত্তর
 //   • বাকি সব মেসেজ              → telegram-bot.js (Claude AI assistant)
-// অনুমোদন: chat id == TELEGRAM_ADMIN_CHAT_ID এবং from id ∈ TELEGRAM_ADMIN_USER_IDS (দুটোই)।
+// অনুমোদনের নিয়ম: services/telegramAccess.js (AI assistant-এর নিয়ম আলাদা ও কড়া)।
 const { pool } = require('../db');
 const bot = require('../telegram-bot');
-const { escapeHtml, telegramRequest, sendTelegramMessage } = require('./telegramApi');
+const { escapeHtml, getBotToken, telegramRequest, sendTelegramMessage } = require('./telegramApi');
+const { isAdminActor, denialHint } = require('./telegramAccess');
+const { buildPaymentMessage, listPendingPayments } = require('./telegramNotifications');
 const { logEvent } = require('./auditLog');
 const notify = require('./notify');
 const { sanitizeText } = require('../middleware/validate');
@@ -41,10 +44,11 @@ async function handleCallbackQuery(query) {
     callback_query_id: query.id, text, show_alert: showAlert
   });
 
-  if (!bot.isAuthorizedSender({ chat: message && message.chat, from })) {
+  const actor = { chat: message && message.chat, from };
+  if (!(await isAdminActor(actor))) {
     console.warn(`⚠️ অননুমোদিত Telegram callback (chat=${message?.chat?.id}, user=${from?.id})`);
     audit(from || { id: 'unknown' }, 'TELEGRAM_CALLBACK_UNAUTHORIZED', { status: 'failure', category: 'security' });
-    await answer('অনুমতি নেই।', true);
+    await answer((await denialHint(actor)) || 'অনুমতি নেই।', true);
     return;
   }
 
@@ -103,8 +107,8 @@ async function handleCallbackQuery(query) {
 
 // ==================== সাপোর্ট রিপ্লাই ====================
 /** আমাদের বটের পাঠানো সাপোর্ট নোটিফিকেশনে Reply হলে ইউজার id, নইলে null। */
-function parseSupportReplyTarget(replied) {
-  const botId = String(process.env.TELEGRAM_BOT_TOKEN || '').split(':')[0];
+function parseSupportReplyTarget(replied, botToken) {
+  const botId = String(botToken || '').split(':')[0];
   if (!replied || !replied.from || !botId || String(replied.from.id) !== botId) return null;
   const match = SUPPORT_HEADER_RE.exec(String(replied.text || '').split('\n')[0]);
   return match ? Number(match[1]) : null;
@@ -125,9 +129,10 @@ async function deliverSupportReply(userId, rawText) {
     [user.id, text]
   );
   await pool.query(`UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND is_admin = false AND is_read = false`, [user.id]);
+  // ইউজারের লাইভ চ্যাট প্যানেল শুধু 'ai' ছাড়া অন্য অবস্থায় দেখা যায় — তাই উত্তর গেলে সবসময় 'connected'
   const connected = await pool.query(
     `UPDATE users SET support_status = 'connected', support_status_updated_at = NOW()
-     WHERE id = $1 AND support_status = 'waiting'`,
+     WHERE id = $1 AND support_status IS DISTINCT FROM 'connected'`,
     [user.id]
   );
 
@@ -163,28 +168,53 @@ async function replyToUser(msg, userId, text) {
   }
 }
 
+// ==================== অপেক্ষমাণ রিকোয়েস্ট ====================
+async function sendPending(chatId) {
+  try {
+    const rows = await listPendingPayments();
+    if (!rows.length) return sendTelegramMessage(chatId, '✅ কোনো অপেক্ষমাণ ডিপোজিট/উইথড্র নেই।');
+    for (const row of rows) {
+      const { text, replyMarkup } = buildPaymentMessage(row);
+      await sendTelegramMessage(chatId, text, replyMarkup ? { reply_markup: replyMarkup } : {});
+    }
+    return sendTelegramMessage(chatId, `মোট দেখানো হলো: ${rows.length}টি (একবারে সর্বোচ্চ ১০টি, পুরনোটা আগে)।`);
+  } catch (err) {
+    console.error('telegram /pending error:', err.message);
+    return sendTelegramMessage(chatId, '❌ তালিকা আনা যায়নি।');
+  }
+}
+
 // ==================== রাউটার ====================
 async function processUpdate(update) {
   if (update.callback_query) return handleCallbackQuery(update.callback_query);
 
   const msg = update.message;
   if (!msg) return undefined;
-  // অননুমোদিত হলে handleMessage নিজেই লগ/অডিট করে এবং কোনো উত্তর দেয় না
-  if (!bot.isAuthorizedSender(msg)) return bot.handleMessage(msg);
+  if (!(await isAdminActor(msg))) {
+    const hint = await denialHint(msg);
+    if (hint) await sendTelegramMessage(msg.chat.id, hint);
+    // handleMessage অননুমোদিত প্রেরককে শুধু লগ/অডিট করে, কোনো উত্তর দেয় না
+    return bot.handleMessage(msg);
+  }
 
   const text = typeof msg.text === 'string' ? msg.text.trim() : '';
+  if (/^\/pending(?:@\w+)?$/.test(text)) return sendPending(msg.chat.id);
   if (/^\/reply(?:@\w+)?(?:\s|$)/.test(text)) {
     const cmd = REPLY_CMD_RE.exec(text);
     if (!cmd) return sendTelegramMessage(msg.chat.id, 'ব্যবহার: <code>/reply userId আপনার উত্তর</code>');
     return replyToUser(msg, Number(cmd[1]), cmd[2]);
   }
 
-  const target = parseSupportReplyTarget(msg.reply_to_message);
+  const target = msg.reply_to_message ? parseSupportReplyTarget(msg.reply_to_message, await getBotToken()) : null;
   if (target && !text.startsWith('/')) {
     if (!text) return sendTelegramMessage(msg.chat.id, 'শুধু টেক্সট উত্তর পাঠানো যায়।');
     return replyToUser(msg, target, text);
   }
 
+  if (!bot.isAuthorizedSender(msg)) {
+    return sendTelegramMessage(msg.chat.id,
+      `ℹ️ AI assistant চালু করতে Render-এ TELEGRAM_ADMIN_CHAT_ID=${msg.chat.id} ও TELEGRAM_ADMIN_USER_IDS=${msg.from.id} দুটোই লাগবে।\n/pending ও সাপোর্ট রিপ্লাই কাজ করবে।`);
+  }
   return bot.handleMessage(msg);
 }
 

@@ -12,7 +12,14 @@
 | `ANTHROPIC_MODEL` | ঐচ্ছিক |
 | `RENDER_EXTERNAL_URL` | Render নিজে সেট করে |
 
-`CHAT_ID` ও `USER_IDS` **দুটোই** মিলতে হয়। প্রাইভেট চ্যাটে দুটোর মান একই।
+### কে কী করতে পারে
+
+| চ্যাট | পেমেন্ট বাটন, সাপোর্ট রিপ্লাই, `/pending` | AI assistant (GitHub অ্যাক্সেসসহ) |
+|---|---|---|
+| প্রাইভেট | অ্যাডমিন চ্যাট, **অথবা** `USER_IDS`-এ থাকা user | `CHAT_ID` ও `USER_IDS` দুটোই |
+| গ্রুপ | অ্যাডমিন চ্যাট **এবং** `USER_IDS` | `CHAT_ID` ও `USER_IDS` দুটোই |
+
+অ্যাডমিন চ্যাট = `TELEGRAM_ADMIN_CHAT_ID` (না থাকলে `TELEGRAM_CHAT_ID`)। env-এ কোনো id না থাকলে তবেই Admin প্যানেলের chat id ধরা হয়।
 
 ## Webhook রেজিস্টার
 
@@ -27,12 +34,14 @@ npm run telegram:webhook -- --info  # বর্তমান অবস্থা
 
 - **ডিপোজিট/উইথড্র:** নোটিফিকেশনের Approve/Reject বাটন চাপুন। উইথড্র Approve করার **আগে** টাকা পাঠান।
 - **সাপোর্ট:** `🎫 SUPPORT` মেসেজে Reply দিন, অথবা `/reply <userId> <উত্তর>`।
+- **অপেক্ষমাণ তালিকা:** `/pending` লিখলে বাটনসহ আসে।
 - **AI:** অন্য যেকোনো মেসেজের উত্তর Claude দেয়।
 
 ## জানা দরকার
 
 - রিকোয়েস্ট থাকে `payment_requests` টেবিলে (`type` = deposit/withdraw), সাপোর্ট `chat_messages`-এ। নতুন মাইগ্রেশন লাগে না।
-- Admin প্যানেলে (`/admin/telegram`) env থেকে আলাদা bot token বা chat id সেভ করা থাকলে নোটিফিকেশন বাটন ছাড়া যায়।
+- Admin প্যানেলে (`/admin/telegram`) সেভ করা bot token থাকলে সেটাই ব্যবহার হয় (webhook-ও ওই বটে বসে)।
+- বাটন বন্ধ থাকার কারণ (যেমন অবৈধ webhook secret) নোটিফিকেশনেই লেখা থাকে।
 - অ্যাডমিন তালিকার যে কেউ RBAC ছাড়াই পেমেন্ট অনুমোদন করতে পারে। তাই তালিকা ছোট রাখুন ও Telegram-এ 2FA চালু রাখুন।
 - সব অ্যাকশন `audit_logs`-এ `TELEGRAM:<userId>` নামে লেখা হয়।
 
@@ -43,6 +52,7 @@ npm run telegram:webhook -- --info  # বর্তমান অবস্থা
 | `routes/telegramWebhook.js` | Webhook, secret যাচাই |
 | `services/telegramAdmin.js` | বাটন, সাপোর্ট রিপ্লাই, রাউটিং |
 | `services/telegramNotifications.js` | অ্যাডমিন নোটিফিকেশন |
+| `services/telegramAccess.js` | অনুমোদনের নিয়ম |
 | `services/telegramApi.js` | `sendTelegramMessage` |
 | `services/telegramWebhookSetup.js`, `scripts/setTelegramWebhook.js` | Webhook সেটআপ |
 | `telegram-bot.js` | Claude AI assistant |

@@ -22,6 +22,7 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { logAdminAction, logEvent: logAuditEvent } = require('../services/auditLog');
 const telegramConfig = require('../services/telegramConfig');
 const { notifyTelegram } = require('../services/telegramNotify');
+const { registerWebhook } = require('../services/telegramWebhookSetup');
 const { tr } = require('../utils/i18n');
 
 // Telegram API-তে বাইরের কল যায় এমন রুটে (test/test-notification) কড়া সীমা
@@ -63,6 +64,12 @@ async function audit(req, { actionType, details, action, riskLevel = 'medium', s
     req, actorType: 'admin', actorId: actor.id, actorUsername: actor.username,
     action, category: 'settings', status, riskLevel, details: meta
   }).catch(e => console.error(`adminTelegram logAuditEvent (${action}) error:`, e.message));
+}
+
+// বট বদলালে নতুন বটে webhook না বসালে তার বাটন/রিপ্লাই সার্ভারে পৌঁছায় না
+function reregisterWebhook() {
+  if (process.env.NODE_ENV === 'test') return;
+  registerWebhook().then((r) => { if (!r.ok) console.warn('Telegram webhook রেজিস্টার হয়নি:', r.description); });
 }
 
 // ==================== পেজ ====================
@@ -139,6 +146,7 @@ router.post('/token', telegramSaveLimiter, rbac.requirePermission('settings_edit
 
     if (action === 'clear') {
       await telegramConfig.saveConfig({ botToken: null }, actorOf(req));
+      reregisterWebhook();
       await audit(req, {
         actionType: 'TELEGRAM_TOKEN_CLEARED',
         details: 'Telegram bot token ডাটাবেস থেকে মুছে ফেলা হয়েছে (.env ফলব্যাক সক্রিয়)',
@@ -157,6 +165,7 @@ router.post('/token', telegramSaveLimiter, rbac.requirePermission('settings_edit
     }
 
     await telegramConfig.saveConfig({ botToken: token }, actorOf(req));
+    reregisterWebhook();
 
     // লগে কখনো পুরো টোকেন যায় না — শুধু masked hint
     await audit(req, {

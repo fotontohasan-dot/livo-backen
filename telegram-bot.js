@@ -1,11 +1,10 @@
 const { fetchWithTimeout } = require('./utils/httpClient');
 const Anthropic = require('@anthropic-ai/sdk');
 const crypto = require('crypto');
-const { sendPlainText } = require('./services/telegramApi');
+const { sendPlainText, telegramRequest } = require('./services/telegramApi');
 const { registerWebhook } = require('./services/telegramWebhookSetup');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-6';
 
@@ -213,16 +212,8 @@ FILE: ফাইলের নাম
 
 সবসময় বাংলায় উত্তর দাও।`;
 
-// Telegram API helper
-async function telegramAPI(method, data) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
-  const response = await fetchWithTimeout(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  return response.json();
-}
+// Telegram API helper — নোটিফিকেশন ও webhook যে বটে চলে সেই একই টোকেন
+const telegramAPI = (method, data) => telegramRequest(method, data);
 
 // GitHub: ফাইল পড়া
 async function githubReadFile(filePath) {
@@ -460,7 +451,7 @@ async function handleMessage(msg) {
     conversations[chatId] = [];
     await telegramAPI('sendMessage', {
       chat_id: chatId,
-      text: '🎮 *Bet420 AI Assistant*\n\nআমি তোমার Bet420 প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/reply userId উত্তর - সাপোর্ট রিপ্লাই\n/clear - কথোপকথন মুছো',
+      text: '🎮 *Bet420 AI Assistant*\n\nআমি তোমার Bet420 প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/pending - অপেক্ষমাণ ডিপোজিট/উইথড্র\n/reply userId উত্তর - সাপোর্ট রিপ্লাই\n/clear - কথোপকথন মুছো',
       parse_mode: 'Markdown'
     });
     return;

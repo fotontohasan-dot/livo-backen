@@ -2,9 +2,9 @@
 // অ্যাডমিনের Telegram-এ ডিপোজিট/উইথড্র (ইনলাইন বাটনসহ) ও সাপোর্ট মেসেজ নোটিফিকেশন।
 // বাটন/রিপ্লাই প্রসেস করে services/telegramAdmin.js। দুটো ফাংশনই কখনো throw করে না।
 const { pool } = require('../db');
-const telegramConfig = require('./telegramConfig');
 const { notifyTelegram } = require('./telegramNotify');
 const { escapeHtml } = require('./telegramApi');
+const { configProblem, webhookRegistrationFailure } = require('./telegramWebhookSetup');
 
 const SUPPORT_PREVIEW_LEN = 3000;
 const LABEL = { deposit: 'ডিপোজিট', withdraw: 'উইথড্র' };
@@ -13,19 +13,6 @@ const clip = (v, max) => {
   const s = String(v == null ? '' : v);
   return s.length > max ? `${s.slice(0, max)}…` : s;
 };
-
-/**
- * বাটন তখনই কাজ করবে যখন নোটিফিকেশনটা webhook-ওয়ালা বট থেকেই অনুমোদিত অ্যাডমিন চ্যাটে যায়।
- * Admin প্যানেলে অন্য bot/chat সেট করা থাকলে বাটন ছাড়া সাধারণ নোটিফিকেশন যায়।
- */
-function canUseButtons(config) {
-  const adminChat = process.env.TELEGRAM_ADMIN_CHAT_ID;
-  return !!(
-    config && adminChat && process.env.TELEGRAM_ADMIN_USER_IDS && process.env.TELEGRAM_WEBHOOK_SECRET &&
-    config.botToken === process.env.TELEGRAM_BOT_TOKEN &&
-    String(config.chatId) === String(adminChat)
-  );
-}
 
 function paymentKeyboard(type, id) {
   const name = type === 'deposit' ? 'Deposit' : 'Withdraw';
@@ -37,38 +24,54 @@ function paymentKeyboard(type, id) {
   };
 }
 
+const PAYMENT_SELECT = `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON u.id = pr.user_id`;
+
+/** একটা pending রিকোয়েস্টের মেসেজ ও বাটন (নোটিফিকেশন ও /pending দুটোই ব্যবহার করে)। */
+function buildPaymentMessage(p) {
+  const lines = [
+    `${p.type === 'deposit' ? '💰' : '🏧'} <b>নতুন ${LABEL[p.type]} রিকোয়েস্ট</b>`,
+    `রেফারেন্স: <code>#${p.id}</code>`,
+    `ইউজার: ${escapeHtml(p.username)} (user_id: ${p.user_id})`,
+    `পরিমাণ: ${escapeHtml(p.amount)} টাকা`,
+    `মেথড: ${escapeHtml(p.method)}`
+  ];
+  if (p.account_number) lines.push(`অ্যাকাউন্ট: <code>${escapeHtml(clip(p.account_number, 100))}</code>`);
+  // ডিপোজিটে লাইনটা সবসময় থাকে, যাতে TrxID না থাকাটাও অ্যাডমিনের চোখে পড়ে
+  if (p.type === 'deposit' || p.transaction_id) {
+    lines.push(`ট্রানজ্যাকশন আইডি: ${p.transaction_id ? `<code>${escapeHtml(clip(p.transaction_id, 100))}</code>` : 'নেই'}`);
+  }
+  if (p.want_bonus) lines.push('বোনাস: নিতে চায়');
+
+  // বাটন কাজ না করার কারণ থাকলে নীরবে লুকানো হয় না, মেসেজেই লেখা থাকে
+  const blocked = configProblem();
+  if (blocked) lines.push('', `⚠️ বাটন বন্ধ: ${escapeHtml(blocked)}`);
+  else if (webhookRegistrationFailure()) lines.push('', `⚠️ Webhook রেজিস্টার হয়নি: ${escapeHtml(webhookRegistrationFailure())}`);
+
+  return { text: lines.join('\n'), replyMarkup: blocked ? undefined : paymentKeyboard(p.type, p.id) };
+}
+
 async function notifyPaymentRequest(requestId) {
   try {
-    const r = await pool.query(
-      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON u.id = pr.user_id WHERE pr.id = $1`,
-      [requestId]
-    );
+    const r = await pool.query(`${PAYMENT_SELECT} WHERE pr.id = $1`, [requestId]);
     const p = r.rows[0];
     if (!p || !LABEL[p.type] || p.status !== 'pending') return { sent: false, reason: 'not_pending' };
 
-    const lines = [
-      `${p.type === 'deposit' ? '💰' : '🏧'} <b>নতুন ${LABEL[p.type]} রিকোয়েস্ট</b>`,
-      `রেফারেন্স: <code>#${p.id}</code>`,
-      `ইউজার: ${escapeHtml(p.username)} (user_id: ${p.user_id})`,
-      `পরিমাণ: ${escapeHtml(p.amount)} টাকা`,
-      `মেথড: ${escapeHtml(p.method)}`
-    ];
-    if (p.account_number) lines.push(`অ্যাকাউন্ট: <code>${escapeHtml(clip(p.account_number, 100))}</code>`);
-    // ডিপোজিটে লাইনটা সবসময় থাকে, যাতে TrxID না থাকাটাও অ্যাডমিনের চোখে পড়ে
-    if (p.type === 'deposit' || p.transaction_id) {
-      lines.push(`ট্রানজ্যাকশন আইডি: ${p.transaction_id ? `<code>${escapeHtml(clip(p.transaction_id, 100))}</code>` : 'নেই'}`);
-    }
-    if (p.want_bonus) lines.push('বোনাস: নিতে চায়');
-
-    const config = await telegramConfig.getConfig();
-    return await notifyTelegram(lines.join('\n'), {
-      category: p.type,
-      replyMarkup: canUseButtons(config) ? paymentKeyboard(p.type, p.id) : undefined
-    });
+    const { text, replyMarkup } = buildPaymentMessage(p);
+    return await notifyTelegram(text, { category: p.type, replyMarkup });
   } catch (err) {
     console.error('telegram payment notification error:', err.message);
     return { sent: false, reason: 'error' };
   }
+}
+
+/** ম্যানুয়াল (গেটওয়ে নয়) pending রিকোয়েস্ট, পুরনোটা আগে। */
+async function listPendingPayments(limit = 10) {
+  const r = await pool.query(
+    `${PAYMENT_SELECT} WHERE pr.status = 'pending' AND pr.type IN ('deposit','withdraw') AND pr.gateway IS NULL
+     ORDER BY pr.created_at ASC, pr.id ASC LIMIT $1`,
+    [limit]
+  );
+  return r.rows;
 }
 
 /**
@@ -97,4 +100,4 @@ async function notifySupportMessage({ userId, username, messageId, message, live
   }
 }
 
-module.exports = { notifyPaymentRequest, notifySupportMessage, canUseButtons };
+module.exports = { notifyPaymentRequest, notifySupportMessage, buildPaymentMessage, listPendingPayments };
