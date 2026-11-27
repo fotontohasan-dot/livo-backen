@@ -13,7 +13,7 @@ const { publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 const { requireFeature } = require('../middleware/featureGate');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
-const { notifyTelegram } = require('../services/telegramNotify');
+const { notifyPaymentRequest } = require('../services/telegramNotifications');
 const withdrawalWindowSvc = require('../services/withdrawalWindow');
 const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 
@@ -104,19 +104,6 @@ async function approvedDepositCount(db, userId, excludeRequestId = null) {
     [userId, excludeRequestId]
   );
   return parseInt(r.rows[0].count, 10) || 0;
-}
-
-function escapeTelegramHtml(v) {
-  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// অ্যাডমিনের Telegram-এ নোটিফিকেশন (ফায়ার-অ্যান্ড-ফরগেট — ব্যর্থ হলে ডিপোজিট/উইথড্র আটকায় না)
-function telegramAdminAlert(text, category) {
-  try {
-    notifyTelegram(text, { category }).catch((e) => console.error('payment telegram alert error:', e.message));
-  } catch (e) {
-    console.error('payment telegram alert error:', e.message);
-  }
 }
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
@@ -284,16 +271,13 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
       return res.redirect('/payment/deposit');
     }
 
-    await client.query(
-      `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus, channel_id) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6, $7)`,
+    const created = await client.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus, channel_id) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6, $7) RETURNING id`,
       [userId, method, amount, transaction_id, account_number, wantBonus, channelId]
     );
     await client.query('COMMIT');
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
-    telegramAdminAlert(
-      `💰 <b>নতুন ডিপোজিট রিকোয়েস্ট</b>\nইউজার: ${escapeTelegramHtml(req.session.user.username)}\nপরিমাণ: ${amount} টাকা\nমেথড: ${escapeTelegramHtml(method)}${wantBonus ? '\nবোনাস: নিতে চায়' : ''}`,
-      'deposit'
-    );
+    notifyPaymentRequest(created.rows[0].id); // fire-and-forget; কখনো throw করে না
     req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
@@ -662,8 +646,8 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
       return res.redirect('/payment/withdraw');
     }
 
-    await client.query(
-      `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1, 'withdraw', $2, $3, $4, 'pending')`,
+    const created = await client.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1, 'withdraw', $2, $3, $4, 'pending') RETURNING id`,
       [userId, method, amount, account_number]
     );
 
@@ -672,10 +656,7 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
-    telegramAdminAlert(
-      `🏧 <b>নতুন উইথড্র রিকোয়েস্ট</b>\nইউজার: ${escapeTelegramHtml(req.session.user.username)}\nপরিমাণ: ${amount} টাকা\nমেথড: ${escapeTelegramHtml(method)}`,
-      'withdraw'
-    );
+    notifyPaymentRequest(created.rows[0].id);
 
     req.flash('success', req.t('payment_withdraw_request_sent'));
     res.redirect('/payment/history');

@@ -1,7 +1,7 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
-const { notifyTelegram } = require('./telegramNotify');
+const { notifySupportMessage } = require('./telegramNotifications');
 const cache = require('./cache');
 const { isAllowedOrigin } = require('../utils/allowedOrigins');
 
@@ -47,6 +47,13 @@ const notifyUserSeen = (userId) => {
   const bus = emitBus(); if (!bus || !userId) return;
   try { bus.to(`user:${userId}`).emit('messages_seen', { by: 'admin' }); }
   catch (err) { console.error('notifyUserSeen error:', err.message); }
+};
+
+// Telegram থেকে পাঠানো সাপোর্ট উত্তর — ইউজার ও খোলা অ্যাডমিন চ্যাট প্যানেল দুই জায়গাতেই রিয়েল-টাইমে
+const emitSupportReply = (userId, payload) => {
+  const bus = emitBus(); if (!bus || !userId) return;
+  try { bus.to(`user:${userId}`).to('admins').emit('new_message', payload); }
+  catch (err) { console.error('emitSupportReply error:', err.message); }
 };
 
 const notifyAdminsSeen = (userId) => {
@@ -313,9 +320,9 @@ const initSocket = (server, sessionMiddleware) => {
         const createdAt = new Date();
 
         // ডেটাবেসে সেভ
-        await pool.query(
+        const saved = await pool.query(
           `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, file_url, file_type, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
           [senderId, receiverId, message, isAdmin, fileUrl, fileType, createdAt]
         );
 
@@ -346,11 +353,12 @@ const initSocket = (server, sessionMiddleware) => {
             title: 'নতুন সাপোর্ট মেসেজ',
             message: message || 'একটি ফাইল পাঠানো হয়েছে'
           });
-          // Telegram বার্তাটা parse_mode=HTML দিয়ে পাঠানো হয়, তাই ইউজারের username/message
-          // সরাসরি বসালে সেটা Telegram-এর HTML হিসেবে ব্যাখ্যা হতো (মার্কআপ ইনজেকশন / বার্তা
-          // বিকৃতি)। এন্টিটিগুলো এস্কেপ করে দেওয়া হচ্ছে।
-          const tgEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${tgEscape(u.username || 'ইউজার')}: ${message ? tgEscape(message) : '(ফাইল পাঠানো হয়েছে)'}`, { category: 'support' });
+          notifySupportMessage({
+            userId: senderId,
+            username: u.username,
+            messageId: saved && saved.rows && saved.rows[0] ? saved.rows[0].id : null,
+            message: message ? String(message) : null
+          });
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {
@@ -596,4 +604,4 @@ const emitTickerUpdate = (payload = {}) => {
   }
 };
 
-module.exports = { initSocket, getIo, getEmitter, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { emitSupportReply, initSocket, getIo, getEmitter, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

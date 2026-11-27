@@ -18,6 +18,8 @@ const telegramConfig = require('./telegramConfig');
  * @param {Object} [opts]
  * @param {'deposit'|'withdraw'|'support'|'security'|'system'} [opts.category]
  *        - দেওয়া থাকলে Admin প্যানেলে সেই ক্যাটাগরির টগল বন্ধ থাকলে মেসেজ পাঠানো হয় না।
+ * @param {object} [opts.replyMarkup] - ইনলাইন কীবোর্ড
+ * @param {boolean} [opts.disablePreview] - লিংক প্রিভিউ বন্ধ
  * @returns {Promise<{sent: boolean, reason?: string}>}
  */
 async function notifyTelegram(text, opts = {}) {
@@ -41,7 +43,13 @@ async function notifyTelegram(text, opts = {}) {
     const res = await integrationFetch('telegram', url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: config.chatId, text, parse_mode: 'HTML' })
+      body: JSON.stringify({
+        chat_id: config.chatId,
+        text,
+        parse_mode: 'HTML',
+        ...(opts.replyMarkup ? { reply_markup: opts.replyMarkup } : {}),
+        ...(opts.disablePreview ? { link_preview_options: { is_disabled: true } } : {})
+      })
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');

@@ -1,11 +1,13 @@
 const { fetchWithTimeout } = require('./utils/httpClient');
 const Anthropic = require('@anthropic-ai/sdk');
 const crypto = require('crypto');
+const { sendPlainText } = require('./services/telegramApi');
+const { registerWebhook } = require('./services/telegramWebhookSetup');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://bet420-backen.onrender.com';
+const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-6';
 
 // ==================== নিরাপত্তা: Webhook যাচাইকরণ ====================
 // Telegram প্রতিটি webhook request-এ এই secret token header হিসেবে পাঠাবে
@@ -164,7 +166,7 @@ function extractText(response) {
     .trim();
 }
 
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 60 * 1000, maxRetries: 1 });
 const conversations = {};
 
 // GitHub-এ commit করার আগে admin-এর explicit "হ্যাঁ" লাগবে — ভুল/দুর্ঘটনাক্রমে
@@ -419,31 +421,17 @@ async function processGithubAction(responseText, chatId, fromId) {
       });
     }
   } else {
-    // Normal message
-    await telegramAPI('sendMessage', {
-      chat_id: chatId,
-      text: responseText,
-      parse_mode: 'Markdown'
-    });
+    // সাধারণ উত্তর: প্লেইন টেক্সটে, টুকরো করে — AI-র অসম্পূর্ণ Markdown বা 4096+ অক্ষরে
+    // Telegram পুরো মেসেজ প্রত্যাখ্যান করত
+    await sendPlainText(chatId, responseText);
   }
 }
 
-// Webhook set
+// Webhook set — বিস্তারিত services/telegramWebhookSetup.js
 async function setWebhook() {
-  if (!WEBHOOK_SECRET) {
-    console.warn('⚠️ TELEGRAM_WEBHOOK_SECRET নেই — webhook রেজিস্টার করা হচ্ছে না, বট নিষ্ক্রিয় থাকবে।');
-    return;
-  }
-  try {
-    await telegramAPI('deleteWebhook', { drop_pending_updates: true });
-    const webhookUrl = `${RENDER_URL}/telegram-webhook`;
-    // secret_token পাঠানো হচ্ছে — Telegram এখন থেকে প্রতিটি request-এ
-    // X-Telegram-Bot-Api-Secret-Token header-এ এই মানটা পাঠাবে, যা app.js যাচাই করবে।
-    const result = await telegramAPI('setWebhook', { url: webhookUrl, secret_token: WEBHOOK_SECRET });
-    console.log('🔗 Telegram Webhook set:', result.description);
-  } catch (err) {
-    console.error('⚠️ Telegram webhook setup skipped (network issue):', err.message);
-  }
+  const result = await registerWebhook();
+  if (result.ok) console.log('🔗 Telegram Webhook set:', result.url);
+  else console.warn('⚠️ Telegram webhook রেজিস্টার হয়নি:', result.description);
 }
 
 // Message handle করা
@@ -472,7 +460,7 @@ async function handleMessage(msg) {
     conversations[chatId] = [];
     await telegramAPI('sendMessage', {
       chat_id: chatId,
-      text: '🎮 *Bet420 AI Assistant*\n\nআমি তোমার Bet420 প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/clear - কথোপকথন মুছো',
+      text: '🎮 *Bet420 AI Assistant*\n\nআমি তোমার Bet420 প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/reply userId উত্তর - সাপোর্ট রিপ্লাই\n/clear - কথোপকথন মুছো',
       parse_mode: 'Markdown'
     });
     return;
@@ -583,7 +571,7 @@ async function handleMessage(msg) {
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: AI_MODEL,
       max_tokens: 2048,
       system: SYSTEM_PROMPT,
       messages: conversations[chatId]

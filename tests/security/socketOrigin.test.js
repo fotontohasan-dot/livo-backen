@@ -81,7 +81,11 @@ describe('Socket.IO সংযোগ-স্তরের অরিজিন যা
 
   test('Telegram নোটিফিকেশনে ইউজারের বার্তা এস্কেপ করা হয়', () => {
     // বার্তাটা parse_mode=HTML দিয়ে যায়, তাই কাঁচা `<` মার্কআপ ইনজেকশন ঘটাত।
-    expect(socketSource).toMatch(/tgEscape/);
+    // এস্কেপিং এখন services/telegramNotifications.js-এ (socket.js শুধু ওই হেল্পার ডাকে)
+    expect(socketSource).toMatch(/notifySupportMessage\(/);
+    expect(socketSource).not.toMatch(/notifyTelegram\(/);
+    const notifications = fs.readFileSync(require.resolve('../../services/telegramNotifications'), 'utf8');
+    expect(notifications).toMatch(/escapeHtml\(clip\(message,/);
   });
 });
 

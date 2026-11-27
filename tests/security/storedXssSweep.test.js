@@ -116,7 +116,11 @@ describe('Stored XSS sweep (PHASE 9)', () => {
 
     test('socket chat বার্তা Telegram-এ escape করা হয় (regression)', () => {
       const src = fs.readFileSync(path.join(ROOT, 'services', 'socket.js'), 'utf8');
-      expect(src).toMatch(/tgEscape/);
+      // এস্কেপিং এখন services/telegramNotifications.js-এ (socket.js শুধু ওই হেল্পার ডাকে)
+      expect(src).toMatch(/notifySupportMessage\(/);
+      expect(src).not.toMatch(/notifyTelegram\(/);
+      const notifications = fs.readFileSync(require.resolve('../../services/telegramNotifications'), 'utf8');
+      expect(notifications).toMatch(/escapeHtml\(clip\(message,/);
     });
 
     test('কোনো view-তে javascript: URL scheme ব্যবহার হয় না', () => {

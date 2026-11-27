@@ -47,7 +47,9 @@ const ALLOWED_DIRECT_APP_REQUIRE = new Set([
   // live Socket.IO harness: helpers/app.js নিজের http server বানায়, তাতে
   // Socket.IO যুক্ত নয়। প্রকৃত handshake পরীক্ষা করতে app.js-এর নিজস্ব
   // httpServer লাগে, যেখানে initSocket() যুক্ত হয়েছে।
-  path.join(TESTS_DIR, 'security', 'socketHandshakeLive.test.js')
+  path.join(TESTS_DIR, 'security', 'socketHandshakeLive.test.js'),
+  // একই কারণে (live Socket.IO): Telegram থেকে সাপোর্ট রিপ্লাই ইউজারের সকেটে পৌঁছায় কিনা
+  path.join(TESTS_DIR, 'integration', 'telegramAdmin.test.js')
 ]);
 
 function walk(dir) {

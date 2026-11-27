@@ -146,8 +146,11 @@ describe('Socket.IO authorization (PHASE 8)', () => {
 
   describe('Telegram output escaping (regression)', () => {
     test('chat বার্তা Telegram HTML হিসেবে escape করা হয়', () => {
-      expect(SRC).toMatch(/tgEscape/);
-      expect(SRC).toMatch(/replace\(\/</);
+      // এস্কেপিং এখন services/telegramNotifications.js-এ (socket.js শুধু ওই হেল্পার ডাকে)
+      expect(SRC).toMatch(/notifySupportMessage\(/);
+      expect(SRC).not.toMatch(/notifyTelegram\(/);
+      const notifications = fs.readFileSync(require.resolve('../../services/telegramNotifications'), 'utf8');
+      expect(notifications).toMatch(/escapeHtml\(clip\(message,/);
     });
   });
 });

@@ -15,6 +15,7 @@
     "test:watch": "cross-env TZ=UTC NODE_ENV=test jest --watch",
     "test:coverage": "cross-env TZ=UTC NODE_ENV=test jest --coverage",
     "build": "npm run build:css",
+    "telegram:webhook": "node scripts/setTelegramWebhook.js",
     "test:e2e": "playwright test",
     "scan:secrets": "node scripts/scanSecrets.js",
     "scan:secrets:history": "node scripts/scanSecrets.js --history",
