@@ -109,7 +109,7 @@ describe('হোম — 200 ও নেভিগেশন ক্রম', () => {
     const res = await agent.get('/');
     expect(res.status).toBe(200);
     expect(res.text).toMatch(/<html lang="en"/);
-    for (const label of ['Casino', 'Live Casino', 'Cricket', 'Sports', 'Wallet', 'All games']) {
+    for (const label of ['Casino', 'Live Casino', 'Cricket', 'Sports', 'All games']) {
       expect(res.text).toContain(label);
     }
     const nav = [...res.text.matchAll(/<a href="[^"]+" class="main-cat-item[^"]*">.*?<span>([^<]+)<\/span><\/a>/g)].map((m) => m[1]);
@@ -223,11 +223,11 @@ describe('গেম লঞ্চ ও আচরণ অপরিবর্তিত
     }
   });
 
-  test('হোমের নতুন বটম-বারের সব লিংক আসল রুটে যায়', async () => {
+  test('হোমের বটম-বার (হোম, স্পোর্টস, আমন্ত্রণ, প্রমোশন, সেবা, প্রোফাইল) — সব লিংক আসল রুটে যায়', async () => {
     const res = await request(app).get('/');
     const nav = res.text.slice(res.text.indexOf('id="pubBottomNav"'));
     const hrefs = [...nav.matchAll(/<a href="([^"]+)" class="pub-nav-item/g)].map((m) => m[1]);
-    expect(hrefs).toEqual(['/', '/games', '/sports', '/coins', '/profile']);
+    expect(hrefs).toEqual(['/', '/sports', '/extra/invitation', '/promotions', '/chat', '/profile']);
     for (const href of hrefs) {
       const r = await request(app).get(href);
       expect([200, 302]).toContain(r.status);
