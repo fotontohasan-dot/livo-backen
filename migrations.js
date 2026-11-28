@@ -2937,6 +2937,32 @@ async function applyMigrations(pool) {
     `);
     console.log('✅ turnover v2 ready');
 
+    // ==================== স্থায়ী সেশন: রিফ্রেশ টোকেন ====================
+    // শুধু SHA-256 হ্যাশ রাখা হয় (আসল টোকেন কেবল ব্রাউজারের HttpOnly কুকিতে)। family_id একই লগইন-চেইনের
+    // সব রোটেটেড টোকেন বাঁধে — reuse ধরা পড়লে পুরো family বাতিল হয়। services/refreshTokens.js দ্রষ্টব্য।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash CHAR(64) NOT NULL UNIQUE,
+        family_id UUID NOT NULL,
+        family_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        sid VARCHAR(255),
+        ip VARCHAR(64),
+        user_agent VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_used_at TIMESTAMPTZ,
+        expires_at TIMESTAMPTZ NOT NULL,
+        rotated_at TIMESTAMPTZ,
+        revoked_at TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id) WHERE revoked_at IS NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family ON refresh_tokens(family_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_sid ON refresh_tokens(user_id, sid);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expiry ON refresh_tokens(expires_at);`);
+    console.log('✅ refresh_tokens ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

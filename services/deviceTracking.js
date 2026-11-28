@@ -4,6 +4,7 @@
 
 const crypto = require('crypto');
 const { destroySessionById } = require('./sessionStore');
+const refreshTokens = require('./refreshTokens');
 const geoip = require('geoip-lite');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
@@ -196,6 +197,8 @@ async function revokeDeviceSession(userId, deviceSessionId, actorLabel) {
     console.error('user_sessions delete error:', e.message);
   }
   await destroySessionById(sid); // Redis স্টোর সক্রিয় থাকলে সেখান থেকেও
+  // ওই ডিভাইসের রিফ্রেশ টোকেনও বাতিল — নইলে সেশন মুছলেও পরের GET-এ আবার নিঃশব্দে লগইন হয়ে যেত
+  try { await refreshTokens.revokeBySid(userId, sid); } catch (e) { console.error('refresh token revoke (device) error:', e.message); }
 
   await logAdminAction(null, actorLabel || 'SYSTEM', 'DEVICE_SESSION_REVOKED',
     `ইউজার #${userId} — ডিভাইস লগআউট করা হয়েছে: ${device_name || sid}`, null);
@@ -204,6 +207,8 @@ async function revokeDeviceSession(userId, deviceSessionId, actorLabel) {
 }
 
 async function revokeAllOtherSessions(userId, currentSid, actorLabel) {
+  // বর্তমান সেশন বাদে বাকি সব ডিভাইসের রিফ্রেশ টোকেন বাতিল (device_sessions সারি না থাকলেও)
+  try { await refreshTokens.revokeAllExceptSid(userId, currentSid); } catch (e) { console.error('refresh token revoke (others) error:', e.message); }
   const rows = await pool.query(
     `SELECT id, sid FROM device_sessions WHERE user_id = $1 AND revoked_at IS NULL AND sid != $2`,
     [userId, currentSid]
