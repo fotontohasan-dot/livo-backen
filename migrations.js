@@ -309,6 +309,22 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_support_reports_user ON support_reports(user_id, created_at);`);
 
+    // ফর্মের প্রমাণ (স্ক্রিনশট + ভিডিও): ফাইল Cloudinary-তে থাকে, এখানে লিংক ও মেটাডেটা —
+    // এজেন্ট রিপোর্টের সাথে সরাসরি দেখতে পায়। রিপোর্ট মুছলে এই সারিগুলোও মুছে যায়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS support_report_files (
+        id SERIAL PRIMARY KEY,
+        report_id INTEGER NOT NULL REFERENCES support_reports(id) ON DELETE CASCADE,
+        file_url TEXT NOT NULL,
+        file_type VARCHAR(10) NOT NULL,
+        public_id TEXT,
+        original_name VARCHAR(255),
+        size_bytes INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_support_report_files_report ON support_report_files(report_id);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS news (
         id SERIAL PRIMARY KEY,
