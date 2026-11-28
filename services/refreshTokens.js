@@ -29,7 +29,10 @@ function getConfig() {
     ttlMs: intEnv('REFRESH_TOKEN_TTL_DAYS', 60, 1) * DAY_MS,
     familyMaxMs: intEnv('REFRESH_TOKEN_FAMILY_MAX_DAYS', 180, 1) * DAY_MS,
     rotateAfterMs: intEnv('REFRESH_ROTATE_AFTER_HOURS', 24, 1) * 60 * 60 * 1000,
-    reuseGraceMs: intEnv('REFRESH_REUSE_GRACE_SECONDS', 10, 0) * 1000
+    reuseGraceMs: intEnv('REFRESH_REUSE_GRACE_SECONDS', 10, 0) * 1000,
+    // অ্যাডমিন "remember" টোকেন: আলাদা, ছোট মেয়াদ। এটা দিয়ে শুধু পাসওয়ার্ড ধাপ বাদ যায় — 2FA সবসময় লাগে।
+    adminTtlMs: intEnv('ADMIN_REMEMBER_TTL_DAYS', 30, 1) * DAY_MS,
+    adminFamilyMaxMs: intEnv('ADMIN_REMEMBER_FAMILY_MAX_DAYS', 90, 1) * DAY_MS
   };
 }
 
@@ -49,16 +52,19 @@ function clip(v, n) {
  */
 async function issueToken(userId, meta = {}, db = pool) {
   const cfg = getConfig();
+  const kind = meta.kind === 'admin' ? 'admin' : 'user';
+  const ttlMs = kind === 'admin' ? cfg.adminTtlMs : cfg.ttlMs;
+  const familyMaxMs = kind === 'admin' ? cfg.adminFamilyMaxMs : cfg.familyMaxMs;
   const token = newRawToken();
   const familyId = meta.familyId || crypto.randomUUID();
   const now = Date.now();
   const familyStartedAt = meta.familyStartedAt ? new Date(meta.familyStartedAt) : new Date(now);
   // sliding মেয়াদ, কিন্তু family-র absolute সীমার বেশি নয়
-  const expiresAt = new Date(Math.min(now + cfg.ttlMs, familyStartedAt.getTime() + cfg.familyMaxMs));
+  const expiresAt = new Date(Math.min(now + ttlMs, familyStartedAt.getTime() + familyMaxMs));
   const r = await db.query(
-    `INSERT INTO refresh_tokens (user_id, token_hash, family_id, family_started_at, sid, ip, user_agent, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [userId, hashToken(token), familyId, familyStartedAt, clip(meta.sid, 255), clip(meta.ip, 64), clip(meta.userAgent, 255), expiresAt]
+    `INSERT INTO refresh_tokens (user_id, token_hash, family_id, family_started_at, sid, ip, user_agent, expires_at, kind)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+    [userId, hashToken(token), familyId, familyStartedAt, clip(meta.sid, 255), clip(meta.ip, 64), clip(meta.userAgent, 255), expiresAt, kind]
   );
   // সময়ে সময়ে পুরনো সারি পরিষ্কার (আলাদা cron ছাড়াই; ১% ইস্যুতে একবার)
   if (Math.random() < 0.01) purgeExpired().catch(() => {});
@@ -75,14 +81,15 @@ async function issueToken(userId, meta = {}, db = pool) {
  */
 async function rotateToken(rawToken, meta = {}) {
   if (typeof rawToken !== 'string' || !TOKEN_RE.test(rawToken)) return { status: 'invalid' };
+  const kind = meta.kind === 'admin' ? 'admin' : 'user';
   const cfg = getConfig();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const found = await client.query(
       `SELECT id, user_id, family_id, family_started_at, expires_at, rotated_at, revoked_at
-         FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE`,
-      [hashToken(rawToken)]
+         FROM refresh_tokens WHERE token_hash = $1 AND kind = $2 FOR UPDATE`,
+      [hashToken(rawToken), kind]
     );
     const row = found.rows[0];
     if (!row || row.revoked_at) {
@@ -113,6 +120,7 @@ async function rotateToken(rawToken, meta = {}) {
     const issued = await issueToken(row.user_id, {
       familyId: row.family_id,
       familyStartedAt: row.family_started_at,
+      kind,
       sid: meta.sid,
       ip: meta.ip,
       userAgent: meta.userAgent

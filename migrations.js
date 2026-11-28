@@ -2974,6 +2974,8 @@ async function applyMigrations(pool) {
         revoked_at TIMESTAMPTZ
       );
     `);
+    // kind: 'user' (সাধারণ স্থায়ী সেশন) | 'admin' (পাসওয়ার্ড ধাপ বাদ, 2FA সবসময় বাধ্যতামূলক)
+    await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS kind VARCHAR(10) NOT NULL DEFAULT 'user';`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id) WHERE revoked_at IS NULL;`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family ON refresh_tokens(family_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_sid ON refresh_tokens(user_id, sid);`);

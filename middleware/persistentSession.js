@@ -10,8 +10,9 @@
 //       নিঃশব্দে নতুন টোকেন ইস্যু হয় — ব্যবহারকারী কিছু টের পায় না।
 //
 // নিরাপত্তা সিদ্ধান্ত:
-//  * অ্যাডমিন অ্যাকাউন্টের জন্য রিফ্রেশ টোকেন কখনো ইস্যু/রিস্টোর হয় না — অ্যাডমিনের জন্য 2FA বাধ্যতামূলক
-//    (routes/auth.js completeLogin), রিফ্রেশ কুকি দিয়ে সেটা এড়ানো যেত।
+//  * সাধারণ `livo_rt` কুকি দিয়ে অ্যাডমিন কখনো ইস্যু/রিস্টোর হয় না। অ্যাডমিনের জন্য আলাদা `livo_art`
+//    কুকি আছে (শুধু /admin পাথে যায়, SameSite=Strict): এটা শুধু ইউজারনেম-পাসওয়ার্ড ধাপ বাদ দেয় —
+//    রিস্টোরে সরাসরি লগইন হয় না, সেশনে `pending2FA` বসে আর অ্যাডমিনকে ২FA কোড দিতেই হয়।
 //  * রিস্টোরের সময় ব্যান / সেলফ-এক্সক্লুশন / অস্তিত্ব DB থেকে সরাসরি যাচাই হয় (ক্যাশ নয়)।
 //  * রিস্টোর শুধু GET/HEAD-এ — state-changing রিকোয়েস্ট কুকি-নির্ভর রিস্টোরে চলে না (CSRF সারফেস বাড়ে না)।
 //  * সেশন আইডি রোটেট হয় (session fixation প্রতিরোধ), রোটেটেড টোকেন পুনর্ব্যবহার = family বাতিল।
@@ -22,9 +23,10 @@ const refreshTokens = require('../services/refreshTokens');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
 
 const COOKIE_NAME = 'livo_rt';
+const ADMIN_COOKIE_NAME = 'livo_art';
 
 // যেসব পাথে কুকি দিয়ে রিস্টোর করার মানে হয় না (মেশিন-টু-মেশিন, হেলথ, লগআউট ইত্যাদি)
-const NO_RESTORE_PREFIXES = ['/health', '/ready', '/metrics', '/provider/', '/socket.io/', '/wallet-callback/', '/payment/sslcommerz/', '/telegram-webhook', '/logout'];
+const NO_RESTORE_PREFIXES = ['/health', '/ready', '/metrics', '/provider/', '/socket.io/', '/wallet-callback/', '/payment/sslcommerz/', '/telegram-webhook', '/logout', '/admin/logout'];
 
 function isProd() {
   return process.env.NODE_ENV === 'production';
@@ -68,6 +70,79 @@ function isRestorablePath(req) {
     const bare = prefix.replace(/\/$/, '');
     return p === bare || p.startsWith(bare + '/');
   });
+}
+
+// ==================== অ্যাডমিন: পাসওয়ার্ড ধাপ বাদ, 2FA বাধ্যতামূলক ====================
+function adminCookieOptions() {
+  const { adminTtlMs } = refreshTokens.getConfig();
+  // path=/admin: ইউজার-সাইডের কোনো রিকোয়েস্টে এই কুকি যায়ই না। Strict: অন্য সাইট থেকে আসা রিকোয়েস্টে যায় না।
+  return { httpOnly: true, secure: isProd(), sameSite: 'strict', path: '/admin', maxAge: adminTtlMs };
+}
+function setAdminCookie(res, token) { res.cookie(ADMIN_COOKIE_NAME, token, adminCookieOptions()); }
+function clearAdminCookie(res) {
+  const { maxAge, ...opts } = adminCookieOptions();
+  res.clearCookie(ADMIN_COOKIE_NAME, opts);
+}
+
+function isAdminPath(req) {
+  const p = req.path || '';
+  return p === '/admin' || p.startsWith('/admin/');
+}
+
+/**
+ * ২FA সফল হওয়ার পর কল হয় (routes/admin.js)। আগের অ্যাডমিন টোকেন থাকলে সেটার family বাতিল করে নতুন family।
+ * শুধু totp_enabled অ্যাডমিনের জন্য — ২FA ছাড়া অ্যাডমিনের জন্য remember টোকেন অর্থহীন (এবং বিপজ্জনক)।
+ */
+async function issueAdminRemember(req, res, admin) {
+  try {
+    if (!refreshTokens.getConfig().enabled || !admin || !admin.totp_enabled || !isAdminRole(admin)) return false;
+    const old = req.cookies && req.cookies[ADMIN_COOKIE_NAME];
+    if (old) await refreshTokens.revokeByToken(old).catch(() => {});
+    const issued = await refreshTokens.issueToken(admin.id, { ...reqMeta(req), kind: 'admin' });
+    setAdminCookie(res, issued.token);
+    return true;
+  } catch (err) {
+    console.error('[persistent-session] admin issue error:', err.message);
+    return false;
+  }
+}
+
+async function revokeAdminForLogout(req, res) {
+  try {
+    const raw = req.cookies && req.cookies[ADMIN_COOKIE_NAME];
+    if (raw) await refreshTokens.revokeByToken(raw);
+  } catch (err) {
+    console.error('[persistent-session] admin logout revoke error:', err.message);
+  }
+  try { clearAdminCookie(res); } catch (e) { /* headers already sent */ }
+}
+
+// বৈধ admin remember কুকি → সেশনে pending2FA বসানো (লগইন নয়!)। true = এখন ২FA কোড চাইতে হবে।
+async function restoreAdminPending2FA(req, res, raw) {
+  const result = await refreshTokens.rotateToken(raw, { ...reqMeta(req), kind: 'admin' });
+  if (result.status !== 'ok' && result.status !== 'grace') {
+    clearAdminCookie(res);
+    if (result.status === 'reuse') console.warn('[persistent-session] ADMIN refresh token reuse detected', { userId: result.userId });
+    return false;
+  }
+  const u = await pool.query('SELECT * FROM users WHERE id = $1', [result.userId]);
+  const admin = u.rows[0];
+  // অ্যাডমিন এখনো বৈধ কিনা: role, ban, মুছে ফেলা, এবং ২FA এখনো চালু (বন্ধ করা হলে remember অচল)
+  if (!admin || !isAdminRole(admin) || admin.is_banned || admin.deleted_at || !admin.totp_enabled) {
+    await refreshTokens.revokeFamily(result.familyId).catch(() => {});
+    clearAdminCookie(res);
+    return false;
+  }
+
+  await regenerateSession(req);
+  req.session.pending2FA = { id: admin.id, username: admin.username, role: admin.role };
+  req.session.twoFAAttempts = 0;
+  await saveSession(req);
+  if (result.status === 'ok') {
+    setAdminCookie(res, result.token);
+    await refreshTokens.setSid(result.id, req.sessionID).catch(() => {});
+  }
+  return true;
 }
 
 /**
@@ -161,6 +236,15 @@ async function restoreSession(req, res, raw) {
 async function persistentSessionMiddleware(req, res, next) {
   try {
     if (!refreshTokens.getConfig().enabled || !req.session) return next();
+
+    // অ্যাডমিন: /admin-এ সেশন নেই + remember কুকি আছে → পাসওয়ার্ড বাদ, সরাসরি ২FA কোড পেজে
+    const adminRaw = req.cookies && req.cookies[ADMIN_COOKIE_NAME];
+    if (adminRaw && !req.session.user && !req.session.pending2FA && isAdminPath(req) && isRestorablePath(req)) {
+      const pending = await restoreAdminPending2FA(req, res, adminRaw);
+      if (pending && req.path !== '/admin/login/2fa') return res.redirect('/admin/login/2fa');
+      return next();
+    }
+
     const raw = req.cookies && req.cookies[COOKIE_NAME];
     if (!raw) return next();
 
@@ -221,6 +305,9 @@ module.exports = {
   router,
   issueForLogin,
   revokeForLogout,
+  issueAdminRemember,
+  revokeAdminForLogout,
   COOKIE_NAME,
+  ADMIN_COOKIE_NAME,
   isRestorablePath
 };

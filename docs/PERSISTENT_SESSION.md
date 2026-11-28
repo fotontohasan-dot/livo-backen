@@ -38,3 +38,29 @@
 - `migrations.js` — `refresh_tokens` টেবিল (`IF NOT EXISTS`, নিরাপদে পুনরায় চালানো যায়)
 - `public/js/session-keepalive.js` — ক্লায়েন্টের নিঃশব্দ ping
 - টেস্ট: `tests/persistentSession.test.js` (ইউনিট), `tests/persistentSession.integration.test.js` (HTTP + Postgres)
+
+## অ্যাডমিন: পাসওয়ার্ড বাদ, ২FA সবসময়
+
+অ্যাডমিন সেশন শেষ হলে `/admin`-এ গেলে ইউজারনেম-পাসওয়ার্ড লাগে না; সরাসরি ২FA কোড পেজে যায়, কোড দিলেই ঢোকে।
+
+| | ইউজার | অ্যাডমিন |
+|---|---|---|
+| কুকি | `livo_rt` | `livo_art` |
+| Path / SameSite | `/` / Lax | `/admin` / **Strict** |
+| মেয়াদ (sliding / absolute) | ৬০ / ১৮০ দিন | ৩০ / ৯০ দিন |
+| রিস্টোরের ফল | সরাসরি লগইন | **শুধু `pending2FA`** — ২FA কোড ছাড়া কিছুই খোলে না |
+| ইস্যু হয় | লগইন/রেজিস্টারে | ২FA সফল হওয়ার পর |
+
+- রিস্টোরের সময় যাচাই: role=admin, ban/delete নয়, **২FA এখনো চালু** (বন্ধ করলে remember অচল)।
+- `refresh_tokens.kind` (`user`/`admin`): একটা kind-এর টোকেন অন্যটার কুকিতে কাজ করে না।
+- বাতিল হয়: অ্যাডমিন লগআউট, পাসওয়ার্ড বদল, রিকভারি রুট (`ADMIN_RESET_TOKEN`), ব্যান, reuse শনাক্ত।
+- কনফিগ: `ADMIN_REMEMBER_TTL_DAYS`, `ADMIN_REMEMBER_FAMILY_MAX_DAYS`।
+
+## ইউজারনেম/পাসওয়ার্ড অটো-ফিল
+
+সার্ভার কখনো পাসওয়ার্ড সংরক্ষণ বা ফেরত দেয় না। ফর্ম ভরে দেয় ব্রাউজার/পাসওয়ার্ড ম্যানেজার (প্রথমবার "Save password" চাপলে)।
+সেজন্য ফর্মে `autocomplete="username"`, `autocomplete="current-password"` (ইউজার ও অ্যাডমিন দুই লগইনেই) এবং ২FA ফিল্ডে `autocomplete="one-time-code"` আছে।
+
+## লগআউট
+
+"Logout" চাপলে ওই ডিভাইসের remember টোকেন বাতিল হয় — নইলে বাটনটার কোনো মানে থাকত না। সেশন নিজে থেকে শেষ হলে (মেয়াদ, ব্রাউজার ক্লিনআপ, ডিপ্লয়) নিঃশব্দে ফিরে আসে।

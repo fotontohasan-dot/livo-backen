@@ -936,6 +936,8 @@ if (process.env.ADMIN_RESET_TOKEN) {
             [hashed, targetId]
           );
           resultLine = `বিদ্যমান ইউজার #${targetId}-কে admin বানানো হলো।`;
+          // রিকভারি = পুরনো সব "remember" টোকেন অকার্যকর (আগের কুকি দিয়ে আর ঢোকা যাবে না)
+          await client.query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [targetId]);
         } else {
           const username = 'admin_' + crypto.randomBytes(4).toString('hex');
           const created = await client.query(
