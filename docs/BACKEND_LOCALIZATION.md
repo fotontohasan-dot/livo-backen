@@ -75,7 +75,6 @@
 | `services/botDetection.js`, `services/deviceTracking.js` | internal flag reason ও অ্যাডমিন Telegram নোটিফিকেশন |
 | `queues/*` | ব্যাকগ্রাউন্ড জব internal error |
 | `app.js` ADMIN_RESET রুট | one-off রিকভারি রুট, plain-text অপারেটর আউটপুট |
-| `services/chatbot.js` system prompt | LLM-কে দেওয়া নির্দেশ, ইউজার দেখে না (fallback মেসেজটি লোকালাইজ করা হয়েছে) |
 | `migrations.js`, `services/scheduler.js`, `services/metrics.js`, `services/cache.js` | startup/ops লগ |
 | `services/contentFilter.js` | ফিল্টার শব্দতালিকা — অনুবাদ করলে ফিল্টারই ভেঙে যেত |
 

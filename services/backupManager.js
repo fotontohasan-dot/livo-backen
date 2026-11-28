@@ -28,7 +28,7 @@ const SKIP_TABLES = ['session'];
 const RESTORE_ORDER = [
   'roles',
   'users', 'coin_transactions', 'matches', 'markets', 'bets', 'payment_requests', 'notifications',
-  'chat_messages', 'news', 'kyc_requests', 'error_logs', 'login_logs', 'bonuses',
+  'chat_messages', 'support_reports', 'news', 'kyc_requests', 'error_logs', 'login_logs', 'bonuses',
   'daily_reward_tiers', 'user_daily_rewards', 'referrals', 'referral_commissions',
   'daily_losses', 'vip_levels', 'mission_defs', 'user_missions', 'mission_claims',
   'wheel_spins', 'loyalty_ledger', 'user_badges', 'free_bets', 'periodic_claims',

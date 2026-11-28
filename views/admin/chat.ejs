@@ -9,6 +9,9 @@
        কালো হয়ে ডার্ক ব্যাকগ্রাউন্ডে অদৃশ্য হয়ে যেত (বাকি অ্যাডমিন পেজগুলোর মতোই এখন এটাও কম্পাইল CSS ব্যবহার করে)। -->
   <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <%# CSRF টোকেন — এটা ছাড়া accept/resolve বাটন ও ফাইল আপলোডের POST 403 পেত %>
+  <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+  <script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>
 </head>
 <body class="bg-[#0f172a]">
 <div class="admin-wrap">

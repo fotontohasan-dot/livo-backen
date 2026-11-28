@@ -95,184 +95,60 @@
         }
 
         .category-list li {
-            padding: 12px 15px;
             margin-bottom: 10px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            display: flex;
-            align-items: center;
         }
 
-        .category-list li:hover {
+        .category-list a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .category-list a:hover {
             background-color: rgba(255, 255, 255, 0.2);
         }
 
-        .category-list li i {
+        .category-list i {
             margin-right: 10px;
             font-size: 16px;
             width: 20px;
             text-align: center;
         }
 
-        .chat-container {
+        .live-agent {
             flex: 1;
             display: flex;
             flex-direction: column;
-        }
-
-        .chat-header {
-            background-color: #f8f9fa;
-            padding: 15px 20px;
-            font-weight: bold;
-            font-size: 18px;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 30px 20px;
+            text-align: center;
             color: #333;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .online-indicator {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: #28a745;
-            font-weight: normal;
-        }
-
-        .online-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #28a745;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
             background-color: #f9f9f9;
         }
 
-        .message {
-            max-width: 80%;
-            padding: 12px 15px;
-            border-radius: 18px;
-            line-height: 1.4;
-            position: relative;
+        .live-agent > i {
+            font-size: 42px;
+            color: #008F5A;
         }
 
-        .bot-message {
-            background-color: #f0f2f5;
-            align-self: flex-start;
-            border-bottom-left-radius: 5px;
-        }
-
-        .user-message {
+        .live-agent-button {
             background-color: #008F5A;
             color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 5px;
-        }
-
-        .message-time {
-            font-size: 11px;
-            margin-top: 5px;
-            opacity: 0.7;
-        }
-
-        .chat-input-container {
-            display: flex;
-            flex-direction: column;
-            padding: 15px;
-            border-top: 1px solid #e0e0e0;
-            background-color: white;
-        }
-
-        .cf-warning {
-            display: none;
-            color: #e5484d;
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 6px;
-        }
-
-        .chat-input-row {
-            display: flex;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
             border-radius: 20px;
-            outline: none;
-            font-size: 14px;
-        }
-
-        .send-button {
-            background-color: #008F5A;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 12px 20px;
-            margin-left: 10px;
-            cursor: pointer;
+            padding: 12px 24px;
             font-weight: bold;
-            transition: background-color 0.3s;
+            text-decoration: none;
         }
 
-        .send-button:hover {
+        .live-agent-button:hover {
             background-color: #0A3D2C;
-        }
-
-        .send-button:disabled {
-            background-color: #aaa;
-            cursor: not-allowed;
-        }
-
-        .quick-replies {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 15px;
-            background-color: white;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .quick-reply {
-            background-color: #f0f2f5;
-            border: none;
-            border-radius: 16px;
-            padding: 8px 15px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .quick-reply:hover {
-            background-color: #e4e6eb;
-        }
-
-        .bot-typing {
-            display: none;
-            padding: 10px 15px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .footer {
-            background-color: #0A3D2C;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            font-size: 12px;
         }
 
         @media (max-width: 768px) {
@@ -284,7 +160,6 @@
             .sidebar {
                 width: 100%;
                 padding: 15px;
-                max-height: 200px;
             }
 
             .category-list {
@@ -318,54 +193,23 @@
                 </div>
                 <h3><%= t.category %></h3>
                 <ul class="category-list">
-                    <li data-msg="<%= t.deposit_issue %>"><i class="fas fa-wallet"></i> <%= t.deposit_issue %></li>
-                    <li data-msg="<%= t.withdraw_issue %>"><i class="fas fa-money-bill-wave"></i> <%= t.withdraw_issue %></li>
-                    <li data-msg="<%= t.login_issue %>"><i class="fas fa-right-to-bracket"></i> <%= t.login_issue %></li>
-                    <li data-msg="<%= t('hc_kyc_msg') %>"><i class="fas fa-id-card"></i> <%= t.kyc_verification_title %></li>
-                    <li data-msg="<%= t.bonus_issue %>"><i class="fas fa-gift"></i> <%= t.bonus_issue %></li>
-                    <li data-msg="<%= t.ticket_issue %>"><i class="fas fa-ticket-alt"></i> <%= t.ticket_issue %></li>
-                    <li data-msg="<%= t.football_issue %>"><i class="fas fa-futbol"></i> <%= t.football_issue %></li>
+                    <li><a href="/chat?category=deposit"><i class="fas fa-wallet"></i> <%= t.deposit_issue %></a></li>
+                    <li><a href="/chat?category=withdraw"><i class="fas fa-money-bill-wave"></i> <%= t.withdraw_issue %></a></li>
+                    <li><a href="/chat"><i class="fas fa-right-to-bracket"></i> <%= t.login_issue %></a></li>
+                    <li><a href="/chat"><i class="fas fa-id-card"></i> <%= t.kyc_verification_title %></a></li>
+                    <li><a href="/chat"><i class="fas fa-gift"></i> <%= t.bonus_issue %></a></li>
+                    <li><a href="/chat"><i class="fas fa-ticket-alt"></i> <%= t.ticket_issue %></a></li>
+                    <li><a href="/chat"><i class="fas fa-futbol"></i> <%= t.football_issue %></a></li>
                 </ul>
             </div>
 
-            <div class="chat-container">
-                <div class="chat-header">
-                    <span><%= t.support_bot %></span>
-                    <span class="online-indicator"><span class="online-dot"></span> <%= t.online %></span>
-                </div>
-
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message bot-message">
-                        <%= t.support_bot_greeting %>
-                        <div class="message-time" id="init-time"></div>
-                    </div>
-                </div>
-
-                <div class="bot-typing" id="bot-typing"><%= t.bot_typing %></div>
-
-                <div class="quick-replies">
-                    <button class="quick-reply" data-msg="<%= t.deposit_issue %>"><%= t.deposit_issue %></button>
-                    <button class="quick-reply" data-msg="<%= t.withdraw_issue %>"><%= t.withdraw_issue %></button>
-                    <button class="quick-reply" data-msg="<%= t.bonus_issue %>"><%= t.bonus_issue %></button>
-                    <button class="quick-reply" data-msg="<%= t.login_issue %>"><%= t.login_issue %></button>
-                </div>
-
-                <div class="chat-input-container">
-                    <div class="chat-input-row">
-                        <input type="text" class="chat-input" id="chat-input" placeholder="<%= t.describe_your_issue %>">
-                        <button class="send-button" id="send-button"><%= t.send %></button>
-                    </div>
-                    <div class="cf-warning" id="cf-warning"><%= t.inappropriate_content %></div>
-                </div>
+            <div class="live-agent">
+                <i class="fas fa-headset"></i>
+                <p><%= t.contact_live_agent %></p>
+                <a href="/chat" class="live-agent-button"><%= t('chat_talk_to_live_agent') %></a>
             </div>
-        </div>
-
-        <div class="footer">
-            <%= t.contact_live_agent %>
         </div>
     </div>
 
-    <script src="/js/content-filter.js"></script>
-    <script src="/js/views/help-center.js"></script>
 </body>
 </html>

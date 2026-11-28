@@ -277,12 +277,10 @@ async function applyMigrations(pool) {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);`);
 
-    // AI Agent Chat (Chatbase) ও Human/Admin Live Chat — এই দুইটি বিদ্যমান সিস্টেমকে
-    // একটি seamless handoff flow-এ যুক্ত করার জন্য প্রতিটি user-এর জন্য একটাই
-    // lightweight support-status রাখা হচ্ছে। নতুন conversation টেবিল তৈরি করা হয়নি —
+    // লাইভ সাপোর্ট চ্যাটের জন্য প্রতিটি user-এর একটাই lightweight support-status। নতুন conversation টেবিল তৈরি করা হয়নি —
     // বিদ্যমান users/chat_messages কাঠামোর উপরেই ভিত্তি করা হয়েছে।
-    // ai        → ইউজার এখনো শুধু AI (Chatbase) এজেন্টের সাথে
-    // waiting   → ইউজার "Talk to Live Agent" চেপেছে, কোনো admin এখনো accept করেনি
+    // ai        → কোনো সক্রিয় সাপোর্ট অনুরোধ নেই (নামটি পুরনো ডেটার সাথে সামঞ্জস্যের জন্য)
+    // waiting   → ইউজার লাইভ এজেন্ট চেয়েছে/মেসেজ করেছে, কোনো admin এখনো accept করেনি
     // connected → কোনো admin conversation-টা খুলে/accept করেছে
     // resolved  → admin conversation resolve/close করেছে
     await pool.query(`
@@ -293,6 +291,23 @@ async function applyMigrations(pool) {
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS support_status_updated_at TIMESTAMP;
     `);
+
+    // লাইভ চ্যাটের ডিপোজিট/উইথড্র সমস্যার ফর্ম (services/supportReports.js)।
+    // occurred_at ইউজারের দেওয়া ঘড়ির সময়, তাই টাইমজোন ছাড়া।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS support_reports (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        category VARCHAR(20) NOT NULL,
+        sender_number VARCHAR(30),
+        receiver_number VARCHAR(30),
+        transaction_id VARCHAR(40),
+        occurred_at TIMESTAMP,
+        chat_message_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_support_reports_user ON support_reports(user_id, created_at);`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS news (
@@ -1946,6 +1961,8 @@ async function applyMigrations(pool) {
         );
       }
     }
+    // হেল্প সেন্টারের বট সরানো হয়েছে — তার ফ্ল্যাগ ম্যানেজমেন্ট তালিকায় অনাথ হয়ে থাকবে না
+    await pool.query(`DELETE FROM feature_flags WHERE key = 'ai_chatbot'`);
     console.log("✅ Feature Flags table ready");
 
     // ==================== Notification Template Management ====================

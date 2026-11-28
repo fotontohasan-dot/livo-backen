@@ -56,3 +56,11 @@ npm run telegram:webhook -- --info  # বর্তমান অবস্থা
 | `services/telegramApi.js` | `sendTelegramMessage` |
 | `services/telegramWebhookSetup.js`, `scripts/setTelegramWebhook.js` | Webhook সেটআপ |
 | `telegram-bot.js` | Claude AI assistant |
+
+## লাইভ চ্যাট মেনু ও রিপোর্ট ফর্ম
+
+- `/chat`-এ আগে ক্যাটাগরি মেনু আসে; সব অপশন লাইভ এজেন্টের কাছে যায় (ওয়েবসাইট চ্যাটে কোনো AI নেই)।
+- জমা/উত্তোলন সমস্যায় ফর্ম: প্রেরকের নম্বর, রিসিভার নম্বর, ট্রানজ্যাকশন আইডি, সময় (বাংলাদেশ সময়)। উত্তোলনে প্রেরকের নম্বর ও ট্রানজ্যাকশন আইডি ঐচ্ছিক। ক্যাটাগরি ও বাধ্যতামূলক ঘর: `services/supportReports.js`।
+- তথ্য `support_reports` টেবিল ও চ্যাট হিস্ট্রিতে জমা হয়, তারপর Telegram-এ যায়; নোটিফিকেশনে Reply দিলে ইউজার ওয়েবসাইটে উত্তর পান।
+- ফর্ম/মেনু রিকোয়েস্টের সীমা: ইউজারপ্রতি ১০ মিনিটে ১০টি।
+

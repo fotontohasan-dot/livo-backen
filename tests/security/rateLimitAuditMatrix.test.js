@@ -68,7 +68,7 @@ const CEILINGS = {
   adminFinancialLimiter:    { maxAtMost: 60,  windowAtLeast: 15 * 60 * 1000 },
   googleAuthLimiter:        { maxAtMost: 30,  windowAtLeast: 15 * 60 * 1000 },
   claimLimiter:             { maxAtMost: 20,  windowAtLeast: 60 * 1000 },
-  helpChatLimiter:          { maxAtMost: 20,  windowAtLeast: 60 * 1000 }
+  supportReportLimiter:     { maxAtMost: 20,  windowAtLeast: 10 * 60 * 1000 }
   // generalLimiter এখানে নেই: তার সীমা এখন ফাংশন (ইউজার ID বনাম অ্যানোনিমাস IP) — নিচে
   // 'generalLimiter নীতি' ব্লকে middleware/rateLimitPolicy.js-এর LIMITS.general দিয়ে পাহারা দেওয়া হয়।
 };

@@ -175,15 +175,10 @@ const cspDirectives = {
   // স্ট্যাটিক CSS (public/css/tailwind.css)। একটা কম বাইরের স্ক্রিপ্ট-সোর্স
   // মানে একটা কম সাপ্লাই-চেইন নির্ভরতা: ওই CDN কম্প্রোমাইজ হলে আক্রমণকারী
   // আমাদের প্রতিটা পেজে ইচ্ছেমতো JS চালাতে পারত।
-  // www.chatbase.co — views/index.ejs-এর সাপোর্ট-চ্যাট উইজেট। বুটস্ট্র্যাপ
-  // স্নিপেটটা রানটাইমে <script src="https://www.chatbase.co/embed.min.js">
-  // যোগ করে; origin-টা এখানে না থাকলে ব্রাউজার সেটা ব্লক করত, অর্থাৎ
-  // উইজেটটা কখনোই লোড হতো না।
     scriptSrc: [
     "'self'",
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
-    "https://www.chatbase.co",
     (req, res) => `'nonce-${res.locals.cspNonce}'`
   ],
 
@@ -232,12 +227,10 @@ const cspDirectives = {
   ],
   styleSrcAttr: ["'unsafe-inline'"],
   fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://www.chatbase.co"],
+  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com"],
   mediaSrc: ["'self'", "https://res.cloudinary.com"],
-  connectSrc: ["'self'", "wss:", "ws:", "https://www.chatbase.co"],
-  // frame-src লেখা না থাকলে default-src 'self'-এ নেমে যেত এবং chatbase-এর
-  // iframe ব্লক হতো — উইজেট লোড হয়েও খুলত না।
-  frameSrc: ["'self'", "https://www.chatbase.co"],
+  connectSrc: ["'self'", "wss:", "ws:"],
+  frameSrc: ["'self'"],
   objectSrc: ["'none'"],
   frameAncestors: ["'self'"],
   baseUri: ["'self'"],

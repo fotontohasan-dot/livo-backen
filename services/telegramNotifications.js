@@ -5,6 +5,7 @@ const { pool } = require('../db');
 const { notifyTelegram } = require('./telegramNotify');
 const { escapeHtml } = require('./telegramApi');
 const { configProblem, webhookRegistrationFailure } = require('./telegramWebhookSetup');
+const { CATEGORIES } = require('./supportReports');
 
 const SUPPORT_PREVIEW_LEN = 3000;
 const LABEL = { deposit: 'ডিপোজিট', withdraw: 'উইথড্র' };
@@ -78,26 +79,54 @@ async function listPendingPayments(limit = 10) {
  * প্রথম লাইনটা (`🎫 SUPPORT #U<userId>`) সার্ভার-নির্ধারিত — Telegram থেকে Reply দিলে
  * services/telegramAdmin.js শুধু এই লাইন থেকেই ইউজার চেনে। ইউজারের লেখা কখনো প্রথম লাইনে যায় না।
  */
-async function notifySupportMessage({ userId, username, messageId, message, liveAgent = false }) {
+async function notifySupportMessage({ userId, username, messageId, message, liveAgent = false, topic = null }) {
   try {
     const id = Number(userId);
     if (!Number.isSafeInteger(id) || id <= 0) return { sent: false, reason: 'invalid_user' };
     const body = liveAgent
-      ? '🙋 লাইভ এজেন্ট রিকোয়েস্ট'
+      ? `🙋 লাইভ এজেন্ট রিকোয়েস্ট${topic ? `\nবিষয়: ${escapeHtml(topic)}` : ''}`
       : (message ? escapeHtml(clip(message, SUPPORT_PREVIEW_LEN)) : '(ফাইল পাঠানো হয়েছে — অ্যাডমিন প্যানেলে দেখুন)');
-    const text = [
-      `🎫 SUPPORT #U${id}${messageId ? ` #M${Number(messageId)}` : ''}`,
-      `ইউজার: ${escapeHtml(clip(username || 'ইউজার', 100))} (user_id: ${id})`,
-      '',
-      body,
-      '',
-      `↩️ এই মেসেজে Reply দিন, অথবা <code>/reply ${id} আপনার উত্তর</code>`
-    ].join('\n');
-    return await notifyTelegram(text, { category: 'support', disablePreview: true });
+    return await sendSupportText({ id, username, messageId, bodyLines: [body] });
   } catch (err) {
     console.error('telegram support notification error:', err.message);
     return { sent: false, reason: 'error' };
   }
 }
 
-module.exports = { notifyPaymentRequest, notifySupportMessage, buildPaymentMessage, listPendingPayments };
+function sendSupportText({ id, username, messageId, bodyLines }) {
+  const text = [
+    `🎫 SUPPORT #U${id}${messageId ? ` #M${Number(messageId)}` : ''}`,
+    `ইউজার: ${escapeHtml(clip(username || 'ইউজার', 100))} (user_id: ${id})`,
+    '',
+    ...bodyLines,
+    '',
+    `↩️ এই মেসেজে Reply দিন, অথবা <code>/reply ${id} আপনার উত্তর</code>`
+  ].join('\n');
+  return notifyTelegram(text, { category: 'support', disablePreview: true });
+}
+
+/** লাইভ চ্যাটের ডিপোজিট/উইথড্র সমস্যার ফর্ম — নির্দিষ্ট ফরম্যাটে (data আগেই যাচাই করা)। */
+async function notifySupportReport({ userId, username, messageId, reportId, category, data }) {
+  try {
+    const id = Number(userId);
+    if (!Number.isSafeInteger(id) || id <= 0 || !CATEGORIES[category]) return { sent: false, reason: 'invalid_report' };
+    const value = (v) => (v ? `<code>${escapeHtml(v)}</code>` : 'দেওয়া হয়নি');
+    return await sendSupportText({
+      id, username, messageId,
+      bodyLines: [
+        `${CATEGORIES[category].icon} <b>${CATEGORIES[category].adminLabel}</b> — রিপোর্ট <code>#R${Number(reportId)}</code>`,
+        `প্রেরকের নম্বর: ${value(data.senderNumber)}`,
+        `রিসিভার নম্বর: ${value(data.receiverNumber)}`,
+        `ট্রানজ্যাকশন আইডি: ${value(data.transactionId)}`,
+        `সময়: ${data.occurredAt ? escapeHtml(data.occurredAt) : 'দেওয়া হয়নি'}`
+      ]
+    });
+  } catch (err) {
+    console.error('telegram support report error:', err.message);
+    return { sent: false, reason: 'error' };
+  }
+}
+
+module.exports = {
+  notifyPaymentRequest, notifySupportMessage, notifySupportReport, buildPaymentMessage, listPendingPayments
+};

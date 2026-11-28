@@ -6,7 +6,7 @@
 // routes/ থেকে সব route enumerate করে প্রতিটি privileged endpoint-এ
 // unauthenticated request পাঠায় এবং নিশ্চিত করে যে কোনোটিই 200 দেয় না।
 //
-// MEDIUM-12: POST /help-center/api/chat unauthenticated অবস্থায় একটি
+// MEDIUM-12 (ঐতিহাসিক; endpoint টি এখন সরানো): POST /help-center/api/chat একটি
 // পয়সা-খরচকারী LLM API-তে proxy করত, নিজস্ব rate limit বা দৈর্ঘ্যসীমা ছাড়া।
 // ---------------------------------------------------------------------------
 
@@ -118,47 +118,19 @@ describe('Endpoint authorization sweep (PHASE 6 deep)', () => {
     });
   });
 
-  describe('MEDIUM-12: public AI chat endpoint সীমিত', () => {
-    // POST গুলো CSRF-protected, তাই প্রকৃত token সহ agent ব্যবহার করা হয়
-    async function chatAgent() {
+  describe('MEDIUM-12: public AI chat endpoint সরানো হয়েছে', () => {
+    test('help-center আর কোনো বট API দেয় না', async () => {
       const agent = request.agent(app);
       const page = await agent.get('/help-center/').set('User-Agent', REALISTIC_UA);
       const m = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text || '');
-      return { agent, token: m ? m[1] : '' };
-    }
-
-    test('অতিরিক্ত লম্বা বার্তা প্রত্যাখ্যাত হয় (upstream token খরচ সীমিত)', async () => {
-      const { agent, token } = await chatAgent();
       const res = await agent
         .post('/help-center/api/chat')
         .set('User-Agent', REALISTIC_UA)
-        .set('X-CSRF-Token', token)
-        .send({ message: 'A'.repeat(5000) });
+        .set('X-CSRF-Token', m ? m[1] : '')
+        .send({ message: 'deposit koto?' });
 
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      expect(res.status).toBe(404);
     }, 30000);
-
-    test('দ্রুত পরপর অনুরোধ পাঠালে rate limit কার্যকর হয়', async () => {
-      const { agent, token } = await chatAgent();
-      const statuses = [];
-      for (let i = 0; i < 16; i++) {
-        const res = await agent
-          .post('/help-center/api/chat')
-          .set('User-Agent', REALISTIC_UA)
-          .set('X-CSRF-Token', token)
-          .send({ message: 'deposit koto?' }); // FAQ hit — upstream API ডাকা হয় না
-        statuses.push(res.status);
-      }
-      expect(statuses).toContain(429);
-    }, 60000);
-
-    test('endpoint-এ ডেডিকেটেড limiter ও দৈর্ঘ্যসীমা সংজ্ঞায়িত আছে', () => {
-      const src = fs.readFileSync(path.join(ROOT, 'routes', 'help-center.js'), 'utf8');
-      expect(src).toMatch(/helpChatLimiter/);
-      expect(src).toMatch(/MAX_CHAT_MESSAGE_LEN/);
-      expect(src).toMatch(/router\.post\('\/api\/chat', helpChatLimiter/);
-    });
   });
 
   describe('Gateway callback গুলো unauthenticated হলেও নিরাপদ', () => {

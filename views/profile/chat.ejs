@@ -1,112 +1,126 @@
 <%- include('../partials/head') %>
 
-<div class="ix74-1">
-  <h1 class="ix74-2">💬 <%= t.chat_support %></h1>
+<div class="sc-wrap">
+  <h1 class="sc-title">💬 <%= t.chat_support %></h1>
 
-  <!-- ==================== দ্রুত সাহায্য (help-center পেজের সেম কালার/ডিজাইন) ==================== -->
-  <div class="ix74-3">
-    <div class="ix74-4"></div>
-    <div class="dz74-1"><%= t('chat_quick_help') %></div>
-    <div class="dz74-2"><%= t('chat_category') %></div>
-    <div class="dz74-3" id="quick-category-row">
-      <button data-quick-msg="<%= t('chat_deposit_issue') %>" class="qc-chip">💳 <%= t('chat_deposit_issue') %></button>
-      <button data-quick-msg="<%= t('chat_withdraw_issue') %>" class="qc-chip">💵 <%= t('chat_withdraw_issue') %></button>
-      <button data-quick-msg="<%= t('chat_bonus_issue') %>" class="qc-chip">🎁 <%= t('chat_bonus_issue') %></button>
-      <button data-quick-msg="<%= t('chat_login_issue') %>" class="qc-chip">🔑 <%= t('chat_login_issue') %></button>
-      <button data-quick-msg="<%= t('hc_kyc_msg') %>" class="qc-chip">🪪 <%= t('chat_kyc_issue') %></button>
-      <button data-quick-msg="<%= t('chat_ticket_issue') %>" class="qc-chip">🎫 <%= t('chat_ticket_issue') %></button>
-      <button data-quick-msg="<%= t('chat_football_issue') %>" class="qc-chip">⚽ <%= t('chat_football_issue') %></button>
+  <!-- ১) চ্যাট শুরুর আগে ক্যাটাগরি মেনু — সব অপশনই লাইভ এজেন্টের কাছে যায় -->
+  <section class="sc-card" id="support-menu" hidden>
+    <div class="sc-head"><%= t('chat_menu_title') %></div>
+    <div class="sc-hint"><%= t('chat_menu_hint') %></div>
+    <div class="sc-grid">
+      <% Object.keys(supportCategories).forEach(function (key) { var c = supportCategories[key]; %>
+      <button type="button" class="sc-option<%= key === 'other' ? ' sc-option-wide' : '' %>" data-category="<%= key %>"><%= c.icon %> <%= t(c.labelKey) %></button>
+      <% }) %>
     </div>
-  </div>
-  <!-- ==================== AI সাপোর্ট এজেন্ট (Chatbase) — এখানেই এমবেড, আর কোথাও ভাসমান না ==================== -->
-  <div class="ix74-3 support-panel" id="ai-support-panel">
-    <div class="dz74-1 ai-panel-title">🤖 AI সাপোর্ট এজেন্ট</div>
-    <iframe
-      src="https://www.chatbase.co/chatbot-iframe/pSj_7j1MVN7taO6OD7NHh"
-      width="100%"
-      class="ai-panel-iframe"
-      frameborder="0"
-      allow="microphone"
-    ></iframe>
-    <div class="ai-panel-footer">
-      <button type="button" id="talk-to-live-agent" class="dz74-5" style="width: 100%;">
-        🎧 <%= t('chat_talk_to_live_agent') %>
-      </button>
+    <button type="button" class="sc-link" id="open-chat" hidden><%= t('chat_open_history') %></button>
+  </section>
+
+  <!-- ২) ডিপোজিট/উইথড্র সমস্যার তথ্য ফর্ম -->
+  <section class="sc-card" id="report-panel" hidden>
+    <button type="button" class="sc-link sc-back" data-show-menu><%= t('chat_menu_back') %></button>
+    <div class="sc-head" id="report-title"></div>
+    <div class="sc-hint"><%= t('chat_report_intro') %></div>
+    <button type="button" class="sc-notice" id="new-reply-notice" hidden><%= t('chat_new_reply') %></button>
+    <form id="report-form" novalidate>
+      <label class="sc-label" for="report-sender"><%= t('chat_report_sender') %> <span data-optional="senderNumber" hidden><%= t('chat_report_optional') %></span></label>
+      <input class="sc-input" id="report-sender" name="senderNumber" type="tel" inputmode="tel" maxlength="25" autocomplete="off" placeholder="01XXXXXXXXX">
+
+      <label class="sc-label" for="report-receiver"><%= t('chat_report_receiver') %> <span data-optional="receiverNumber" hidden><%= t('chat_report_optional') %></span></label>
+      <input class="sc-input" id="report-receiver" name="receiverNumber" type="tel" inputmode="tel" maxlength="25" autocomplete="off" placeholder="01XXXXXXXXX">
+
+      <label class="sc-label" for="report-trx"><%= t('chat_report_trx') %> <span data-optional="transactionId" hidden><%= t('chat_report_optional') %></span></label>
+      <input class="sc-input" id="report-trx" name="transactionId" type="text" maxlength="40" autocomplete="off" autocapitalize="characters">
+
+      <label class="sc-label" for="report-time"><%= t('chat_report_time') %> <span data-optional="occurredAt" hidden><%= t('chat_report_optional') %></span></label>
+      <input class="sc-input" id="report-time" name="occurredAt" type="datetime-local">
+
+      <div class="sc-error" id="report-error" role="alert" hidden></div>
+      <button type="submit" class="sc-submit" id="report-submit"><%= t('chat_report_submit') %></button>
+    </form>
+  </section>
+
+  <!-- ৩) লাইভ এজেন্ট চ্যাট -->
+  <section id="live-chat-panel" hidden>
+    <div class="sc-bar" id="live-agent-panel">
+      <span class="sc-agent">👤 <%= t('chat_mode_agent') %></span>
+      <span class="sc-status" id="support-status-banner"></span>
+      <button type="button" class="sc-menu-btn" data-show-menu><%= t('chat_menu_open') %></button>
     </div>
-  </div>
-  <style nonce="<%= cspNonce %>">
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). Every migrated declaration was proved cascade-equivalent:
-     see tools/cascade-check.js. */
-  .dz74-1 { color: #fff; font-weight: 800; font-size: 18px; margin-bottom: 12px; }
-  .dz74-2 { color: rgba(255,255,255,0.85); font-size: 12px; font-weight: 700; margin-bottom: 8px; letter-spacing: .3px; }
-  .dz74-3 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
-  .dz74-4 { display: flex; gap: 8px; margin-bottom: 12px; }
-  .dz74-5 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: var(--grad-gold); color: #000; font-weight: bold; cursor: pointer; font-size: 13px; }
-  .dz74-6 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 13px; }
-  .dz74-7 { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 16px; display: flex; flex-direction: column; height: calc(100vh - 210px); height: calc(100dvh - 210px); min-height: 300px; max-height: 560px; overflow: hidden; }
-  .dz74-8 { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  .dz74-9 { padding: 12px; border-top: 1px solid var(--border-glass); }
-  .dz74-10 { display: none; margin-bottom: 8px; }
-  .dz74-11 { display: none; max-height: 100px; border-radius: 8px; margin-bottom: 4px; }
-  .dz74-12 { font-size: 12px; color: var(--text-muted); }
-  .dz74-13 { color: var(--red-text); font-size: 12px; margin-left: 8px; background: none; border: none; cursor: pointer; }
-  .dz74-14 { display: flex; gap: 8px; align-items: center; }
-  .dz74-15 { background: rgba(255,255,255,0.08); color: var(--text-main); padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 18px; }
-  .dz74-16 { display: none; }
-  .dz74-17 { flex: 1; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px 14px; color: var(--text-main); font-size: 14px; outline: none; }
-  .dz74-18 { background: var(--grad-gold); color: #000; padding: 10px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). A declaration was moved only when no !important rule in
-     the site CSS can match this element for that property. */
-  .ix74-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
-  .ix74-2 { color: var(--text-accent); font-size: 22px; font-weight: 800; margin-bottom: 16px; }
-  .ix74-3 { background: var(--grad-primary); border-radius: 16px; padding: 18px 16px 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
 
-  /* AI সাপোর্ট প্যানেল: স্ক্রিনের (ভিউপোর্ট) ভেতরেই থাকবে — নিচের নেভ বারের উপরে,
-     iframe নিজে ভেতরে স্ক্রল করবে, পুরো প্যানেল স্ক্রিনের বাইরে যাবে না। */
-  .support-panel { padding: 0; overflow: hidden; }
-  #ai-support-panel { display: flex; flex-direction: column;
-    height: calc(100vh - 210px); height: calc(100dvh - 210px); min-height: 380px; max-height: 560px; }
-  .ai-panel-title { padding: 14px 16px 0; flex: 0 0 auto; }
-  .ai-panel-iframe { flex: 1 1 auto; min-height: 0; width: 100%; height: 100%; border: 0; display: block; margin-top: 10px; }
-  .ai-panel-footer { flex: 0 0 auto; padding: 10px 16px 14px; }
-  .ix74-4 { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--red-text)); }
-    .qc-chip{
-      flex:0 0 auto; white-space:nowrap; background:rgba(255,255,255,0.12); color:#fff;
-      border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px 14px;
-      font-size:13px; font-weight:600; cursor:pointer; transition:background-color .2s;
-    }
-    .qc-chip:hover{ background:rgba(255,255,255,0.22); }
-  </style>
+    <div class="sc-chat" id="chat-container">
+      <div class="sc-messages" id="messages"></div>
 
-  <div class="dz74-4" id="live-agent-panel" style="display:none;">
-    <div class="dz74-6" style="cursor: default;">👤 <%= t('chat_mode_agent') %></div>
-    <div id="support-status-banner" style="flex:1; text-align:right; font-size:12px; color: var(--text-muted); align-self:center;"></div>
-  </div>
-
-  <div class="dz74-7" id="chat-container" style="display:none;">
-    <div class="dz74-8" id="messages"></div>
-
-    <div class="dz74-9">
-      <div class="dz74-10" id="file-preview">
-        <img class="dz74-11" id="preview-img"/>
-        <span class="dz74-12" id="preview-name"></span>
-        <button class="dz74-13" data-clear-file>✕ <%= t.cancel %></button>
-      </div>
-      <div class="dz74-14">
-        <label class="dz74-15">
-          📎
-          <input class="dz74-16" type="file" id="file-input" accept="image/*,video/*">
-        </label>
-        <input class="dz74-17" type="text" id="message-input" placeholder="<%= t.message_placeholder %>">
-        <button class="dz74-18" id="send-button">
-          <%= t.send %>
-        </button>
+      <div class="sc-compose">
+        <div class="sc-preview" id="file-preview">
+          <img class="sc-preview-img" id="preview-img"/>
+          <span class="sc-preview-name" id="preview-name"></span>
+          <button type="button" class="sc-preview-clear" data-clear-file>✕ <%= t.cancel %></button>
+        </div>
+        <div class="sc-row">
+          <label class="sc-attach">
+            📎
+            <input class="sc-file" type="file" id="file-input" accept="image/*,video/*">
+          </label>
+          <input class="sc-text" type="text" id="message-input" placeholder="<%= t.message_placeholder %>">
+          <button type="button" class="sc-send" id="send-button"><%= t.send %></button>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 </div>
+
+<style nonce="<%= cspNonce %>">
+  /* ছোট আকারের লাইভ চ্যাট উইজেট */
+  .sc-wrap { padding: 10px 12px 90px; max-width: 320px; margin: 0 auto; }
+  .sc-wrap [hidden] { display: none !important; }
+  .sc-title { color: var(--text-accent); font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+  .sc-card { background: var(--grad-primary); border-radius: 14px; padding: 14px 12px; }
+  .sc-head { color: #fff; font-weight: 800; font-size: 15px; margin-bottom: 4px; }
+  .sc-hint { color: rgba(255,255,255,0.8); font-size: 11.5px; margin-bottom: 10px; line-height: 1.5; }
+  .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .sc-option { min-height: 34px; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 9px; padding: 6px 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; text-align: left; line-height: 1.4; }
+  .sc-option:hover { background: rgba(255,255,255,0.22); }
+  .sc-option:disabled { opacity: .6; cursor: wait; }
+  .sc-option-wide { grid-column: 1 / -1; text-align: center; }
+  .sc-link { display: block; width: 100%; background: none; border: none; color: #fff; font-size: 12px; font-weight: 700; padding: 10px 0 0; cursor: pointer; text-decoration: underline; }
+  .sc-back { width: auto; padding: 0 0 8px; text-decoration: none; }
+  .sc-notice { display: block; width: 100%; margin-bottom: 8px; padding: 8px; border: none; border-radius: 8px; background: #fff; color: #065f46; font-size: 12px; font-weight: 800; cursor: pointer; }
+  .sc-label { display: block; color: #fff; font-size: 12px; font-weight: 700; margin: 0 0 3px; }
+  .sc-input { display: block; width: 100%; box-sizing: border-box; background: #fff; color: #111; border: 2px solid transparent; border-radius: 8px; padding: 6px 10px; font-size: 16px; margin-bottom: 8px; outline: none; min-height: 36px; }
+  .sc-input:focus { border-color: var(--gold); }
+  .sc-input-invalid { border-color: #ef4444; }
+  .sc-wrap div.sc-error { background: #fef2f2 !important; color: #b91c1c !important; -webkit-text-fill-color: #b91c1c; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; margin: 0 0 8px; }
+  .sc-submit { width: 100%; padding: 9px; border: none; border-radius: 8px; background: var(--grad-gold); color: #000; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .sc-submit:disabled { opacity: .6; cursor: wait; }
+  .sc-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .sc-agent { color: var(--text-main); font-weight: 800; font-size: 12.5px; white-space: nowrap; }
+  .sc-status { flex: 1; text-align: right; font-size: 11px; color: var(--text-muted); }
+  .sc-menu-btn { background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 8px; padding: 5px 9px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .sc-chat { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; display: flex; flex-direction: column; height: calc(100vh - 290px); height: calc(100dvh - 290px); min-height: 240px; max-height: 340px; overflow: hidden; }
+  .sc-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .sc-compose { padding: 8px; border-top: 1px solid var(--border-glass); }
+  .sc-preview { display: none; margin-bottom: 6px; }
+  .sc-preview-img { display: none; max-height: 70px; border-radius: 8px; margin-bottom: 4px; }
+  .sc-preview-name { font-size: 11px; color: var(--text-muted); }
+  .sc-preview-clear { color: var(--red-text); font-size: 11px; margin-left: 8px; background: none; border: none; cursor: pointer; }
+  .sc-row { display: flex; gap: 6px; align-items: center; }
+  .sc-attach { background: rgba(255,255,255,0.08); color: var(--text-main); padding: 7px 9px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+  .sc-file { display: none; }
+  .sc-text { flex: 1; min-width: 0; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: 8px; padding: 7px 10px; color: var(--text-main); font-size: 13px; outline: none; }
+  .sc-send { background: var(--grad-gold); color: #000; padding: 8px 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 12.5px; }
+  /* style.css-এর গ্লোবাল `button { background-color: লাল !important }` সেকেন্ডারি বাটনে প্রযোজ্য নয় */
+  .sc-wrap .sc-link { min-height: 0; background-color: transparent !important; border: none; }
+  .sc-wrap .sc-menu-btn { min-height: 30px; background-color: rgba(0,0,0,0.25) !important; border-color: rgba(255,255,255,0.25) !important; }
+  .sc-wrap .sc-notice { background-color: #fff !important; }
+  /* থিমের গ্লোবাল `color/-webkit-text-fill-color: #fff !important` সাদা বক্সের লেখা অদৃশ্য করে দেয় */
+  body .sc-wrap #report-form input.sc-input { background-color: #fff !important; color: #111 !important; -webkit-text-fill-color: #111 !important; caret-color: #111; color-scheme: light; }
+  body .sc-wrap #report-form input.sc-input::placeholder { color: #9ca3af !important; -webkit-text-fill-color: #9ca3af !important; }
+  body .sc-wrap #report-form #report-error { color: #b91c1c !important; -webkit-text-fill-color: #b91c1c !important; }
+  body .sc-wrap #report-panel #new-reply-notice { color: #065f46 !important; -webkit-text-fill-color: #065f46 !important; }
+  /* লাইট মোডেও পেজের পটভূমি সবুজ থাকে — শিরোনাম ও স্ট্যাটাস সাদা রাখা হয় */
+  body.light-mode .sc-wrap .sc-title, body.light-mode .sc-wrap .sc-agent, body.light-mode .sc-wrap .sc-status { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+  .sc-wrap .sc-preview-clear { min-height: 0; background-color: transparent !important; }
+</style>
 
 <script src="/socket.io/socket.io.js"></script>
   <script src="/js/socket-client.js"></script>
@@ -115,24 +129,23 @@
     ওটা ব্রাউজার চালায় না, তাই CSP-তে ইনলাইন স্ক্রিপ্টের ছাড় লাগে না। %>
 <script type="application/json" id="chatConfig"><%- jsonScriptSafe({
   userId: user.id,
-  siteName: siteName,
+  categories: Object.keys(supportCategories).reduce(function (all, key) {
+    var c = supportCategories[key];
+    all[key] = { title: c.icon + ' ' + t(c.labelKey), form: !!c.form, required: c.required || [] };
+    return all;
+  }, {}),
   t: {
-    support_service: t.support_service,
-    welcome_support: t.welcome_support,
-    q_deposit: t.q_deposit,
-    q_withdraw: t.q_withdraw,
-    q_account: t.q_account,
-    q_about: t.q_about,
-    q_event: t.q_event,
     upload_fail: t.upload_fail,
     chat_status_waiting: t.chat_status_waiting,
     chat_status_connected: t.chat_status_connected,
-    chat_status_resolved: t.chat_status_resolved
+    chat_status_resolved: t.chat_status_resolved,
+    chat_report_invalid: t('chat_report_invalid'),
+    chat_report_required: t('chat_report_required'),
+    chat_report_failed: t('chat_report_failed'),
+    chat_report_duplicate: t('chat_report_duplicate')
   }
 }) %></script>
 <script src="/js/profile-chat.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>
-<%- include('../partials/chatbase-widget') %>
-
