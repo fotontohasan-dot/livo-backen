@@ -451,6 +451,11 @@ const sessionMiddleware = session({
 app.use(sessionMiddleware);
 app.use(cookieParser());
 
+// স্থায়ী সেশন + silent token refresh: সেশন কুকি হারালে HttpOnly রিফ্রেশ কুকি থেকে নিঃশব্দে সেশন
+// পুনরুদ্ধার, আর টোকেন মেয়াদ ফুরানোর আগেই ব্যাকএন্ডে রোটেশন। session ও cookieParser-এর পরে, csrf/রুটের আগে।
+const persistentSession = require('./middleware/persistentSession');
+app.use(persistentSession.persistentSessionMiddleware);
+
 // session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
 // যাতে socket connection-এও একই লগইন session ব্যবহার করে ইউজার/অ্যাডমিন যাচাই করা যায়
 const ioInstance = initSocket(server, sessionMiddleware);
@@ -931,6 +936,8 @@ if (process.env.ADMIN_RESET_TOKEN) {
             [hashed, targetId]
           );
           resultLine = `বিদ্যমান ইউজার #${targetId}-কে admin বানানো হলো।`;
+          // রিকভারি = পুরনো সব "remember" টোকেন অকার্যকর (আগের কুকি দিয়ে আর ঢোকা যাবে না)
+          await client.query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [targetId]);
         } else {
           const username = 'admin_' + crypto.randomBytes(4).toString('hex');
           const created = await client.query(
@@ -1072,6 +1079,7 @@ const { maintenanceMiddleware } = require('./middleware/maintenance');
 app.use(maintenanceMiddleware);
 
 // ==================== ROUTES ====================
+app.use('/', persistentSession.router); // POST /auth/refresh (CSRF-সুরক্ষিত, গ্লোবাল csrfProtection আগে চলে)
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
 app.use('/my-bets', require('./routes/myBets'));

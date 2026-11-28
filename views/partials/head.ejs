@@ -98,6 +98,8 @@
        নেভিগেট করলেও ব্যাজ আপ-টু-ডেট থাকে। -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/socket-client.js"></script>
+  <!-- স্থায়ী সেশন: নিঃশব্দে সেশন/রিফ্রেশ টোকেন নবায়ন (HttpOnly টোকেন JS-এ আসে না) -->
+  <script src="/js/session-keepalive.js?v=<%= locals.assetVersion || 'dev' %>" defer></script>
   <script src="/js/badges-realtime.js" defer></script>
   <% } %>
 </head>

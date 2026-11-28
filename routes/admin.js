@@ -120,6 +120,7 @@ const { runAllChecks } = require('../services/healthCheck');
 // নাহলে খোলা socket connection সর্বোচ্চ TTL সময় পর্যন্ত পুরনো privilege ধরে রাখত।
 const { invalidateSocketAuth, emitTickerUpdate, emitMarketStatusChange, emitRunnerStatusChange } = require('../services/socket');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
+const persistentSession = require('../middleware/persistentSession');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview, parseUserAgent } = require('../services/deviceTracking');
@@ -445,6 +446,8 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
     req.session.pending2FA = null;
     req.session.twoFAAttempts = 0;
     applyAdminSessionPolicy(req);
+    // পরের বার সেশন শেষ হলে পাসওয়ার্ড ছাড়া শুধু ২FA কোডেই ঢোকার জন্য (ব্যর্থ হলেও লগইন আটকায় না)
+    await persistentSession.issueAdminRemember(req, res, admin);
     logAdminAction(admin.id, admin.username, 'LOGIN_2FA', '2FA দিয়ে লগইন সম্পন্ন', req.ip);
     // redirect-এর আগে সেশন স্টোরে লেখা নিশ্চিত করা হচ্ছে — নইলে ব্রাউজারের পরের
     // রিকোয়েস্ট (GET /admin) নতুন sid নিয়ে পৌঁছে যেতে পারে সেশন সারি কমিট হওয়ার
@@ -569,7 +572,8 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
 // LOW-1 fix: logout একটি state-changing action, তাই এটি POST + CSRF-protected।
 // পুরনো GET /admin/logout link গুলো ভাঙে না — সেগুলো একটি confirm page-এ যায়
 // যেখান থেকে auto-submit POST form logout সম্পন্ন করে (zero-regression)।
-const doAdminLogout = (req, res) => {
+const doAdminLogout = async (req, res) => {
+  await persistentSession.revokeAdminForLogout(req, res);
   req.session.destroy(() => {
     res.redirect('/admin/login');
   });

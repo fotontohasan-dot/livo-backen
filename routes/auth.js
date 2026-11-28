@@ -29,6 +29,8 @@ const homeCasino = require('../services/homeCasino');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
 const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
+const persistentSession = require('../middleware/persistentSession');
+const refreshTokens = require('../services/refreshTokens');
 
 const { resetAccountIpKey, resetAccountKey, userOrIpKey, ipKey, IP_CEILINGS, markLoginSuccess } = require('../middleware/rateLimitPolicy');
 const { softLoginDelayMs } = require('../middleware/loginLimiters');
@@ -346,6 +348,7 @@ router.post('/register', async (req, res) => {
     const regLogin = await recordLogin(req, newUserId);
     req.session.user = sanitizeUser(result.rows[0]);
     const regDevice = await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
+    await persistentSession.issueForLogin(req, res, result.rows[0]);
 
     // ==== ইমেইল ভেরিফিকেশন লিঙ্ক পাঠানো (থাকলে) — কখনো রেজিস্ট্রেশন ব্লক করে না ====
     // আগে এখানে sendQueuedEmail()-কে await করা হতো, যা এই ফাংশনের নিজের কমেন্টের সাথেই সাংঘর্ষিক —
@@ -432,6 +435,10 @@ async function completeLogin(req, user, vpnInfo) {
     location: deviceResult && deviceResult.location,
     vpnInfo
   }).catch(e => console.error('scanLogin error:', e.message));
+
+  // স্থায়ী সেশন: HttpOnly রিফ্রেশ কুকি ইস্যু (অ্যাডমিনের জন্য নয়; ব্যর্থ হলেও লগইন আটকায় না)।
+  // saveSession-এর আগে, কারণ এটা req.session.rtRotatedAt সেট করে।
+  await persistentSession.issueForLogin(req, req.res, user);
 
   // redirect-এর আগে সেশন স্টোরে লেখা নিশ্চিত করা হচ্ছে। express-session ডিফল্টে
   // fire-and-forget ভঙ্গিতে লেখে, তাই regenerate()-এর পরপরই redirect করলে ব্রাউজারের
@@ -1014,6 +1021,12 @@ router.post('/reset-password/:token', resetIpCeilingLimiter, resetLimiter, async
     } catch (e) {
       console.error('reset-password session revoke error:', e.message);
     }
+    // রিফ্রেশ টোকেনও বাতিল — নইলে আক্রমণকারীর কুকি দিয়ে পাসওয়ার্ড রিসেটের পরেও সেশন ফিরে আসত
+    try {
+      await refreshTokens.revokeAllForUser(updated.rows[0].id);
+    } catch (e) {
+      console.error('reset-password refresh-token revoke error:', e.message);
+    }
 
     req.flash('success', req.t('auth_password_reset_success'));
     res.redirect('/login');
@@ -1035,6 +1048,8 @@ async function doUserLogout(req, res) {
   } catch (e) {
     console.error('logout device_sessions cleanup error:', e.message);
   }
+  // রিফ্রেশ টোকেনের পুরো family বাতিল + কুকি মোছা — নইলে লগআউটের পর পরের GET-এ সেশন ফিরে আসত
+  await persistentSession.revokeForLogout(req, res);
   req.session.destroy(() => res.redirect('/login'));
 }
 
