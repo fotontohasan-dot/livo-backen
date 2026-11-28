@@ -30,7 +30,7 @@
   let selectedFileType = null;
   let seenByCurrentUser = false;
 
-  // AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফের status লেবেল/ব্যাজ রং।
+  // লাইভ সাপোর্টের status লেবেল/ব্যাজ রং।
   // নতুন কিছু নয় — বিদ্যমান users.support_status মান অনুযায়ী শুধু প্রদর্শন।
   const STATUS_LABEL_KEY = {
     ai: 'admin_chat_status_ai',
@@ -218,7 +218,7 @@
       loadChatHistory(userId);
   }
 
-  // "Talk to Live Agent" থেকে আসা conversation admin এই বাটনে accept করে —
+  // ইউজারের লাইভ এজেন্ট অনুরোধ admin এই বাটনে accept করে —
   // ব্যাকএন্ডে (routes/chat.js) atomic UPDATE ... WHERE support_status IN ('ai','waiting')
   // থাকায় দুইজন admin একসাথে একই conversation accept করতে পারবে না।
   async function acceptLiveAgent() {
@@ -312,6 +312,8 @@
           const bubble = document.createElement('div');
           bubble.className = `px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-white font-medium ring-1 ring-yellow-400/60'}`;
           bubble.textContent = text;
+          // ফর্মের রিপোর্ট বহু লাইনের — লাইন ভাঙা বজায় রাখা
+          bubble.style.whiteSpace = 'pre-wrap';
           wrap.appendChild(bubble);
       }
 
@@ -438,15 +440,15 @@
   // Socket listeners
   socket.on('new_message', (data) => {
       if (data.senderId === currentUserId || data.receiverId === currentUserId) {
-          appendMessage(data.message, data.isAdmin, data.created_at, data.fileUrl, data.fileType);
+          appendMessage(data.message, data.isAdmin, data.createdAt || data.created_at, data.fileUrl, data.fileType);
           scrollToBottom();
       }
       // Refresh list to show latest message
       loadConversations();
   });
 
-  // অন্য admin conversation accept/resolve করলে, বা ইউজার নতুন করে "Talk to Live
-  // Agent" চাপলে — এই admin-এর লিস্ট/বাটন রিয়েল-টাইমে সিঙ্ক থাকা
+  // অন্য admin conversation accept/resolve করলে, বা ইউজার নতুন করে লাইভ
+  // এজেন্ট চাইলে — এই admin-এর লিস্ট/বাটন রিয়েল-টাইমে সিঙ্ক থাকা
   socket.on('support_status', (data) => {
       loadConversations();
       if (data && currentUserId && data.userId === currentUserId) {

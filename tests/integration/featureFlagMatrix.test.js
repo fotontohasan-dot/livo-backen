@@ -34,7 +34,6 @@ const PROBE = {
   leaderboard:    { get: '/leaderboard' },
   promotions:     { get: '/extra/promotion' },
   live_chat:      { get: '/chat' },
-  ai_chatbot:     { post: '/help-center/api/chat' },
   news:           { get: '/news' },
   notifications:  { get: '/notifications' },
   provider_wallet:{ post: '/provider/mock-casino/balance' },

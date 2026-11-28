@@ -1,6 +1,5 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
-const { getBotReply } = require('./chatbot');
 const { notifySupportMessage } = require('./telegramNotifications');
 const cache = require('./cache');
 const { isAllowedOrigin } = require('../utils/allowedOrigins');
@@ -56,13 +55,44 @@ const emitSupportReply = (userId, payload) => {
   catch (err) { console.error('emitSupportReply error:', err.message); }
 };
 
+// HTTP রুট থেকে (ক্যাটাগরি/ফর্ম) জমা হওয়া ইউজারের মেসেজ অ্যাডমিন প্যানেলে রিয়েল-টাইমে দেখানো
+const emitUserSupportMessage = (userId, chat) => {
+  const bus = emitBus(); if (!bus || !userId || !chat) return;
+  try {
+    bus.to('admins').emit('new_message', {
+      senderId: Number(userId), receiverId: null, message: chat.message, isAdmin: false,
+      fileUrl: null, fileType: null, createdAt: chat.createdAt
+    });
+    emitAdminAlert('chat', { title: 'নতুন সাপোর্ট মেসেজ', message: chat.message });
+  } catch (err) { console.error('emitUserSupportMessage error:', err.message); }
+};
+
+// চ্যাটে মেসেজ আদান-প্রদান হলে কথোপকথন "সক্রিয়" হয়: অ্যাডমিন উত্তর দিলে connected,
+// ইউজার লিখলে (সক্রিয় অনুরোধ না থাকলে) waiting। ব্যর্থ হলেও মেসেজ পাঠানো আটকায় না।
+async function advanceSupportStatus(userId, fromAdmin) {
+  try {
+    const next = fromAdmin ? 'connected' : 'waiting';
+    const guard = fromAdmin
+      ? `support_status IS DISTINCT FROM 'connected'`
+      : `support_status NOT IN ('waiting', 'connected')`;
+    const r = await pool.query(
+      `UPDATE users SET support_status = $2, support_status_updated_at = NOW()
+        WHERE id = $1 AND role != 'admin' AND ${guard}`,
+      [userId, next]
+    );
+    if (r.rowCount) notifySupportStatus(userId, next);
+  } catch (err) {
+    console.error('support status advance error:', err.message);
+  }
+}
+
 const notifyAdminsSeen = (userId) => {
   const bus = emitBus(); if (!bus || !userId) return;
   try { bus.to('admins').emit('messages_seen', { by: Number(userId) }); }
   catch (err) { console.error('notifyAdminsSeen error:', err.message); }
 };
 
-// ===== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ স্ট্যাটাস =====
+// ===== লাইভ সাপোর্ট স্ট্যাটাস =====
 // বিদ্যমান user:<id> room-এ ইউজারকে, ও বিদ্যমান admins room-এ সব admin-কে পাঠানো হয় —
 // নতুন কোনো রুম/চ্যানেল তৈরি করা হয়নি।
 const notifySupportStatus = (userId, status) => {
@@ -340,6 +370,7 @@ const initSocket = (server, sessionMiddleware) => {
           // অ্যাডমিন → নির্দিষ্ট ইউজারের কাছে
           if (receiverId) {
             io.to(`user:${receiverId}`).emit("new_message", payload);
+            await advanceSupportStatus(receiverId, true);
             // 'ইনটারনাল মেসেজ' আইকনের ব্যাজ সাথে সাথে আপডেট (chat_messages আনরিড কাউন্ট)
             try {
               const { emitBadgeUpdate } = require('./notify');
@@ -359,29 +390,7 @@ const initSocket = (server, sessionMiddleware) => {
             messageId: saved && saved.rows && saved.rows[0] ? saved.rows[0].id : null,
             message: message ? String(message) : null
           });
-
-          // ===== বট মোড হলে অটো-রিপ্লাই =====
-          if (data && data.botMode && message) {
-            const botText = await getBotReply(message);
-            const botCreatedAt = new Date();
-
-            await pool.query(
-              `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_bot, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [senderId, senderId, botText, true, true, botCreatedAt]
-            );
-
-            io.to(`user:${senderId}`).emit("new_message", {
-              senderId: null,
-              receiverId: senderId,
-              message: botText,
-              isAdmin: true,
-              isBot: true,
-              fileUrl: null,
-              fileType: null,
-              createdAt: botCreatedAt
-            });
-          }
+          await advanceSupportStatus(senderId, false);
         }
       } catch (err) {
         console.error("send_message error:", err.message);
@@ -604,4 +613,4 @@ const emitTickerUpdate = (payload = {}) => {
   }
 };
 
-module.exports = { emitSupportReply, initSocket, getIo, getEmitter, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { emitSupportReply, emitUserSupportMessage, initSocket, getIo, getEmitter, emitFeedUpdate, emitOddsAndStatus, emitMarketStatusChange, emitRunnerStatusChange, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

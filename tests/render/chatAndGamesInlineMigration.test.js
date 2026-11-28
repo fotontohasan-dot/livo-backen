@@ -31,26 +31,22 @@ describe('profile/chat.ejs — ইনলাইন কোড সরানো হ�
     expect(chatView).toMatch(/<script src="\/js\/profile-chat\.js"><\/script>/);
   });
 
-  test('কুইক-মেসেজ চিপগুলো data-quick-msg পেয়েছে', () => {
-    expect(count(chatView, /data-quick-msg=/g)).toBe(7);
-    expect(chatJs).toContain('[data-quick-msg]');
+  test('ক্যাটাগরি মেনুর বাটনগুলো data-category hook পায়', () => {
+    expect(chatView).toContain('data-category=');
+    expect(chatJs).toContain('[data-category]');
+    expect(chatJs).toMatch(/btn\.addEventListener\('click'/);
   });
 
-  test('বট/এজেন্ট মোড টগল নেই (9e61e45) — ফাইল-বাতিল hook আছে', () => {
-    // AI সাপোর্ট এখন Chatbase iframe দিয়ে; সকেট-চ্যাট শুধু লাইভ এজেন্টের জন্য,
-    // তাই data-chat-mode টগল ইচ্ছাকৃতভাবে সরানো হয়েছে।
+  test('AI/বট অংশ নেই — শুধু লাইভ এজেন্ট; ফাইল-বাতিল hook আছে', () => {
+    expect(chatView + chatJs).not.toMatch(/chatbase|botMode|<iframe/i);
     expect(count(chatView, /data-chat-mode=/g)).toBe(0);
-    expect(chatJs).not.toContain('[data-chat-mode]');
     expect(count(chatView, /data-clear-file/g)).toBe(1);
     expect(chatJs).toContain('[data-clear-file]');
   });
 
-  test('welcome কার্ডের বাটনগুলো আর innerHTML স্ট্রিং থেকে আসে না', () => {
-    // আগে পাঁচটা বাটন `onclick="sendQuickMessage('...')"` সহ একটা টেমপ্লেট
-    // লিটারেলে জোড়া দেওয়া হত — রানটাইমে তৈরি ইনলাইন হ্যান্ডলার।
+  test('চ্যাটে innerHTML ব্যবহার হয় না', () => {
     expect(chatJs).not.toMatch(/onclick=/);
-    expect(chatJs).toMatch(/createElement\('button'\)/);
-    expect(chatJs).toMatch(/btn\.addEventListener\('click'/);
+    expect(chatJs).not.toMatch(/innerHTML\s*=/);
   });
 
   test('সার্ভার-সাইড মান JSON ব্লক থেকে পড়া হয়, স্ক্রিপ্টে ইনজেক্ট হয় না', () => {

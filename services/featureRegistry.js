@@ -159,12 +159,6 @@ const FEATURES = [
     enforcement: ['routes/chat.js']
   },
   {
-    key: 'ai_chatbot', label: 'AI Chatbot', labelKey: 'admin_ff_name_ai_chatbot', descriptionKey: 'admin_ff_desc_ai_chatbot', category: 'communication', icon: 'fa-robot', order: 51,
-    defaultEnabled: true,
-    description: 'হেল্প সেন্টারের স্বয়ংক্রিয় বট রিপ্লাই',
-    enforcement: ['routes/help-center.js']
-  },
-  {
     key: 'news', label: 'News', labelKey: 'admin_ff_name_news', descriptionKey: 'admin_ff_desc_news', category: 'communication', icon: 'fa-newspaper', order: 52,
     defaultEnabled: true,
     description: 'নিউজ তালিকা ও বিস্তারিত পেজ',

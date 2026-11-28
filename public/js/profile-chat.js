@@ -1,9 +1,7 @@
-// views/profile/chat.ejs-এর আচরণ। আগে এটা একটা ইনলাইন <script> ব্লক ছিল আর
-// ১৫টা ইনলাইন onclick হ্যান্ডলার ছিল — যার ৫টা টেমপ্লেটে নয়, রানটাইমে
-// innerHTML দিয়ে তৈরি হত (welcome কার্ডের কুইক-বাটনগুলো)। ওই ৫টাও সমান
-// সমস্যা: script-src-attr 'none' ওদেরও ব্লক করত।
+// views/profile/chat.ejs-এর আচরণ: ক্যাটাগরি মেনু, তথ্য-ফর্ম ও লাইভ এজেন্ট চ্যাট।
+// কোনো ইনলাইন হ্যান্ডলার নেই (CSP script-src-attr 'none')।
 //
-// সার্ভার-সাইড মান (user id, অনুবাদ, সাইটের নাম) এখন একটা
+// সার্ভার-সাইড মান (user id, ক্যাটাগরি, অনুবাদ) একটা
 // <script type="application/json"> ব্লক থেকে আসে — ওটা executable নয়,
 // তাই CSP-তে কোনো ছাড় লাগে না।
 //
@@ -19,54 +17,153 @@
   var messagesDiv, messageInput, sendButton, fileInput, filePreview, previewImg, previewName;
   var selectedFile = null;
   var selectedFileType = null;
-  var botMode = false; // বট মোড টগল বাটন সরানো হয়েছে — AI সাপোর্ট এখন সরাসরি Chatbase iframe দিয়ে হয়, এই সকেট-চ্যাট শুধু লাইভ এজেন্টের জন্য
 
-  // ==== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ ====
-  // নতুন কোনো chat UI নয় — বিদ্যমান AI প্যানেল (Chatbase iframe) ও বিদ্যমান
-  // live-agent প্যানেল (#chat-container, ইতিমধ্যে নিচে আছে) এর মধ্যে টগল করা হয়,
-  // এবং users.support_status অনুযায়ী একটা ছোট status ব্যানার দেখানো হয়।
-  var aiPanel, liveAgentPanelHeader, talkToLiveAgentBtn, statusBanner;
+  // ==== মেনু → (ফর্ম) → লাইভ এজেন্ট চ্যাট ====
+  // তিনটি ভিউর একটিই একসময় দেখা যায়: ক্যাটাগরি মেনু, তথ্য-ফর্ম, লাইভ চ্যাট।
+  var menuPanel, reportPanel, chatPanel, statusBanner, openChatBtn, newReplyNotice;
+  var reportForm, reportTitle, reportError, reportSubmit;
+  var currentView = null;
+  var activeCategory = null;
+  var historyReady = null;
 
-  function showAiView() {
-    if (aiPanel) aiPanel.style.display = '';
-    if (liveAgentPanelHeader) liveAgentPanelHeader.style.display = 'none';
-    if (messagesDiv && messagesDiv.parentElement) messagesDiv.parentElement.style.display = 'none';
+  function isActiveStatus(status) {
+    return status === 'waiting' || status === 'connected';
   }
 
-  function showLiveAgentView() {
-    if (aiPanel) aiPanel.style.display = 'none';
-    if (liveAgentPanelHeader) liveAgentPanelHeader.style.display = 'flex';
-    if (messagesDiv && messagesDiv.parentElement) messagesDiv.parentElement.style.display = 'flex';
+  function showView(name) {
+    currentView = name;
+    menuPanel.hidden = name !== 'menu';
+    reportPanel.hidden = name !== 'form';
+    chatPanel.hidden = name !== 'chat';
+    if (name === 'chat') {
+      newReplyNotice.hidden = true;
+      scrollToBottom();
+    }
   }
 
   function applyStatus(status) {
-    if (statusBanner) {
-      if (status === 'waiting') statusBanner.textContent = t('chat_status_waiting');
-      else if (status === 'connected') statusBanner.textContent = t('chat_status_connected');
-      else if (status === 'resolved') statusBanner.textContent = t('chat_status_resolved');
-      else statusBanner.textContent = '';
+    if (!statusBanner) return;
+    if (status === 'waiting') statusBanner.textContent = t('chat_status_waiting');
+    else if (status === 'connected') statusBanner.textContent = t('chat_status_connected');
+    else if (status === 'resolved') statusBanner.textContent = t('chat_status_resolved');
+    else statusBanner.textContent = '';
+  }
+
+  // এজেন্টের উত্তর এলে ইউজার যেন দেখতে পান। ফর্ম পূরণের মাঝখানে হঠাৎ ভিউ বদলানো
+  // হয় না (লেখা হারানোর অনুভূতি হয়) — বদলে ওপরে একটা নোটিশ দেখানো হয়।
+  function surfaceAgentActivity() {
+    if (openChatBtn) openChatBtn.hidden = false;
+    if (currentView === 'form') newReplyNotice.hidden = false;
+    else if (currentView !== 'chat') showView('chat');
+  }
+
+  function postJson(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: res.ok, data: data || {} };
+      });
+    });
+  }
+
+  function showSubmitted(data) {
+    if (data.message) {
+      appendMessage(data.message.message, false, data.message.createdAt);
     }
-    // 'ai' ছাড়া বাকি সব অবস্থাতেই (waiting/connected/resolved) ইউজার একবার
-    // handoff শুরু করে ফেলেছে — history/continuity বজায় রাখতে live প্যানেলই দেখানো হয়।
-    if (status === 'waiting' || status === 'connected' || status === 'resolved') {
-      showLiveAgentView();
-    } else {
-      showAiView();
+    applyStatus(data.status);
+    openChatBtn.hidden = false;
+    showView('chat');
+  }
+
+  // ---- মেনু ----
+  function setMenuBusy(busy) {
+    document.querySelectorAll('[data-category]').forEach(function (btn) { btn.disabled = busy; });
+  }
+
+  function chooseCategory(key) {
+    var category = config.categories && config.categories[key];
+    if (!category) return;
+    if (category.form) {
+      openForm(key);
+      return;
+    }
+    setMenuBusy(true);
+    historyReady
+      .then(function () { return postJson('/chat/live-agent', { category: key }); })
+      .then(function (r) {
+        if (!r.ok) { window.alert(r.data.error || t('chat_report_failed')); return; }
+        showSubmitted(r.data);
+      })
+      .catch(function () { window.alert(t('chat_report_failed')); })
+      .then(function () { setMenuBusy(false); });
+  }
+
+  // ---- ফর্ম ----
+  function clearFormError() {
+    reportError.hidden = true;
+    reportForm.querySelectorAll('input').forEach(function (input) {
+      input.classList.remove('sc-input-invalid');
+    });
+  }
+
+  function showFormError(text, field) {
+    reportError.textContent = text;
+    reportError.hidden = false;
+    var input = field && reportForm.elements.namedItem(field);
+    if (input) {
+      input.classList.add('sc-input-invalid');
+      input.focus();
     }
   }
 
-  function fetchStatus() {
-    fetch('/chat/status')
-      .then(function (res) { return res.json(); })
-      .then(function (data) { applyStatus(data && data.status); })
-      .catch(function () { /* ব্যর্থ হলে ডিফল্ট AI ভিউ-ই থাকবে */ });
+  function openForm(key) {
+    var category = config.categories[key];
+    if (activeCategory !== key) reportForm.reset();
+    activeCategory = key;
+    clearFormError();
+    reportTitle.textContent = category.title;
+    reportForm.querySelectorAll('[data-optional]').forEach(function (mark) {
+      mark.hidden = category.required.indexOf(mark.getAttribute('data-optional')) !== -1;
+    });
+    showView('form');
   }
 
-  function talkToLiveAgent() {
-    fetch('/chat/live-agent', { method: 'POST' })
-      .then(function (res) { return res.json(); })
-      .then(function (data) { applyStatus(data && data.status); })
-      .catch(function () { /* নেটওয়ার্ক সমস্যা হলে ব্যানার আপডেট না-ও হতে পারে, কিন্তু existing chat ভেঙে যাবে না */ });
+  function submitReport(event) {
+    event.preventDefault();
+    clearFormError();
+    var category = config.categories[activeCategory];
+    if (!category) return;
+
+    var body = { category: activeCategory };
+    var missing = null;
+    ['senderNumber', 'receiverNumber', 'transactionId', 'occurredAt'].forEach(function (field) {
+      var input = reportForm.elements.namedItem(field);
+      body[field] = input.value.trim();
+      if (!missing && !body[field] && category.required.indexOf(field) !== -1) missing = field;
+    });
+    if (missing) {
+      showFormError(t('chat_report_required'), missing);
+      return;
+    }
+
+    reportSubmit.disabled = true;
+    historyReady
+      .then(function () { return postJson('/chat/report', body); })
+      .then(function (r) {
+        if (!r.ok) {
+          showFormError(r.data.error || t('chat_report_failed'), r.data.field);
+          return;
+        }
+        reportForm.reset();
+        activeCategory = null;
+        showSubmitted(r.data);
+        if (r.data.duplicate) statusBanner.textContent = t('chat_report_duplicate');
+      })
+      .catch(function () { showFormError(t('chat_report_failed')); })
+      .then(function () { reportSubmit.disabled = false; });
   }
 
   function readConfig() {
@@ -84,65 +181,6 @@
     return value == null || value === '' ? (fallback || '') : value;
   }
 
-  function sendQuickMessage(text) {
-    messageInput.value = text;
-    return sendMessage();
-  }
-
-  // welcome কার্ড। কাঠামোটা innerHTML দিয়েই বসে (এতে কোনো হ্যান্ডলার নেই),
-  // কিন্তু কুইক-বাটনগুলো DOM API দিয়ে বানিয়ে addEventListener যুক্ত হয় —
-  // আগে ওগুলো click-হ্যান্ডলার অ্যাট্রিবিউটসহ স্ট্রিং হিসেবে বসত।
-  function showWelcome() {
-    var welcomeDiv = document.createElement('div');
-    var card = document.createElement('div');
-    card.style.cssText = 'background:#fff;color:#000;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:8px';
-
-    var header = document.createElement('div');
-    header.style.cssText = 'padding:14px;background:#f9fafb;display:flex;align-items:center;gap:12px;border-bottom:1px solid #e5e7eb';
-
-    var avatar = document.createElement('div');
-    avatar.style.cssText = 'width:40px;height:40px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:18px';
-    avatar.textContent = 'L';
-    header.appendChild(avatar);
-
-    var titles = document.createElement('div');
-    var title = document.createElement('div');
-    title.style.cssText = 'font-weight:800;color:#111';
-    title.textContent = (config.siteName || '') + ' Support';
-    var subtitle = document.createElement('div');
-    subtitle.style.cssText = 'font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px';
-    subtitle.textContent = t('support_service');
-    titles.appendChild(title);
-    titles.appendChild(subtitle);
-    header.appendChild(titles);
-    card.appendChild(header);
-
-    var body = document.createElement('div');
-    body.style.cssText = 'padding:16px';
-    var intro = document.createElement('p');
-    intro.style.cssText = 'font-size:13px;color:#374151;line-height:1.6;margin-bottom:16px';
-    intro.textContent = t('welcome_support');
-    body.appendChild(intro);
-
-    var list = document.createElement('div');
-    list.style.cssText = 'display:flex;flex-direction:column;gap:8px';
-    ['q_deposit', 'q_withdraw', 'q_account', 'q_about', 'q_event'].forEach(function (key) {
-      var label = t(key);
-      if (!label) return;
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.style.cssText = 'width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center';
-      btn.textContent = label;
-      btn.addEventListener('click', function () { sendQuickMessage(label); });
-      list.appendChild(btn);
-    });
-    body.appendChild(list);
-    card.appendChild(body);
-
-    welcomeDiv.appendChild(card);
-    messagesDiv.appendChild(welcomeDiv);
-  }
-
   function clearFile() {
     selectedFile = null;
     selectedFileType = null;
@@ -157,7 +195,7 @@
     div.style.cssText = 'display:flex;justify-content:' + (isAdmin ? 'flex-start' : 'flex-end');
 
     var inner = document.createElement('div');
-    inner.style.cssText = 'max-width:80%;border-radius:12px;padding:10px 14px;' +
+    inner.style.cssText = 'max-width:85%;border-radius:12px;padding:8px 11px;' +
       (isAdmin ? 'background:rgba(255,255,255,0.1);color:var(--text-main)' : 'background:var(--grad-gold);color:#000');
 
     if (fileUrl) {
@@ -178,7 +216,7 @@
 
     if (text) {
       var p = document.createElement('p');
-      p.style.cssText = 'font-size:14px;margin:0';
+      p.style.cssText = 'font-size:13px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere';
       p.textContent = text;
       inner.appendChild(p);
     }
@@ -229,11 +267,11 @@
       message: text,
       isAdmin: false,
       fileUrl: fileUrl,
-      fileType: fileType,
-      botMode: botMode
+      fileType: fileType
     });
 
     appendMessage(text, false, new Date(), fileUrl, fileType);
+    openChatBtn.hidden = false;
     messageInput.value = '';
     clearFile();
     scrollToBottom();
@@ -252,40 +290,70 @@
     previewName = document.getElementById('preview-name');
     if (!messagesDiv || !messageInput || !sendButton) return;
 
-    aiPanel = document.getElementById('ai-support-panel');
-    liveAgentPanelHeader = document.getElementById('live-agent-panel');
-    talkToLiveAgentBtn = document.getElementById('talk-to-live-agent');
+    menuPanel = document.getElementById('support-menu');
+    reportPanel = document.getElementById('report-panel');
+    chatPanel = document.getElementById('live-chat-panel');
     statusBanner = document.getElementById('support-status-banner');
-    if (talkToLiveAgentBtn) talkToLiveAgentBtn.addEventListener('click', talkToLiveAgent);
-    // ডিফল্ট: AI প্যানেল দেখানো, তারপর প্রকৃত status অনুযায়ী দরকার হলে live প্যানেলে সুইচ
-    showAiView();
-    fetchStatus();
+    openChatBtn = document.getElementById('open-chat');
+    newReplyNotice = document.getElementById('new-reply-notice');
+    reportForm = document.getElementById('report-form');
+    reportTitle = document.getElementById('report-title');
+    reportError = document.getElementById('report-error');
+    reportSubmit = document.getElementById('report-submit');
+    if (!menuPanel || !reportPanel || !chatPanel || !reportForm) return;
+
+    document.querySelectorAll('[data-category]').forEach(function (btn) {
+      btn.addEventListener('click', function () { chooseCategory(btn.getAttribute('data-category')); });
+    });
+    document.querySelectorAll('[data-show-menu]').forEach(function (btn) {
+      btn.addEventListener('click', function () { showView('menu'); });
+    });
+    openChatBtn.addEventListener('click', function () { showView('chat'); });
+    newReplyNotice.addEventListener('click', function () { showView('chat'); });
+    reportForm.addEventListener('submit', submitReport);
 
     socket = window.livoSocket();
     socket.emit('join', userId);
-
-    // কুইক-মেসেজ চিপ — বার্তাটা data-* অ্যাট্রিবিউটে
-    document.querySelectorAll('[data-quick-msg]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        sendQuickMessage(btn.getAttribute('data-quick-msg'));
-      });
-    });
 
     document.querySelectorAll('[data-clear-file]').forEach(function (btn) {
       btn.addEventListener('click', clearFile);
     });
 
-    fetch('/chat/history')
+    var statusReady = fetch('/chat/status')
+      .then(function (res) { return res.json(); })
+      .then(function (data) { applyStatus(data && data.status); return data && data.status; })
+      .catch(function () { return null; });
+
+    historyReady = fetch('/chat/history')
       .then(function (res) { return res.json(); })
       .then(function (messages) {
-        showWelcome();
-        if (Array.isArray(messages)) {
-          messages.forEach(function (msg) {
-            appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type);
-          });
-          scrollToBottom();
-        }
-      });
+        if (!Array.isArray(messages)) return [];
+        messagesDiv.textContent = '';
+        messages.forEach(function (msg) {
+          appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type);
+        });
+        scrollToBottom();
+        return messages;
+      })
+      .catch(function () { return []; });
+
+    // হেল্প সেন্টার থেকে ?category=deposit|withdraw দিয়ে এলে সরাসরি ফর্ম খোলে
+    var requested = new URLSearchParams(window.location.search).get('category');
+    var preset = requested && Object.prototype.hasOwnProperty.call(config.categories || {}, requested)
+      && config.categories[requested].form ? requested : null;
+    if (preset) openForm(preset);
+
+    // চলমান কথোপকথন বা না-পড়া উত্তর থাকলে চ্যাট, নাহলে আগে মেনু
+    Promise.all([statusReady, historyReady]).then(function (results) {
+      var messages = results[1];
+      openChatBtn.hidden = messages.length === 0;
+      var unread = messages.some(function (m) { return m.is_admin && !m.is_read; });
+      if (currentView === null) {
+        showView(isActiveStatus(results[0]) || unread ? 'chat' : 'menu');
+      } else if (unread) {
+        surfaceAgentActivity();
+      }
+    });
 
     fileInput.addEventListener('change', function () {
       var file = fileInput.files[0];
@@ -321,12 +389,15 @@
       if (data.isAdmin) {
         appendMessage(data.message, true, data.createdAt, data.fileUrl, data.fileType);
         scrollToBottom();
+        surfaceAgentActivity();
       }
     });
 
     // অ্যাডমিন accept/resolve করলে (routes/chat.js) রিয়েল-টাইমে ব্যানার/প্যানেল আপডেট
     socket.on('support_status', function (data) {
-      applyStatus(data && data.status);
+      var status = data && data.status;
+      applyStatus(status);
+      if (status === 'connected' && currentView === 'menu') showView('chat');
     });
   }
 

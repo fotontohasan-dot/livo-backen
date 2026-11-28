@@ -773,7 +773,10 @@ router.post('/feedback', isAuth, async (req, res) => {
 });
 
 router.get('/chat', isAuth, (req, res) => {
-  res.render('profile/chat', { user: req.session.user });
+  res.render('profile/chat', {
+    user: req.session.user,
+    supportCategories: require('../services/supportReports').CATEGORIES
+  });
 });
 
 // ==================== লয়্যালটি পয়েন্ট ====================

@@ -5,7 +5,9 @@ const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { notifyUserSeen, notifyAdminsSeen, notifySupportStatus } = require('../services/socket');
+const { notifyUserSeen, notifyAdminsSeen, notifySupportStatus, emitUserSupportMessage } = require('../services/socket');
+const { createLimiter } = require('../middleware/rateLimitFactory');
+const supportReports = require('../services/supportReports');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -136,7 +138,46 @@ const upload = multer({
 });
 
 router.get('/', isAuth, requireFeature('live_chat'), (req, res) => {
-  res.render('profile/chat', { user: req.session.user });
+  res.render('profile/chat', { user: req.session.user, supportCategories: supportReports.CATEGORIES });
+});
+
+// ফর্ম ও ক্যাটাগরি রিকোয়েস্ট প্রতিটাই অ্যাডমিনের Telegram-এ যায় — তাই ইউজারপ্রতি সীমা
+const supportReportLimiter = createLimiter('support_report', {
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `u:${req.session.user.id}`,
+  handler: (req, res) => res.status(429).json({ error: req.t('common_rate_limited') })
+});
+
+// ডিপোজিট/উইথড্র সমস্যার ফর্ম: তথ্য জমা → চ্যাটে বসা → অ্যাডমিন প্যানেল ও Telegram
+router.post('/report', isAuth, requireFeature('live_chat'), supportReportLimiter, async (req, res) => {
+  const checked = supportReports.validateReport(req.body || {});
+  if (!checked.ok) {
+    return res.status(400).json({ error: req.t('chat_report_invalid'), field: checked.field });
+  }
+  try {
+    const { id: userId, username } = req.session.user;
+    const result = await supportReports.createReport({
+      userId, category: checked.category, data: checked.data, t: req.t
+    });
+    if (!result.duplicate) {
+      emitUserSupportMessage(userId, result.chat);
+      if (result.statusChanged) notifySupportStatus(userId, result.status);
+      require('../services/telegramNotifications').notifySupportReport({
+        userId, username, messageId: result.chat.id, reportId: result.reportId,
+        category: checked.category, data: checked.data
+      });
+    }
+    res.json({
+      reportId: result.reportId,
+      status: result.status,
+      duplicate: result.duplicate,
+      message: result.chat ? { message: result.chat.message, createdAt: result.chat.createdAt } : null
+    });
+  } catch (err) {
+    console.error('chat report error:', err.message);
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
 });
 
 router.get('/admin', isAdmin, requireSupportView, (req, res) => {
@@ -205,11 +246,11 @@ router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => 
   }
 });
 
-// ==================== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ ====================
+// ==================== লাইভ সাপোর্ট স্ট্যাটাস ====================
 // এই চারটি রুট নতুন কোনো chat/conversation সিস্টেম তৈরি করে না — বিদ্যমান
 // users.support_status কলাম (উপরে migrations.js) ও বিদ্যমান socket infra
-// (services/socket.js-এর user:<id>/admins room) ব্যবহার করে শুধু AI ও Human
-// chat-এর মধ্যে একটি স্পষ্ট status/handoff যুক্ত করা হচ্ছে।
+// (services/socket.js-এর user:<id>/admins room) ব্যবহার করে। 'ai' মানটি পুরনো ডেটার
+// সাথে সামঞ্জস্যের জন্য রাখা — এর অর্থ এখন "কোনো সক্রিয় সাপোর্ট অনুরোধ নেই"।
 
 // ইউজার নিজের বর্তমান support_status জানতে চাইলে (পেজ লোড/রিফ্রেশে)
 router.get('/status', isAuth, requireFeature('live_chat'), async (req, res) => {
@@ -222,38 +263,59 @@ router.get('/status', isAuth, requireFeature('live_chat'), async (req, res) => {
   }
 });
 
-// "Talk to Live Agent" — ইউজার নিজের জন্যই status বদলাতে পারে, session থেকে userId
-// নেওয়া হয় (client থেকে userId কখনো বিশ্বাস করা হয় না)।
-router.post('/live-agent', isAuth, requireFeature('live_chat'), async (req, res) => {
+// মেনু থেকে লাইভ এজেন্ট চাওয়া (ঐচ্ছিক category সহ)। ইউজার নিজের জন্যই status বদলাতে
+// পারে, session থেকে userId নেওয়া হয় (client থেকে userId কখনো বিশ্বাস করা হয় না)।
+router.post('/live-agent', isAuth, requireFeature('live_chat'), supportReportLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const current = await pool.query('SELECT support_status FROM users WHERE id = $1', [userId]);
-    const currentStatus = current.rows[0] && current.rows[0].support_status;
-    // ইতিমধ্যে waiting/connected থাকলে আবার waiting-এ ফেরত পাঠানো হবে না (একই user-এর
-    // জন্য একাধিক active human support request তৈরি হওয়া আটকানো — রিকোয়ারমেন্ট #4)
-    if (currentStatus === 'waiting' || currentStatus === 'connected') {
-      return res.json({ status: currentStatus });
+    const username = req.session.user.username;
+    const requested = req.body && req.body.category;
+    if (requested !== undefined && !supportReports.getCategory(requested)) {
+      return res.status(400).json({ error: req.t('chat_report_invalid'), field: 'category' });
     }
-    await pool.query(
-      `UPDATE users SET support_status = 'waiting', support_status_updated_at = NOW() WHERE id = $1`,
-      [userId]
-    );
-    notifySupportStatus(userId, 'waiting');
-    // অ্যাডমিন প্যানেলে "নতুন লাইভ সাপোর্ট অনুরোধ" alert — বিদ্যমান emitAdminAlert/Telegram
-    // ইনফ্রা পুনর্ব্যবহার, নতুন কিছু নয়
-    try {
-      const { emitAdminAlert } = require('../services/socket');
-      emitAdminAlert('chat', {
-        title: req.t ? req.t('admin_chat_live_request_title') : 'Live agent requested',
-        message: req.session.user.username || ''
-      });
-    } catch (e) { /* alert ব্যর্থ হলেও handoff চলবে */ }
+
+    let result;
+    if (requested) {
+      result = await supportReports.startCategoryChat({ userId, category: requested, t: req.t });
+    } else {
+      // ইতিমধ্যে waiting/connected থাকলে আবার waiting-এ ফেরত পাঠানো হবে না (একই user-এর
+      // জন্য একাধিক active human support request তৈরি হওয়া আটকানো — রিকোয়ারমেন্ট #4)
+      const upd = await pool.query(
+        `UPDATE users SET support_status = 'waiting', support_status_updated_at = NOW()
+          WHERE id = $1 AND support_status NOT IN ('waiting', 'connected') RETURNING support_status`,
+        [userId]
+      );
+      if (!upd.rowCount) {
+        const cur = await pool.query('SELECT support_status FROM users WHERE id = $1', [userId]);
+        return res.json({ status: cur.rows[0] && cur.rows[0].support_status });
+      }
+      result = { status: 'waiting', statusChanged: true, duplicate: false };
+    }
+
+    if (result.chat) emitUserSupportMessage(userId, result.chat);
+    if (result.statusChanged) {
+      notifySupportStatus(userId, result.status);
+      // অ্যাডমিন প্যানেলে "নতুন লাইভ সাপোর্ট অনুরোধ" alert — বিদ্যমান emitAdminAlert ইনফ্রা
+      try {
+        const { emitAdminAlert } = require('../services/socket');
+        emitAdminAlert('chat', {
+          title: req.t ? req.t('admin_chat_live_request_title') : 'Live agent requested',
+          message: username || ''
+        });
+      } catch (e) { /* alert ব্যর্থ হলেও handoff চলবে */ }
+    }
     // emitAdminAlert শুধু অ্যাডমিন প্যানেলে যায়, Telegram-এ নয় — তাই এখানে আলাদা করে পাঠানো হচ্ছে
-    try {
-      const { notifySupportMessage } = require('../services/telegramNotifications');
-      notifySupportMessage({ userId, username: req.session.user.username, liveAgent: true });
-    } catch (e) { /* Telegram ব্যর্থ হলেও handoff চলবে */ }
-    res.json({ status: 'waiting' });
+    if (!result.duplicate) {
+      require('../services/telegramNotifications').notifySupportMessage({
+        userId, username, liveAgent: true,
+        messageId: result.chat ? result.chat.id : null,
+        topic: requested ? supportReports.CATEGORIES[requested].adminLabel : null
+      });
+    }
+    res.json({
+      status: result.status,
+      message: result.chat ? { message: result.chat.message, createdAt: result.chat.createdAt } : null
+    });
   } catch (err) {
     console.error('chat live-agent error:', err.message);
     res.status(500).json({ error: req.t('common_server_error_short') });

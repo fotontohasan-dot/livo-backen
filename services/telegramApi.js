@@ -1,8 +1,9 @@
 // services/telegramApi.js
-// Telegram Bot API-র পাতলা ক্লায়েন্ট। সবসময় env-এর TELEGRAM_BOT_TOKEN ব্যবহার করে, কারণ
-// webhook ওই বটেই রেজিস্টার হয়। কোনো ফাংশন throw করে না; ব্যর্থতায় { ok:false } ফেরত দেয়।
+// Telegram Bot API-র পাতলা ক্লায়েন্ট। নোটিফিকেশন, webhook ও রিপ্লাই — সব একই বটে যায়:
+// Admin প্যানেলে সেভ করা টোকেন, না থাকলে TELEGRAM_BOT_TOKEN। কোনো ফাংশন throw করে না; ব্যর্থতায় { ok:false } ফেরত দেয়।
 // URL কখনো লগ করা হয় না (তাতে bot token থাকে)।
 const { integrationFetch } = require('../utils/integrationHttp');
+const telegramConfig = require('./telegramConfig');
 
 const CHUNK_SIZE = 4000; // Telegram-এর সীমা 4096
 
@@ -10,8 +11,18 @@ function escapeHtml(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+async function getBotToken() {
+  try {
+    const { botToken } = await telegramConfig.getConfig();
+    if (botToken) return botToken;
+  } catch (err) {
+    console.error('[telegram] কনফিগ লোড ব্যর্থ:', err.message);
+  }
+  return process.env.TELEGRAM_BOT_TOKEN || null;
+}
+
 async function telegramRequest(method, payload = {}) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const token = await getBotToken();
   if (!token) return { ok: false, description: 'bot_token_missing' };
   try {
     const res = await integrationFetch('telegram', `https://api.telegram.org/bot${token}/${method}`, {
@@ -61,4 +72,4 @@ async function sendPlainText(chatId, text) {
   return last;
 }
 
-module.exports = { escapeHtml, telegramRequest, sendTelegramMessage, sendPlainText };
+module.exports = { escapeHtml, getBotToken, telegramRequest, sendTelegramMessage, sendPlainText };
