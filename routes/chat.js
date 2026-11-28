@@ -149,23 +149,88 @@ const supportReportLimiter = createLimiter('support_report', {
   handler: (req, res) => res.status(429).json({ error: req.t('common_rate_limited') })
 });
 
-// ডিপোজিট/উইথড্র সমস্যার ফর্ম: তথ্য জমা → চ্যাটে বসা → অ্যাডমিন প্যানেল ও Telegram
-router.post('/report', isAuth, requireFeature('live_chat'), supportReportLimiter, async (req, res) => {
+// প্রমাণ-ফাইলের (স্ক্রিনশট + ভিডিও) জন্য আলাদা multer — ভিডিও বড় হয়, তাই সীমা ৩০MB; ফাইল সর্বোচ্চ MAX_PROOF_FILES টি।
+// ফাইল মেমরিতে আসে, magic byte যাচাই পেরোলে তবেই Cloudinary-তে যায়।
+const proofUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 30 * 1024 * 1024, files: supportReports.MAX_PROOF_FILES },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) return cb(new Error('FILE_TYPE'));
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) return cb(new Error('FILE_TYPE'));
+    cb(null, true);
+  }
+}).array('proofs', supportReports.MAX_PROOF_FILES);
+
+function receiveProofs(req, res, next) {
+  proofUpload(req, res, (err) => {
+    if (!err) return next();
+    const tooBig = err.code === 'LIMIT_FILE_SIZE';
+    const tooMany = err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE';
+    return res.status(400).json({
+      error: req.t(tooBig ? 'chat_report_proof_too_big' : tooMany ? 'chat_report_proof_too_many' : 'chat_report_proof_bad_type'),
+      field: 'proofs'
+    });
+  });
+}
+
+function uploadProofToCloudinary(file, fileType) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'bet420/support-reports', resource_type: fileType === 'video' ? 'video' : 'image', timeout: 60000 },
+      (error, result) => {
+        require('../services/integrationStatus').recordIntegrationResult('cloudinary', !error, error && error.message);
+        return error ? reject(error) : resolve(result);
+      }
+    );
+    stream.end(file.buffer);
+  });
+}
+
+// ডিপোজিট/উইথড্র সমস্যার ফর্ম: তথ্য + প্রমাণ (স্ক্রিনশট ও ভিডিও) জমা → DB → চ্যাটে বসা → অ্যাডমিন প্যানেল ও Telegram
+router.post('/report', isAuth, requireFeature('live_chat'), supportReportLimiter, receiveProofs, async (req, res) => {
   const checked = supportReports.validateReport(req.body || {});
   if (!checked.ok) {
     return res.status(400).json({ error: req.t('chat_report_invalid'), field: checked.field });
   }
+
+  // প্রতিটা ফাইলের প্রকৃত টাইপ magic byte দিয়ে যাচাই (extension/MIME ফাঁকি ধরতে)
+  const accepted = [];
+  for (const file of req.files || []) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const detected = detectMagicBytes(file.buffer);
+    if (!detected || !extensionMatchesDetectedType(ext, detected)) {
+      return res.status(400).json({ error: req.t('chat_file_content_mismatch'), field: 'proofs' });
+    }
+    accepted.push({ file, fileType: detected.startsWith('video') ? 'video' : 'image' });
+  }
+  const proofCheck = supportReports.validateProofs(checked.category, accepted);
+  if (!proofCheck.ok) {
+    const key = proofCheck.reason === 'video_missing' ? 'chat_report_proof_video_missing'
+      : proofCheck.reason === 'too_many' ? 'chat_report_proof_too_many' : 'chat_report_proof_screenshot_missing';
+    return res.status(400).json({ error: req.t(key), field: 'proofs' });
+  }
+
+  let uploaded = [];
   try {
     const { id: userId, username } = req.session.user;
+    uploaded = await Promise.all(accepted.map(async ({ file, fileType }) => {
+      const r = await uploadProofToCloudinary(file, fileType);
+      return { url: r.secure_url, publicId: r.public_id, fileType, originalName: file.originalname, size: file.size };
+    }));
+
     const result = await supportReports.createReport({
-      userId, category: checked.category, data: checked.data, t: req.t
+      userId, category: checked.category, data: checked.data, t: req.t, files: uploaded
     });
-    if (!result.duplicate) {
+    if (result.duplicate) {
+      // একই তথ্য আগেই জমা হয়েছে — এই আপলোডগুলো এতিম হয়ে যাবে, তাই মুছে ফেলা
+      await cleanupProofs(uploaded);
+    } else {
       emitUserSupportMessage(userId, result.chat);
       if (result.statusChanged) notifySupportStatus(userId, result.status);
       require('../services/telegramNotifications').notifySupportReport({
         userId, username, messageId: result.chat.id, reportId: result.reportId,
-        category: checked.category, data: checked.data
+        category: checked.category, data: checked.data, files: uploaded
       });
     }
     res.json({
@@ -176,6 +241,25 @@ router.post('/report', isAuth, requireFeature('live_chat'), supportReportLimiter
     });
   } catch (err) {
     console.error('chat report error:', err.message);
+    await cleanupProofs(uploaded);
+    res.status(500).json({ error: req.t('chat_report_failed') });
+  }
+});
+
+async function cleanupProofs(files) {
+  await Promise.all((files || []).filter((f) => f.publicId).map((f) =>
+    cloudinary.uploader.destroy(f.publicId, { resource_type: f.fileType === 'video' ? 'video' : 'image' })
+      .catch((e) => console.error('proof cleanup error:', e.message))));
+}
+
+// এজেন্ট/অ্যাডমিন: একটি রিপোর্টের প্রমাণ-ফাইল দ্রুত দেখার জন্য
+router.get('/report/:id/files', isAdmin, requireSupportView, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  try {
+    res.json(await supportReports.getReportFiles(id));
+  } catch (err) {
+    console.error('report files error:', err.message);
     res.status(500).json({ error: req.t('common_server_error_short') });
   }
 });

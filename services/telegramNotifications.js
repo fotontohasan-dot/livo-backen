@@ -106,7 +106,7 @@ function sendSupportText({ id, username, messageId, bodyLines }) {
 }
 
 /** লাইভ চ্যাটের ডিপোজিট/উইথড্র সমস্যার ফর্ম — নির্দিষ্ট ফরম্যাটে (data আগেই যাচাই করা)। */
-async function notifySupportReport({ userId, username, messageId, reportId, category, data }) {
+async function notifySupportReport({ userId, username, messageId, reportId, category, data, files = [] }) {
   try {
     const id = Number(userId);
     if (!Number.isSafeInteger(id) || id <= 0 || !CATEGORIES[category]) return { sent: false, reason: 'invalid_report' };
@@ -118,7 +118,8 @@ async function notifySupportReport({ userId, username, messageId, reportId, cate
         `প্রেরকের নম্বর: ${value(data.senderNumber)}`,
         `রিসিভার নম্বর: ${value(data.receiverNumber)}`,
         `ট্রানজ্যাকশন আইডি: ${value(data.transactionId)}`,
-        `সময়: ${data.occurredAt ? escapeHtml(data.occurredAt) : 'দেওয়া হয়নি'}`
+        `সময়: ${data.occurredAt ? escapeHtml(data.occurredAt) : 'দেওয়া হয়নি'}`,
+        ...files.map((f, i) => `${f.fileType === 'video' ? '🎥 ভিডিও' : '🖼 স্ক্রিনশট'} ${i + 1}: ${escapeHtml(f.url)}`)
       ]
     });
   } catch (err) {

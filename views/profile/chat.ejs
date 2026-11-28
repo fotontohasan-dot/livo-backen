@@ -20,6 +20,7 @@
     <button type="button" class="sc-link sc-back" data-show-menu><%= t('chat_menu_back') %></button>
     <div class="sc-head" id="report-title"></div>
     <div class="sc-hint"><%= t('chat_report_intro') %></div>
+    <div class="sc-hint sc-hint-strong"><%= t('chat_report_time_instruction') %></div>
     <button type="button" class="sc-notice" id="new-reply-notice" hidden><%= t('chat_new_reply') %></button>
     <form id="report-form" novalidate>
       <label class="sc-label" for="report-sender"><%= t('chat_report_sender') %> <span data-optional="senderNumber" hidden><%= t('chat_report_optional') %></span></label>
@@ -33,6 +34,11 @@
 
       <label class="sc-label" for="report-time"><%= t('chat_report_time') %> <span data-optional="occurredAt" hidden><%= t('chat_report_optional') %></span></label>
       <input class="sc-input" id="report-time" name="occurredAt" type="datetime-local">
+
+      <label class="sc-label" for="report-proofs"><%= t('chat_report_proof') %> <span class="sc-required">*</span></label>
+      <div class="sc-hint"><%= t('chat_report_proof_hint') %></div>
+      <input class="sc-input sc-file" id="report-proofs" name="proofs" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
+      <ul class="sc-file-list" id="report-proof-list"></ul>
 
       <div class="sc-error" id="report-error" role="alert" hidden></div>
       <button type="submit" class="sc-submit" id="report-submit"><%= t('chat_report_submit') %></button>
@@ -89,6 +95,10 @@
   .sc-input { display: block; width: 100%; box-sizing: border-box; background: #fff; color: #111; border: 2px solid transparent; border-radius: 8px; padding: 6px 10px; font-size: 16px; margin-bottom: 8px; outline: none; min-height: 36px; }
   .sc-input:focus { border-color: var(--gold); }
   .sc-input-invalid { border-color: #ef4444; }
+  .sc-hint-strong { font-weight: 700; color: #fde68a; }
+  .sc-required { color: #fca5a5; }
+  .sc-file-list { list-style: none; margin: 4px 0 8px; padding: 0; font-size: 11.5px; color: #fff; }
+  .sc-file-list li { padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sc-wrap div.sc-error { background: #fef2f2 !important; color: #b91c1c !important; -webkit-text-fill-color: #b91c1c; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; margin: 0 0 8px; }
   .sc-submit { width: 100%; padding: 9px; border: none; border-radius: 8px; background: var(--grad-gold); color: #000; font-weight: 800; font-size: 13px; cursor: pointer; }
   .sc-submit:disabled { opacity: .6; cursor: wait; }
@@ -131,7 +141,7 @@
   userId: user.id,
   categories: Object.keys(supportCategories).reduce(function (all, key) {
     var c = supportCategories[key];
-    all[key] = { title: c.icon + ' ' + t(c.labelKey), form: !!c.form, required: c.required || [] };
+    all[key] = { title: c.icon + ' ' + t(c.labelKey), form: !!c.form, required: c.required || [], proofRequired: !!c.proofRequired };
     return all;
   }, {}),
   t: {
@@ -142,7 +152,12 @@
     chat_report_invalid: t('chat_report_invalid'),
     chat_report_required: t('chat_report_required'),
     chat_report_failed: t('chat_report_failed'),
-    chat_report_duplicate: t('chat_report_duplicate')
+    chat_report_duplicate: t('chat_report_duplicate'),
+    chat_report_proof_screenshot_missing: t('chat_report_proof_screenshot_missing'),
+    chat_report_proof_video_missing: t('chat_report_proof_video_missing'),
+    chat_report_proof_too_many: t('chat_report_proof_too_many'),
+    chat_report_proof_too_big: t('chat_report_proof_too_big'),
+    chat_report_proof_bad_type: t('chat_report_proof_bad_type')
   }
 }) %></script>
 <script src="/js/profile-chat.js"></script>

@@ -3572,5 +3572,13 @@
   "chat_report_failed": "Could not submit. Please try again shortly.",
   "chat_report_duplicate": "These details were already submitted.",
   "chat_report_ref": "report",
-  "chat_report_topic": "Topic"
+  "chat_report_topic": "Topic",
+  "chat_report_time_instruction": "Select the exact date and time when the transaction took place.",
+  "chat_report_proof": "Proof (screenshot and video)",
+  "chat_report_proof_hint": "Attach both a screenshot and a video of the transaction (JPG, PNG, WEBP, MP4, MOV, WEBM; up to 4 files, 30MB each).",
+  "chat_report_proof_screenshot_missing": "Please attach a screenshot (image) of the transaction.",
+  "chat_report_proof_video_missing": "Please attach a video of the transaction.",
+  "chat_report_proof_too_many": "You can attach up to 4 files.",
+  "chat_report_proof_too_big": "File is too large. Each file must be under 30MB.",
+  "chat_report_proof_bad_type": "Only JPG, PNG, WEBP images and MP4, MOV, WEBM videos are allowed."
 }

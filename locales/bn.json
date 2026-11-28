@@ -3572,5 +3572,13 @@
   "chat_report_failed": "জমা দেওয়া যায়নি। একটু পরে আবার চেষ্টা করুন।",
   "chat_report_duplicate": "এই তথ্য আগেই জমা হয়েছে।",
   "chat_report_ref": "রিপোর্ট",
-  "chat_report_topic": "বিষয়"
+  "chat_report_topic": "বিষয়",
+  "chat_report_time_instruction": "লেনদেনটি যে তারিখ ও সময়ে হয়েছে, সেই সঠিক তারিখ ও সময় নির্বাচন করুন।",
+  "chat_report_proof": "প্রমাণ (স্ক্রিনশট ও ভিডিও)",
+  "chat_report_proof_hint": "ট্রানজেকশনের স্ক্রিনশট এবং ভিডিও — দুটোই দিতে হবে (JPG, PNG, WEBP, MP4, MOV, WEBM; সর্বোচ্চ ৪টি ফাইল, প্রতিটি ৩০MB পর্যন্ত)।",
+  "chat_report_proof_screenshot_missing": "ট্রানজেকশনের স্ক্রিনশট (ছবি) যুক্ত করুন।",
+  "chat_report_proof_video_missing": "ট্রানজেকশনের ভিডিও যুক্ত করুন।",
+  "chat_report_proof_too_many": "সর্বোচ্চ ৪টি ফাইল দেওয়া যাবে।",
+  "chat_report_proof_too_big": "ফাইল অনেক বড়। প্রতিটি ফাইল ৩০MB-এর মধ্যে হতে হবে।",
+  "chat_report_proof_bad_type": "শুধু JPG, PNG, WEBP ছবি এবং MP4, MOV, WEBM ভিডিও দেওয়া যাবে।"
 }

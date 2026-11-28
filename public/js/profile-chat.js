@@ -69,6 +69,36 @@
     });
   }
 
+  // multipart (ফাইলসহ) POST — Content-Type ব্রাউজার নিজেই boundary-সহ বসায়
+  function postForm(url, formData) {
+    return fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' }, body: formData })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          return { ok: res.ok, data: data || {} };
+        });
+      });
+  }
+
+  var MAX_PROOF_FILES = 4;
+  var MAX_PROOF_BYTES = 30 * 1024 * 1024;
+  function proofKind(file) {
+    if (/^image\//.test(file.type)) return 'image';
+    if (/^video\//.test(file.type)) return 'video';
+    return null;
+  }
+
+  function renderProofList() {
+    var list = document.getElementById('report-proof-list');
+    var input = reportForm.elements.namedItem('proofs');
+    if (!list || !input) return;
+    list.textContent = '';
+    Array.prototype.forEach.call(input.files, function (file) {
+      var li = document.createElement('li');
+      li.textContent = (proofKind(file) === 'video' ? '🎥 ' : '🖼 ') + file.name;
+      list.appendChild(li);
+    });
+  }
+
   function showSubmitted(data) {
     if (data.message) {
       appendMessage(data.message.message, false, data.message.createdAt);
@@ -121,7 +151,7 @@
 
   function openForm(key) {
     var category = config.categories[key];
-    if (activeCategory !== key) reportForm.reset();
+    if (activeCategory !== key) { reportForm.reset(); renderProofList(); }
     activeCategory = key;
     clearFormError();
     reportTitle.textContent = category.title;
@@ -149,15 +179,31 @@
       return;
     }
 
+    // প্রমাণ: কমপক্ষে ১টি স্ক্রিনশট ও ১টি ভিডিও বাধ্যতামূলক
+    var formData = new FormData();
+    Object.keys(body).forEach(function (k) { formData.append(k, body[k]); });
+    if (category.proofRequired) {
+      var proofInput = reportForm.elements.namedItem('proofs');
+      var picked = Array.prototype.slice.call(proofInput.files);
+      var hasImage = picked.some(function (f) { return proofKind(f) === 'image'; });
+      var hasVideo = picked.some(function (f) { return proofKind(f) === 'video'; });
+      if (!hasImage) { showFormError(t('chat_report_proof_screenshot_missing'), 'proofs'); return; }
+      if (!hasVideo) { showFormError(t('chat_report_proof_video_missing'), 'proofs'); return; }
+      if (picked.length > MAX_PROOF_FILES) { showFormError(t('chat_report_proof_too_many'), 'proofs'); return; }
+      if (picked.some(function (f) { return f.size > MAX_PROOF_BYTES; })) { showFormError(t('chat_report_proof_too_big'), 'proofs'); return; }
+      picked.forEach(function (f) { formData.append('proofs', f); });
+    }
+
     reportSubmit.disabled = true;
     historyReady
-      .then(function () { return postJson('/chat/report', body); })
+      .then(function () { return postForm('/chat/report', formData); })
       .then(function (r) {
         if (!r.ok) {
           showFormError(r.data.error || t('chat_report_failed'), r.data.field);
           return;
         }
         reportForm.reset();
+        renderProofList();
         activeCategory = null;
         showSubmitted(r.data);
         if (r.data.duplicate) statusBanner.textContent = t('chat_report_duplicate');
@@ -311,6 +357,8 @@
     openChatBtn.addEventListener('click', function () { showView('chat'); });
     newReplyNotice.addEventListener('click', function () { showView('chat'); });
     reportForm.addEventListener('submit', submitReport);
+    var proofsField = reportForm.elements.namedItem('proofs');
+    if (proofsField) proofsField.addEventListener('change', renderProofList);
 
     socket = window.livoSocket();
     socket.emit('join', userId);

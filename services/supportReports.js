@@ -9,9 +9,9 @@ const { tzOffsetMinutes } = require('../utils/businessTime');
 // উইথড্রয় টাকা না পৌঁছালে ইউজারের কাছে প্রেরকের নম্বর/TrxID থাকে না, তাই সেগুলো ঐচ্ছিক।
 const CATEGORIES = {
   deposit: { labelKey: 'chat_deposit_issue', adminLabel: 'জমার সমস্যা', icon: '💳', form: true,
-    required: ['senderNumber', 'receiverNumber', 'transactionId', 'occurredAt'] },
+    required: ['senderNumber', 'receiverNumber', 'transactionId', 'occurredAt'], proofRequired: true },
   withdraw: { labelKey: 'chat_withdraw_issue', adminLabel: 'উত্তোলনের সমস্যা', icon: '💵', form: true,
-    required: ['receiverNumber', 'occurredAt'] },
+    required: ['receiverNumber', 'occurredAt'], proofRequired: true },
   bonus: { labelKey: 'chat_bonus_issue', adminLabel: 'বোনাস সমস্যা', icon: '🎁' },
   login: { labelKey: 'chat_login_issue', adminLabel: 'লগইন সমস্যা', icon: '🔑' },
   kyc: { labelKey: 'chat_kyc_issue', adminLabel: 'KYC ভেরিফিকেশন', icon: '🪪' },
@@ -82,12 +82,31 @@ function validateReport(body = {}) {
   return { ok: true, category: body.category, data };
 }
 
+// প্রমাণ: কমপক্ষে ১টি স্ক্রিনশট (ছবি) ও ১টি ভিডিও বাধ্যতামূলক, সর্বোচ্চ MAX_PROOF_FILES টি ফাইল।
+const MAX_PROOF_FILES = 4;
+
+/** files: [{ fileType: 'image'|'video', ... }] → { ok } | { ok:false, field:'proofs', reason } */
+function validateProofs(categoryKey, files) {
+  const category = getCategory(categoryKey);
+  if (!category || !category.proofRequired) return { ok: true };
+  const list = Array.isArray(files) ? files : [];
+  if (list.length > MAX_PROOF_FILES) return { ok: false, field: 'proofs', reason: 'too_many' };
+  if (!list.some((f) => f.fileType === 'image')) return { ok: false, field: 'proofs', reason: 'screenshot_missing' };
+  if (!list.some((f) => f.fileType === 'video')) return { ok: false, field: 'proofs', reason: 'video_missing' };
+  return { ok: true };
+}
+
 /** চ্যাটে ইউজারের মেসেজ হিসেবে যে লেখাটা জমা হয়। */
-function formatReportMessage(t, categoryKey, reportId, data) {
+function formatReportMessage(t, categoryKey, reportId, data, files = []) {
   const category = CATEGORIES[categoryKey];
   const lines = [`📋 ${t(category.labelKey)} (${t('chat_report_ref')} #R${reportId})`];
   for (const [field, labelKey] of Object.entries(FIELD_LABEL_KEYS)) {
     lines.push(`${t(labelKey)}: ${data[field] || '—'}`);
+  }
+  if (files.length) {
+    const images = files.filter((f) => f.fileType === 'image').length;
+    const videos = files.filter((f) => f.fileType === 'video').length;
+    lines.push(`${t('chat_report_proof')}: 🖼 ${images} · 🎥 ${videos}`);
   }
   return lines.join('\n');
 }
@@ -137,7 +156,7 @@ async function insertUserMessage(client, userId, message) {
 }
 
 /** ফর্মের রিপোর্ট জমা। একই তথ্য ১০ মিনিটের মধ্যে আবার এলে duplicate: true। */
-async function createReport({ userId, category, data, t }) {
+async function createReport({ userId, category, data, t, files = [] }) {
   return inTransaction(async (client) => {
     const current = await lockUser(client, userId);
     const same = await client.query(
@@ -158,7 +177,14 @@ async function createReport({ userId, category, data, t }) {
       [userId, category, data.senderNumber, data.receiverNumber, data.transactionId, data.occurredAt]
     );
     const reportId = report.rows[0].id;
-    const chat = await insertUserMessage(client, userId, formatReportMessage(t, category, reportId, data));
+    for (const f of files) {
+      await client.query(
+        `INSERT INTO support_report_files (report_id, file_url, file_type, public_id, original_name, size_bytes)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [reportId, f.url, f.fileType, f.publicId || null, (f.originalName || '').slice(0, 255) || null, f.size || null]
+      );
+    }
+    const chat = await insertUserMessage(client, userId, formatReportMessage(t, category, reportId, data, files));
     await client.query('UPDATE support_reports SET chat_message_id = $2 WHERE id = $1', [reportId, chat.id]);
     return { duplicate: false, reportId, chat, ...(await setStatus(client, userId, current)) };
   });
@@ -180,7 +206,15 @@ async function startCategoryChat({ userId, category, t }) {
   });
 }
 
+/** এজেন্টের যাচাইয়ের জন্য: একটি রিপোর্টের সব প্রমাণ-ফাইল। */
+async function getReportFiles(reportId) {
+  const r = await pool.query(
+    `SELECT id, file_url, file_type, original_name, size_bytes, created_at
+       FROM support_report_files WHERE report_id = $1 ORDER BY id`, [reportId]);
+  return r.rows;
+}
+
 module.exports = {
-  CATEGORIES, getCategory, validateReport, parseOccurredAt, formatReportMessage,
-  createReport, startCategoryChat
+  CATEGORIES, MAX_PROOF_FILES, getCategory, validateReport, validateProofs, parseOccurredAt,
+  formatReportMessage, createReport, startCategoryChat, getReportFiles
 };
