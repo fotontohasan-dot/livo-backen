@@ -3,6 +3,7 @@
 // নিট লোকসান = মোট বাজি - মোট জয়। লোকসান হলেই ক্যাশব্যাক, লাভ হলে কিছু না।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const businessTime = require('../utils/businessTime');
 
@@ -146,6 +147,7 @@ async function claimCashback(userId, category = 'sports', lang = 'bn') {
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, userId]);
+    await createBonus(client, userId, 'daily', amount); // টার্নওভার ৫x
     await client.query(`UPDATE daily_losses SET cashback_claimed = true WHERE id = $1 AND cashback_claimed = false`, [row.id]);
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)

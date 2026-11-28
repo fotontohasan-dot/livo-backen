@@ -3,6 +3,7 @@
 // নির্দিষ্ট স্ট্রিকে পৌঁছালে অতিরিক্ত বোনাস টাকা।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 
 // পুরনো নিয়ম (ফিক্সড): 3win=50, 5win=150, 7win=400, 10win=1000 — বাতিল
 // এরপর ২০% (১০০ বাজিতে ২০ বোনাস) → ৫% (১০০ বাজিতে ৫ বোনাস) → এখন ০.০৫%
@@ -62,6 +63,7 @@ async function recordGameResult(userId, won, betAmount) {
       if (streak > 0 && streak % STREAK_INTERVAL === 0) {
         const bonus = calcStreakBonus(betAmount);
         await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+        await createBonus(client, userId, 'daily', bonus); // টার্নওভার ৫x
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'win_streak', $3)`,

@@ -2,8 +2,9 @@
 // Turnover System V2 — একমাত্র সক্রিয় টার্নওভার সিস্টেম।
 //
 // নিয়ম:
-//   • বোনাস নিলে   : required = (Deposit + Bonus) × multiplier   (admin: turnover_multiplier)
-//   • বোনাস না নিলে : required = Deposit × 1                      (admin: turnover_no_bonus_multiplier)
+//   • ডিপোজিট অংশ  : সবসময় Deposit × ২                           (admin: turnover_no_bonus_multiplier, ডিফল্ট ২)
+//   • বোনাস অংশ    : Bonus × ৫                                   (admin: turnover_multiplier, ডিফল্ট ৫)
+//   • required = Deposit × ২ + Bonus × ৫ (ফ্রি বেট, গোল্ডেন এগ, লাকি হুইল ইত্যাদি বোনাস-অনলি: Bonus × ৫)
 //   • প্রতিটি Deposit-এর টার্নওভার আলাদা সারিতে (deposit_turnovers), পুরোনোটা আগে পূরণ হয় (FIFO)।
 //   • যোগ্য Casino/Sports বেটের অঙ্ক জিতুক-হারুক গোনা হয় (Sports: সেটেলমেন্টের পর)।
 //   • Void/Cancelled/Refund এবং (ডিফল্টে) Cash-out গোনা হয় না; Sports-এ min odds প্রযোজ্য।
@@ -16,7 +17,7 @@ const { getSetting } = require('./settings');
 
 const DEFAULTS = {
   multiplier: 5,        // বোনাস সহ — admin: turnover_multiplier
-  noBonusMultiplier: 1, // বোনাস ছাড়া — admin: turnover_no_bonus_multiplier
+  noBonusMultiplier: 2, // ডিপোজিট অংশ (বোনাস থাকুক বা না থাকুক) — admin: turnover_no_bonus_multiplier
   minOdds: 1.5,         // Sports ন্যূনতম odds — admin: turnover_min_odds (0 = বন্ধ)
   expiryHours: 0,       // 0 = মেয়াদ নেই — admin: turnover_expiry_hours
   cashoutCounts: false  // admin: turnover_cashout_counts ('1' হলে Cash-out গোনা হবে)
@@ -62,7 +63,7 @@ async function loadConfig(db) {
 
 // ==================== ১. Deposit-এর টার্নওভার তৈরি ====================
 // Deposit approve হলে (routes/payment.js creditApprovedDeposit) প্রতিবার ডাকা হয়।
-// bonusAmount > 0 হলে (Deposit+Bonus)×multiplier, নাহলে Deposit×1।
+// required = Deposit × ২ + Bonus × ৫ (দুটো অংশ আলাদা গুণকে)।
 async function createDepositTurnover(client, { userId, depositId = null, depositAmount, bonusAmount = 0, source = 'deposit', multiplierOverride = null, status: reqStatus = 'active' }) {
   const pendingReview = reqStatus === 'pending_review';
   const deposit = Math.max(0, Math.round(Number(depositAmount) || 0));
@@ -71,9 +72,11 @@ async function createDepositTurnover(client, { userId, depositId = null, deposit
 
   const cfg = await loadConfig(client);
   const ov = Number(multiplierOverride);
-  // multiplierOverride: নির্দিষ্ট উৎসের (যেমন প্রথম-ডিপোজিট ফ্রি বেট) আলাদা গুণক; না দিলে আগের নিয়ম
-  const multiplier = Number.isFinite(ov) && ov > 0 ? ov : (bonus > 0 ? cfg.multiplier : cfg.noBonusMultiplier);
-  const required = (deposit + bonus) * multiplier;
+  // multiplierOverride: নির্দিষ্ট উৎসের (যেমন প্রথম-ডিপোজিট ফ্রি বেট) বোনাস-অংশের আলাদা গুণক; না দিলে cfg.multiplier (৫x)
+  const bonusMult = Number.isFinite(ov) && ov > 0 ? ov : cfg.multiplier;
+  const required = deposit * cfg.noBonusMultiplier + bonus * bonusMult;
+  // multiplier কলামে কার্যকর গড় গুণক (required ÷ (deposit+bonus)), ২ দশমিক
+  const multiplier = Math.round((required / (deposit + bonus)) * 100) / 100;
   const expiresAt = !pendingReview && cfg.expiryHours > 0 ? new Date(Date.now() + cfg.expiryHours * 3600 * 1000) : null;
 
   const db = client || pool;

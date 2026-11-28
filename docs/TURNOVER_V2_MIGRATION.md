@@ -2,7 +2,7 @@
 
 ## ১. কী বদলেছে
 - `services/turnover.js` সম্পূর্ণ নতুন: Deposit-ভিত্তিক, `deposit_turnovers` টেবিলে (প্রতি Deposit আলাদা সারি)।
-- বোনাস নিলে `(Deposit + Bonus) × turnover_multiplier`; না নিলে `Deposit × turnover_no_bonus_multiplier (১)`।
+- `required = Deposit × turnover_no_bonus_multiplier (২) + Bonus × turnover_multiplier (৫)`। বোনাস-অনলি (ফ্রি বেট, গোল্ডেন এগ, লাকি হুইল, রেফারেল, ডেইলি ইত্যাদি): `Bonus × ৫`।
 - Sports টার্নওভার বেট **settle** হওয়ার পর (জিতুক/হারুক) `services/settlement.js` ও acca settlement থেকে যোগ হয়; Casino বেট ঘটনার সময় (tx id দিয়ে ডুপ্লিকেট-প্রতিরোধ)।
 - Void / Cancelled / Refund গোনা হয় না; Cash-out ডিফল্টে গোনা হয় না; Sports-এ `turnover_min_odds` প্রযোজ্য (odds অজানা হলে গোনা হয় না — fail-closed)।
 - ১০০% হলে সারি `completed` হয় → উইথড্র লক নিজে থেকে খোলে। `turnover_expiry_hours > 0` হলে মেয়াদ শেষে সারি `expired`, বোনাস অংশ (ব্যালেন্সে যতটুকু আছে) কাটা, লক খোলে।
@@ -27,7 +27,7 @@
 | সেটিং | ডিফল্ট |
 |---|---|
 | turnover_multiplier (বোনাসসহ) | ৩ (DB-তে আগে থেকে সেট থাকা মান; নতুন DB-তে migration-এর ৩) |
-| turnover_no_bonus_multiplier | ১ |
+| turnover_no_bonus_multiplier | ২ |
 | turnover_min_odds | ১.৫ |
 | turnover_expiry_hours | ০ (মেয়াদ নেই) |
 | turnover_cashout_counts | ০ (গোনা হয় না) |

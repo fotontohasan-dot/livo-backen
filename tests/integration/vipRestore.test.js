@@ -43,6 +43,7 @@ afterAll(async () => {
   await pool.query(`DELETE FROM vip_reward_history WHERE user_id = $1`, [userId]);
   await pool.query(`DELETE FROM coin_transactions WHERE user_id = $1`, [userId]);
   await pool.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+  await pool.query(`DELETE FROM deposit_turnovers WHERE user_id = ANY($1)`, [[adminId, userId]]);
   await pool.query(`DELETE FROM admin_logs WHERE admin_id = ANY($1)`, [[adminId, userId]]);
   await pool.query(`DELETE FROM users WHERE id = ANY($1)`, [[adminId, userId]]);
   await pool.query(`DELETE FROM vip_levels WHERE level = ANY($1)`, [[LVL_A, LVL_B]]);

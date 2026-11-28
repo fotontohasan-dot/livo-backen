@@ -13,6 +13,7 @@
 // সেটা আলাদা কাজ। ততক্ষণ UI-তে এটাকে দৈনিক বোনাস হিসেবেই দেখানো উচিত।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const { today: businessToday } = require('../utils/businessTime');
 
@@ -58,6 +59,7 @@ async function claimShare(userId, lang = 'bn') {
       [userId, today(), SHARE_BONUS]
     );
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [SHARE_BONUS, userId]);
+    await createBonus(client, userId, 'daily', SHARE_BONUS); // টার্নওভার ৫x
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'social_share', 'সোশ্যাল শেয়ার বোনাস')`,
       [userId, SHARE_BONUS]

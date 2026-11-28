@@ -3,6 +3,7 @@
 // বাজি ধরলে total_turnover বাড়ে; নতুন লেভেলে পৌঁছালে আপগ্রেড বোনাস।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 
 // ==================== বাজিতে টার্নওভার যোগ + লেভেল চেক ====================
 // গেম/স্পোর্টস বাজির পর ডাকা হবে।
@@ -61,6 +62,7 @@ async function addVipTurnover(userId, amount) {
 
         if (bonus > 0) {
           await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+          await createBonus(client, userId, 'daily', bonus); // টার্নওভার ৫x
           await client.query(
             `INSERT INTO coin_transactions (user_id, amount, type, description)
              VALUES ($1, $2, 'vip_upgrade', $3)`,

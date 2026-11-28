@@ -1,6 +1,6 @@
 // services/freebet.js
 // ফ্রি বেট — সিস্টেম/অ্যাডমিন ইউজারকে ফ্রি বেট দেয়।
-// ইউজার ক্লেইম করলে সেই পরিমাণ বোনাস টাকা পায় (টার্নওভার শর্ত সহ — স্পোর্টস ৫x / ক্যাসিনো ৩৫x)।
+// ইউজার ক্লেইম করলে সেই পরিমাণ বোনাস টাকা পায় (টার্নওভার শর্ত সহ — সব ফ্রি বেটে বোনাস × ৫x)।
 
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
@@ -134,10 +134,10 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
 
     // টাকা যোগ + টার্নওভার বোনাস তৈরি
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [fb.amount, userId]);
-    // শুধু first_deposit সারিতে free_bet_turnover_multiplier (ডিফল্ট ৩x); বাকি ফ্রি বেট আগের নিয়মে ('deposit')
+    // শুধু first_deposit সারিতে free_bet_turnover_multiplier (ডিফল্ট ৫x); বাকি ফ্রি বেট আগের নিয়মে ('deposit')
     if (fb.reason === FIRST_DEPOSIT_REASON) {
       const m = Number(await getSetting('free_bet_turnover_multiplier'));
-      await createBonus(client, userId, 'free_bet', fb.amount, { multiplier: Number.isFinite(m) && m > 0 ? m : 3 });
+      await createBonus(client, userId, 'free_bet', fb.amount, { multiplier: Number.isFinite(m) && m > 0 ? m : 5 });
     } else {
       await createBonus(client, userId, 'deposit', fb.amount);
     }

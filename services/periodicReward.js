@@ -4,6 +4,7 @@
 // মাসিক: গত ক্যালেন্ডার মাসের sports turnover টয়ার বোনাস, মাসে একবার।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const businessTime = require('../utils/businessTime');
 
@@ -85,6 +86,7 @@ async function claimWeekly(userId, lang = 'bn') {
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [status.amount, userId]);
+    await createBonus(client, userId, 'daily', status.amount); // টার্নওভার ৫x
     await client.query(
       `INSERT INTO periodic_claims (user_id, claim_type, period_key, amount) VALUES ($1, 'weekly', $2, $3)`,
       [userId, status.weekKey, status.amount]
@@ -160,6 +162,7 @@ async function claimMonthly(userId, lang = 'bn') {
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [status.bonus, userId]);
+    await createBonus(client, userId, 'daily', status.bonus); // টার্নওভার ৫x
     await client.query(
       `INSERT INTO periodic_claims (user_id, claim_type, period_key, amount) VALUES ($1, 'monthly', $2, $3)`,
       [userId, status.monthKey, status.bonus]

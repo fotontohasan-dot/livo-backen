@@ -883,7 +883,7 @@ async function applyMigrations(pool) {
 
     // প্রথম-ডিপোজিট ফ্রি বেট ক্লেইমের টার্নওভার গুণক (শুধু reason='first_deposit' সারির জন্য); বিদ্যমান মান অক্ষত
     await pool.query(`
-      INSERT INTO site_settings (key, value) VALUES ('free_bet_turnover_multiplier', '3')
+      INSERT INTO site_settings (key, value) VALUES ('free_bet_turnover_multiplier', '5')
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -2962,12 +2962,23 @@ async function applyMigrations(pool) {
     `);
     await pool.query(`
       INSERT INTO site_settings (key, value) VALUES
-        ('turnover_no_bonus_multiplier', '1'),
+        ('turnover_no_bonus_multiplier', '2'),
         ('turnover_min_odds', '1.5'),
         ('turnover_expiry_hours', '0'),
         ('turnover_cashout_counts', '0')
       ON CONFLICT (key) DO NOTHING
     `);
+    // নতুন নিয়ম (একবারই): ডিপোজিট ২x, বোনাস ৫x, ফ্রি বেট ৫x। মার্কার থাকলে আর ছোঁয়া হয় না — পরে অ্যাডমিন বদলালে রিস্টার্টে ফিরে যাবে না।
+    const turnoverRulesMark = await pool.query(
+      `INSERT INTO site_settings (key, value) VALUES ('turnover_rules_2x_5x_applied', '1') ON CONFLICT (key) DO NOTHING RETURNING key`
+    );
+    if (turnoverRulesMark.rowCount > 0) {
+      await pool.query(
+        `INSERT INTO site_settings (key, value) VALUES
+           ('turnover_no_bonus_multiplier', '2'), ('turnover_multiplier', '5'), ('free_bet_turnover_multiplier', '5')
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+      );
+    }
     console.log('✅ turnover v2 ready');
 
   } catch (err) {

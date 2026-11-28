@@ -176,7 +176,7 @@ describe('ক্লেইম — টার্নওভার free_bet_turnover_m
     expect(Number(b.required)).toBe(90);
   });
 
-  test('সেটিং বদলালে নতুন গুণক (৪x); সারি না থাকলে ডিফল্ট ৩x', async () => {
+  test('সেটিং বদলালে নতুন গুণক (৪x); সারি না থাকলে ডিফল্ট ৫x', async () => {
     await setRaw('free_bet_turnover_multiplier', '4');
     const u1 = await mk();
     await approve(await makeDeposit(u1, 500));
@@ -187,7 +187,7 @@ describe('ক্লেইম — টার্নওভার free_bet_turnover_m
     const u2 = await mk();
     await approve(await makeDeposit(u2, 500));
     await freebet.claimFreeBet(u2, (await rows(u2))[0].id);
-    expect(Number((await bonusRow(u2, 'free_bet')).required)).toBe(90);
+    expect(Number((await bonusRow(u2, 'free_bet')).required)).toBe(150); // ডিফল্ট ৫x × ৩০
   });
 
   test('অন্য ফ্রি বেট (first_deposit নয়) আগের নিয়মে — free_bet টাইপ নয়', async () => {

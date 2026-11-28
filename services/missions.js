@@ -2,6 +2,7 @@
 // মিশন — ডেইলি (প্রতিদিন), উইকলি (এই সপ্তাহ), স্পেশাল (নির্দিষ্ট ইভেন্ট সময়কাল)।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const businessTime = require('../utils/businessTime');
 
@@ -194,6 +195,7 @@ async function claimMission(userId, missionId, lang = 'bn') {
       );
     }
 
+    await createBonus(client, userId, 'daily', finalReward); // টার্নওভার ৫x
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'mission', $3)`,
       [userId, finalReward, `মিশন: ${d.title}`]

@@ -1159,8 +1159,8 @@ const BONUS_SETTING_KEYS = new Set([
 
 // ফর্মের ডিফল্ট (views/admin/settings.ejs) — সেটিং সারি না থাকলে ফর্ম এই মান পাঠায়, তাই এটাকে "অপরিবর্তিত" ধরা হয়
 const BONUS_SETTING_DEFAULTS = {
-  turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5',
-  turnover_expiry_hours: '0', turnover_cashout_counts: '0', free_bet_turnover_multiplier: '3'
+  turnover_multiplier: '5', turnover_no_bonus_multiplier: '2', turnover_min_odds: '1.5',
+  turnover_expiry_hours: '0', turnover_cashout_counts: '0', free_bet_turnover_multiplier: '5'
 };
 // turnover_* ও বোনাস-সংক্রান্ত key — এগুলোর বদল অডিট লগে পুরোনো/নতুন মানসহ লেখা হয়
 // বাজির ওপর রেফারেল কমিশন গেট ও tier % (K9b) — টাকার পেআউটে প্রভাব ফেলে, তাই এগুলোর বদলও অডিট লগে যায়

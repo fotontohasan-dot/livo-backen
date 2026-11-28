@@ -3,6 +3,7 @@
 // ব্যাজ পাওয়ার শর্ত এখানে কোডে ঠিক করা; অর্জিত ব্যাজ user_badges টেবিলে রাখা হয়।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 
 // সব ব্যাজের সংজ্ঞা
 // check(stats) → true হলে ব্যাজ প্রাপ্য
@@ -94,6 +95,7 @@ async function checkBadges(userId) {
             inserted = true;
             if (b.reward > 0) {
               await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [b.reward, userId]);
+              await createBonus(client, userId, 'daily', b.reward); // টার্নওভার ৫x
               await client.query(
                 `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'badge', $3)`,
                 [userId, b.reward, `ব্যাজ: ${b.name}`]

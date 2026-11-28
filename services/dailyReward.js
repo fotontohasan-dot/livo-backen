@@ -4,6 +4,7 @@
 // দিন বদলালে (reward_date) অটো রিসেট — নতুন দিনের নতুন রো।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const businessTime = require('../utils/businessTime');
 
@@ -108,6 +109,7 @@ async function claimDailyReward(userId, lang = 'bn') {
       `UPDATE users SET coins = coins + $1 WHERE id = $2`,
       [bonusAmount, userId]
     );
+    await createBonus(client, userId, 'daily', bonusAmount); // টার্নওভার ৫x
 
     // রিওয়ার্ড claimed চিহ্নিত
     await client.query(

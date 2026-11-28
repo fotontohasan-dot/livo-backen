@@ -29,27 +29,37 @@ function fakeClient(rows = []) {
 
 beforeEach(() => {
   Object.keys(settings).forEach((k) => delete settings[k]);
-  Object.assign(settings, { turnover_multiplier: '5', turnover_no_bonus_multiplier: '1', turnover_min_odds: '1.5', turnover_expiry_hours: '0', turnover_cashout_counts: '0' });
+  Object.assign(settings, { turnover_multiplier: '5', turnover_no_bonus_multiplier: '2', turnover_min_odds: '1.5', turnover_expiry_hours: '0', turnover_cashout_counts: '0' });
 });
 
-describe('required turnover formula', () => {
-  test('bonus accepted: (deposit + bonus) × multiplier', async () => {
+describe('required turnover formula (ডিপোজিট ২x + বোনাস ৫x)', () => {
+  test('ডিপোজিট ১০০০ + বোনাস ১০০০: ২০০০ + ৫০০০ = ৭০০০', async () => {
     const c = fakeClient();
-    await T.createDepositTurnover(c, { userId: 1, depositId: 10, depositAmount: 1000, bonusAmount: 200 });
-    const p = c.state.inserted[0];
-    expect(Number(p[5])).toBe(5);            // multiplier
-    expect(Number(p[6])).toBe(6000);         // (1000+200)×5
+    await T.createDepositTurnover(c, { userId: 1, depositId: 10, depositAmount: 1000, bonusAmount: 1000 });
+    expect(Number(c.state.inserted[0][6])).toBe(7000);
   });
-  test('no bonus: deposit × 1', async () => {
+  test('ডিপোজিট ১০০০ + বোনাস ৫০০: ২০০০ + ২৫০০ = ৪৫০০', async () => {
+    const c = fakeClient();
+    await T.createDepositTurnover(c, { userId: 1, depositId: 13, depositAmount: 1000, bonusAmount: 500 });
+    expect(Number(c.state.inserted[0][6])).toBe(4500);
+  });
+  test('বোনাস ছাড়া: ডিপোজিট × ২', async () => {
     const c = fakeClient();
     await T.createDepositTurnover(c, { userId: 1, depositId: 11, depositAmount: 1000, bonusAmount: 0 });
-    expect(Number(c.state.inserted[0][6])).toBe(1000);
+    expect(Number(c.state.inserted[0][6])).toBe(2000);
+    expect(Number(c.state.inserted[0][5])).toBe(2);
   });
-  test('multiplier comes from admin settings', async () => {
+  test('বোনাস-অনলি (ফ্রি বেট/গোল্ডেন এগ/হুইল): বোনাস × ৫', async () => {
+    const c = fakeClient();
+    await T.createBonus(c, 1, 'daily', 100);
+    expect(Number(c.state.inserted[0][6])).toBe(500);
+    expect(Number(c.state.inserted[0][5])).toBe(5);
+  });
+  test('গুণক অ্যাডমিন সেটিং থেকে আসে (বোনাস অংশ)', async () => {
     settings.turnover_multiplier = '10';
     const c = fakeClient();
     await T.createDepositTurnover(c, { userId: 1, depositId: 12, depositAmount: 500, bonusAmount: 100 });
-    expect(Number(c.state.inserted[0][6])).toBe(6000);
+    expect(Number(c.state.inserted[0][6])).toBe(2000); // ৫০০×২ + ১০০×১০
   });
 });
 

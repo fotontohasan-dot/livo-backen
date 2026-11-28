@@ -3,6 +3,7 @@
 // নিয়ম: প্রতি ১০০ বাজিতে ১ পয়েন্ট। ১০০ পয়েন্ট = ১০ টাকা (রূপান্তরে)।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 
 const POINTS_PER_100_STAKE = 1;   // প্রতি ১০০ বাজিতে ১ পয়েন্ট
@@ -80,6 +81,7 @@ async function redeemPoints(userId, redeemPoints, lang = 'bn') {
     }
 
     await client.query(`UPDATE users SET loyalty_points = loyalty_points - $1, coins = coins + $2 WHERE id = $3 AND loyalty_points >= $1`, [pts, coins, userId]);
+    await createBonus(client, userId, 'daily', coins); // টার্নওভার ৫x
     await client.query(
       `INSERT INTO loyalty_ledger (user_id, points, reason) VALUES ($1, $2, 'redeem')`,
       [userId, -pts]

@@ -3,6 +3,7 @@
 // পুরস্কারগুলো নির্দিষ্ট, সার্ভারেই র‍্যান্ডম নির্বাচন (ক্লায়েন্ট ঠকাতে পারবে না)।
 
 const { pool } = require('../db');
+const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const secureRandom = require('../utils/secureRandom');
 const businessTime = require('../utils/businessTime');
@@ -108,6 +109,7 @@ async function spin(userId, lang = 'bn') {
     let notifRow;
     if (prize > 0) {
       await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [prize, userId]);
+      await createBonus(client, userId, 'daily', prize); // টার্নওভার ৫x
       await client.query(
         `INSERT INTO coin_transactions (user_id, amount, type, description)
          VALUES ($1, $2, 'lucky_wheel', 'লাকি হুইল পুরস্কার')`,
