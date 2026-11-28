@@ -3580,5 +3580,7 @@
   "chat_report_proof_video_missing": "Please attach a video of the transaction.",
   "chat_report_proof_too_many": "You can attach up to 4 files.",
   "chat_report_proof_too_big": "File is too large. Each file must be under 30MB.",
-  "chat_report_proof_bad_type": "Only JPG, PNG, WEBP images and MP4, MOV, WEBM videos are allowed."
+  "chat_report_proof_bad_type": "Only JPG, PNG, WEBP images and MP4, MOV, WEBM videos are allowed.",
+  "chat_report_add_screenshot": "Add screenshot",
+  "chat_report_add_video": "Add video"
 }
