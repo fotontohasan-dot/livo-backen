@@ -3580,5 +3580,7 @@
   "chat_report_proof_video_missing": "ট্রানজেকশনের ভিডিও যুক্ত করুন।",
   "chat_report_proof_too_many": "সর্বোচ্চ ৪টি ফাইল দেওয়া যাবে।",
   "chat_report_proof_too_big": "ফাইল অনেক বড়। প্রতিটি ফাইল ৩০MB-এর মধ্যে হতে হবে।",
-  "chat_report_proof_bad_type": "শুধু JPG, PNG, WEBP ছবি এবং MP4, MOV, WEBM ভিডিও দেওয়া যাবে।"
+  "chat_report_proof_bad_type": "শুধু JPG, PNG, WEBP ছবি এবং MP4, MOV, WEBM ভিডিও দেওয়া যাবে।",
+  "chat_report_add_screenshot": "স্ক্রিনশট যোগ করুন",
+  "chat_report_add_video": "ভিডিও যোগ করুন"
 }

@@ -35,9 +35,23 @@
       <label class="sc-label" for="report-time"><%= t('chat_report_time') %> <span data-optional="occurredAt" hidden><%= t('chat_report_optional') %></span></label>
       <input class="sc-input" id="report-time" name="occurredAt" type="datetime-local">
 
-      <label class="sc-label" for="report-proofs"><%= t('chat_report_proof') %> <span class="sc-required">*</span></label>
+      <div class="sc-label"><%= t('chat_report_proof') %> <span class="sc-required">*</span></div>
       <div class="sc-hint"><%= t('chat_report_proof_hint') %></div>
-      <input class="sc-input sc-file" id="report-proofs" name="proofs" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm">
+
+      <div class="sc-upload-row">
+        <label class="sc-upload" for="report-shots">
+          <span class="sc-upload-ico" aria-hidden="true">📷</span>
+          <span class="sc-upload-txt"><%= t('chat_report_add_screenshot') %></span>
+          <span class="sc-upload-plus" aria-hidden="true">＋</span>
+        </label>
+        <label class="sc-upload" for="report-video">
+          <span class="sc-upload-ico" aria-hidden="true">🎥</span>
+          <span class="sc-upload-txt"><%= t('chat_report_add_video') %></span>
+          <span class="sc-upload-plus" aria-hidden="true">＋</span>
+        </label>
+      </div>
+      <input class="sc-file-hidden" id="report-shots" type="file" multiple accept="image/jpeg,image/png,image/webp">
+      <input class="sc-file-hidden" id="report-video" type="file" accept="video/mp4,video/quicktime,video/webm">
       <ul class="sc-file-list" id="report-proof-list"></ul>
 
       <div class="sc-error" id="report-error" role="alert" hidden></div>
@@ -96,6 +110,18 @@
   .sc-input:focus { border-color: var(--gold); }
   .sc-input-invalid { border-color: #ef4444; }
   .sc-hint-strong { font-weight: 700; color: #fde68a; }
+  .sc-file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+  .sc-upload-row { display: flex; gap: 8px; margin: 4px 0 8px; }
+  .sc-upload { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 84px; padding: 10px 6px; cursor: pointer; text-align: center;
+    border: 2px dashed rgba(255,255,255,0.65); border-radius: 14px; background: rgba(255,255,255,0.1); color: #fff; font-size: 12.5px; font-weight: 700; }
+  .sc-upload:active { background: rgba(255,255,255,0.22); }
+  .sc-upload-ico { font-size: 28px; line-height: 1; }
+  .sc-upload-plus { font-size: 16px; line-height: 1; color: #fde68a; }
+  .sc-upload.sc-input-invalid { border-color: #ef4444; }
+  .sc-upload.sc-done { border-style: solid; border-color: #86efac; background: rgba(134,239,172,0.18); }
+  .sc-file-list li { display: flex; align-items: center; gap: 6px; }
+  .sc-file-list .sc-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sc-file-remove { background: transparent !important; color: #fca5a5 !important; border: 0; font-size: 14px; padding: 2px 6px; min-height: 0; cursor: pointer; }
   .sc-required { color: #fca5a5; }
   .sc-file-list { list-style: none; margin: 4px 0 8px; padding: 0; font-size: 11.5px; color: #fff; }
   .sc-file-list li { padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
